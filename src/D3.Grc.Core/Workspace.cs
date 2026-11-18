@@ -10,6 +10,7 @@ public sealed partial class Workspace:IDisposable
     public Workspace(LocalIdentity identity){this.identity=identity;}
     private readonly SemaphoreSlim _gate=new(1,1);private Cipher? _cipher;private FileStream? _lock,_lease;private string? _dir;
     public string? ProjectPath{get;private set;}public string Name{get;private set;}="";public bool IsOpen=>ProjectPath is not null;public bool IsDirty{get;private set;}
+    public string? PreservedRecoveryPath { get; private set; }
     public static string WorkRoot=>Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"D3GRC","work-v06");
     private string DbPath=>Path.Combine(_dir??throw new InvalidOperationException("Kein Projekt geöffnet."),"project.db");
     private void Demand(){identity.Demand();if(!IsOpen)throw new InvalidOperationException("Projekt öffnen.");}
@@ -17,10 +18,32 @@ public sealed partial class Workspace:IDisposable
     {await _gate.WaitAsync();try{Demand();using var c=Open(DbPath);return action(c);}finally{_gate.Release();}}
     private async Task<T> Change<T>(string action,string id,string detail,Func<SqliteConnection,SqliteTransaction,T> change,bool save=true)
     {
-        await _gate.WaitAsync();try{Demand();T result;using(var c=Open(DbPath))using(var t=c.BeginTransaction()){result=change(c,t);Log(c,t,action,id,detail);t.Commit();}IsDirty=true;
-            try{await Snapshot(ProjectPath!+".recovery");if(save){await Snapshot(ProjectPath!);IsDirty=false;if(File.Exists(ProjectPath+".recovery"))File.Delete(ProjectPath+".recovery");}}
-            catch(Exception ex){throw new IOException("Änderung lokal übernommen, dauerhafte Speicherung fehlgeschlagen. Nicht schließen; erneut Speichern wählen. "+ex.Message,ex);}return result;
-        }finally{_gate.Release();}
+        await _gate.WaitAsync();
+        try
+        {
+            Demand();
+            T result;
+            using (var connection = Open(DbPath))
+            using (var transaction = connection.BeginTransaction())
+            {
+                result = change(connection, transaction);
+                Log(connection, transaction, action, id, detail);
+                transaction.Commit();
+            }
+            IsDirty = true;
+            try
+            {
+                await Snapshot(ProjectPath! + ".recovery");
+                if (save)
+                    await WriteProjectAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new WorkspacePersistenceException(ex);
+            }
+            return result;
+        }
+        finally { _gate.Release(); }
     }
     private void Prepare(string path)
     {
@@ -28,14 +51,30 @@ public sealed partial class Workspace:IDisposable
         _lock=new FileStream(path+".lock",FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);Files.PrivateDirectory(WorkRoot);_dir=Path.Combine(WorkRoot,Guid.NewGuid().ToString("N"));Files.PrivateDirectory(_dir);
         _lease=new FileStream(Path.Combine(_dir,".active"),FileMode.CreateNew,FileAccess.ReadWrite,FileShare.None);using var f=Files.Create(DbPath);
     }
-    public async Task CreateAsync(string path,string name,string password,string? catalog=null)
+    public async Task CreateAsync(string path, string name, string password, string? catalog = null,
+        CompanyProfile? companyProfile = null)
     {
         identity.Demand();if(password.Length<12||string.IsNullOrWhiteSpace(name)||name.Length>240)throw new ArgumentException("Projektname erforderlich; Passwort mindestens 12 Zeichen.");
+        if (companyProfile is not null)
+            companyProfile = CompanyPlanning.Validate(companyProfile);
         await _gate.WaitAsync();var wasOpen=IsOpen;try{
             if(wasOpen)throw new InvalidOperationException("Aktuelles Projekt schließen.");path=Path.GetFullPath(path);Prepare(path);if(File.Exists(path)||File.Exists(path+".recovery"))throw new IOException("Zieldatei existiert.");
             File.Copy(catalog??Path.Combine(AppContext.BaseDirectory,"content","catalog-v05.db"),DbPath,true);if(!OperatingSystem.IsWindows())File.SetUnixFileMode(DbPath,UnixFileMode.UserRead|UnixFileMode.UserWrite);
             await Database.MigrateAsync(DbPath);_cipher=new Cipher();await _cipher.InitializeAsync(password);ProjectPath=path;Name=name.Trim();
-            using(var c=Open(DbPath))using(var t=c.BeginTransaction()){Exec(c,t,"UPDATE Metadata SET Value=$p0 WHERE Key='ProjectName'",Name);Log(c,t,"ProjectCreated","",Name);t.Commit();}await Snapshot(path);IsDirty=false;
+            using (var connection = Open(DbPath))
+            using (var transaction = connection.BeginTransaction())
+            {
+                Exec(connection, transaction, "UPDATE Metadata SET Value=$p0 WHERE Key='ProjectName'", Name);
+                Log(connection, transaction, "ProjectCreated", "", Name);
+                if (companyProfile is not null)
+                {
+                    PersistCompanyProfile(connection, transaction, companyProfile);
+                    Log(connection, transaction, "CompanyProfileConfigured", "", JsonSerializer.Serialize(companyProfile));
+                }
+                transaction.Commit();
+            }
+            await Snapshot(path);
+            IsDirty = false;
         }catch{if(!wasOpen)Cleanup();throw;}finally{_gate.Release();}
     }
     public async Task OpenAsync(string path,string password,bool recovery=false)
@@ -51,8 +90,19 @@ public sealed partial class Workspace:IDisposable
                 var migrated=Scalar(c,null,"SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId='20261118210000_TopicsAndSessions'")!="";
                 if(!migrated&&File.Exists(path)){var backup=path+".pre06-"+DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")+".bak";File.Copy(path,backup,false);}
             }
-            await Database.MigrateAsync(DbPath);ProjectPath=path;using(var c=Open(DbPath)){Name=Scalar(c,null,"SELECT Value FROM Metadata WHERE Key='ProjectName'");using var t=c.BeginTransaction();Log(c,t,recovery?"RecoveryOpened":"ProjectOpened","","0.6");t.Commit();}
-            IsDirty=true;await Snapshot(path+".recovery");
+            await Database.MigrateAsync(DbPath);
+            if (!recovery && File.Exists(path + ".recovery"))
+                await PreserveRecoveryAsync(path);
+            ProjectPath = path;
+            using (var c = Open(DbPath))
+            {
+                Name = Scalar(c, null, "SELECT Value FROM Metadata WHERE Key='ProjectName'");
+                using var transaction = c.BeginTransaction();
+                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.7");
+                transaction.Commit();
+            }
+            IsDirty = true;
+            await Snapshot(path + ".recovery");
         }catch{if(!wasOpen)Cleanup();throw;}finally{_gate.Release();}
     }
     private async Task Snapshot(string path)
@@ -62,15 +112,36 @@ public sealed partial class Workspace:IDisposable
             var plain=await Files.ReadAsync(temp,Cipher.Limit);byte[] encrypted;try{encrypted=_cipher!.Encrypt(plain);}finally{CryptographicOperations.ZeroMemory(plain);}await Files.AtomicAsync(path,encrypted);
         }finally{if(File.Exists(temp))File.Delete(temp);}
     }
-    public async Task SaveAsync(){await _gate.WaitAsync();try{Demand();await Snapshot(ProjectPath!);IsDirty=false;if(File.Exists(ProjectPath+".recovery"))File.Delete(ProjectPath+".recovery");}finally{_gate.Release();}}
+    private async Task PreserveRecoveryAsync(string projectPath)
+    {
+        var fileName = $"D3GRC-Recovery-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}.d3grc";
+        var preserved = Path.Combine(Path.GetDirectoryName(projectPath)!, fileName);
+        var encrypted = await Files.ReadAsync(projectPath + ".recovery", Cipher.Limit + 52);
+        await Files.AtomicAsync(preserved, encrypted);
+        PreservedRecoveryPath = preserved;
+    }
+    private async Task WriteProjectAsync()
+    {
+        await Snapshot(ProjectPath!);
+        IsDirty = false;
+        var recoveryPath = ProjectPath! + ".recovery";
+        if (File.Exists(recoveryPath))
+            File.Delete(recoveryPath);
+    }
+    public async Task SaveAsync()
+    {
+        await _gate.WaitAsync();
+        try { Demand(); await WriteProjectAsync(); }
+        finally { _gate.Release(); }
+    }
     public async Task SaveAsAsync(string path)
     {
         await _gate.WaitAsync();FileStream? next=null;try{Demand();path=Path.GetFullPath(path);if(File.Exists(path)||File.Exists(path+".recovery")||new FileInfo(path+".lock").LinkTarget is not null)throw new IOException("Neuen Dateinamen wählen.");next=new FileStream(path+".lock",FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);await Snapshot(path);_lock?.Dispose();_lock=next;next=null;ProjectPath=path;IsDirty=false;}finally{next?.Dispose();_gate.Release();}
     }
     public async Task AutosaveAsync(){await _gate.WaitAsync();try{identity.Demand();if(IsOpen&&IsDirty)await Snapshot(ProjectPath!+".recovery");}finally{_gate.Release();}}
     public async Task CloseAsync(){await _gate.WaitAsync();try{Cleanup();}finally{_gate.Release();}}
-    public async Task LogoutAsync(){await _gate.WaitAsync();try{if(IsOpen&&IsDirty){await Snapshot(ProjectPath!);IsDirty=false;}Cleanup();identity.Logout();}finally{_gate.Release();}}
-    private void Cleanup(){_lease?.Dispose();_lease=null;try{if(_dir is not null&&Directory.Exists(_dir))Directory.Delete(_dir,true);}finally{_dir=null;_cipher?.Dispose();_cipher=null;_lock?.Dispose();_lock=null;ProjectPath=null;Name="";IsDirty=false;}}
+    public async Task LogoutAsync(){await _gate.WaitAsync();try{if(IsOpen&&IsDirty)await WriteProjectAsync();Cleanup();identity.Logout();}finally{_gate.Release();}}
+    private void Cleanup(){_lease?.Dispose();_lease=null;try{if(_dir is not null&&Directory.Exists(_dir))Directory.Delete(_dir,true);}finally{_dir=null;_cipher?.Dispose();_cipher=null;_lock?.Dispose();_lock=null;ProjectPath=null;PreservedRecoveryPath=null;Name="";IsDirty=false;}}
     public void Dispose(){Cleanup();_gate.Dispose();}
     public static int CleanupOrphans(){if(!Directory.Exists(WorkRoot))return 0;int count=0;foreach(var dir in Directory.GetDirectories(WorkRoot))try{using(var f=new FileStream(Path.Combine(dir,".active"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None)){}Directory.Delete(dir,true);count++;}catch(IOException){}catch(UnauthorizedAccessException){}return count;}
     private static string Hash(string utc,string actor,string action,string id,string detail,string previous)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new[]{utc,actor,action,id,detail,previous}))));
@@ -105,7 +176,7 @@ public sealed partial class Workspace:IDisposable
             Exec(c,t,"INSERT INTO Records(Id,Kind,Code,Title,SourceId,TemplateId,Locator,Body,Owner,Status,DueDate,Scope,Version,IsSeed) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p6,$p7,$p8,$p9,$p10,$p11,1,0) ON CONFLICT(Id) DO UPDATE SET Code=excluded.Code,Title=excluded.Title,SourceId=excluded.SourceId,TemplateId=excluded.TemplateId,Locator=excluded.Locator,Body=excluded.Body,Owner=excluded.Owner,Status=excluded.Status,DueDate=excluded.DueDate,Scope=excluded.Scope,Version=Records.Version+1,IsSeed=0",e.Id,e.Kind,e.Code,e.Title,e.SourceId,e.TemplateId,e.Locator,e.Body,e.Owner,e.Status,e.DueDate,e.Scope);
             Exec(c,t,"INSERT OR IGNORE INTO RecordTopics VALUES($p0,$p1)",e.Id,topic);if(topic!="REVIEW")Exec(c,t,"DELETE FROM RecordTopics WHERE RecordId=$p0 AND TopicId='REVIEW'",e.Id);
             Exec(c,t,"UPDATE RecordSources SET Role='Sekundär' WHERE RecordId=$p0",e.Id);Exec(c,t,"INSERT INTO RecordSources VALUES($p0,$p1,$p2,'Primär') ON CONFLICT(RecordId,SourceId) DO UPDATE SET Locator=excluded.Locator,Role='Primär'",e.Id,e.SourceId,e.Locator);
-            if(e.Kind=="Requirement")Exec(c,t,"INSERT INTO Applicability VALUES($p0,$p1,$p2,$p3,$p4) ON CONFLICT(RecordId) DO UPDATE SET Decision=excluded.Decision,Reason=excluded.Reason,Reviewer=excluded.Reviewer,ReviewedUtc=excluded.ReviewedUtc",e.Id,e.Status,reason,identity.User,DateTimeOffset.UtcNow.ToString("O"));return true;
+            if(e.Kind=="Requirement")Exec(c,t,"INSERT INTO Applicability VALUES($p0,$p1,$p2,$p3,$p4) ON CONFLICT(RecordId) DO UPDATE SET Decision=excluded.Decision,Reason=excluded.Reason,Reviewer=excluded.Reviewer,ReviewedUtc=excluded.ReviewedUtc WHERE Applicability.Decision<>excluded.Decision",e.Id,e.Status,reason,identity.User,DateTimeOffset.UtcNow.ToString("O"));return true;
         });
     }
     public async Task AddTopicAsync(string id,string topic,string reason)=>await Change("TopicAdded",id,reason,(c,t)=>{Reason(reason);if(Get(c,t,id).Status is "Abgeschlossen" or "Geschlossen")throw new ArgumentException("Abgeschlossener Datensatz gesperrt.");Exec(c,t,"INSERT OR IGNORE INTO RecordTopics VALUES($p0,$p1)",id,topic);return true;});

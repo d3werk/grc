@@ -56,6 +56,27 @@ public sealed partial class Workspace
     public Task<List<ExportSheet>> ExportSnapshotAsync(string topic,string scope,string search)=>Read(c=>{
         var entries=Query(c,null,"SELECT * FROM Records r WHERE ($p0='' OR EXISTS(SELECT 1 FROM RecordTopics t WHERE t.RecordId=r.Id AND t.TopicId=$p0)) AND ($p1='' OR Scope=$p1)",ReadEntry,topic,scope).Where(e=>search==""||new[]{e.Title,e.Code,e.Body,e.Owner}.Any(s=>s.Contains(search,StringComparison.CurrentCultureIgnoreCase))).ToList();var ids=entries.Select(e=>e.Id).ToHashSet();
         var sheets=new List<ExportSheet>();var meta=new List<string[]>{new[]{"Projekt",Name},new[]{"Thema",topic==""?"Alle Themen":topic},new[]{"Scope",scope==""?"Alle Scopes":scope},new[]{"Suche",search},new[]{"Stichtag UTC",DateTimeOffset.UtcNow.ToString("O")},new[]{"Profil",identity.User!},new[]{"Methode","Aktueller Bestand; keine historische Zeitreihe; keine Konformitätsquote"}};sheets.Add(new("Exportkontext",["Feld","Wert"],meta));
+        if (ReadCompanyProfile(c) is { } company)
+        {
+            meta.Add(["Unternehmensgröße", CompanyPlanning.SizeLabels[company.Size]]);
+            meta.Add(["Branche", CompanyPlanning.IndustryLabels[company.Industry]]);
+            meta.Add(["Standorte", company.SiteCount.ToString(CultureInfo.InvariantCulture)]);
+            meta.Add(["Organisationseinheiten", company.OrganizationalUnitCount.ToString(CultureInfo.InvariantCulture)]);
+            meta.Add(["Risikofokus", CompanyPlanning.RiskFocusLabels[company.RiskFocus]]);
+            meta.Add(["Gewählte Fachthemen", string.Join(", ", company.Topics.Select(id => CompanyPlanning.TopicLabels[id]))]);
+            meta.Add(["Ausgewählte Merkmale", string.Join(", ", CompanyPlanning.FactorLabels
+                .Where(factor => company.Factors.HasFlag(factor.Key)).Select(factor => factor.Value))]);
+
+            var planRows = CompanyPlanning.Build(company).Select(module => new[]
+            {
+                module.Priority == CompanyModulePriority.Key ? "Schlüsselmodul" : "Optionale Ergänzung",
+                module.Title,
+                module.TopicId.Length == 0 ? "Themenübergreifend" : CompanyPlanning.TopicLabels[module.TopicId],
+                module.Why,
+                module.NextStep
+            }).ToList();
+            sheets.Add(new("Umsetzungsplan", ["Priorität", "Modul", "Fachthema", "Begründung", "Nächster Schritt"], planRows));
+        }
         sheets.Add(new("Kennzahlen",["Kennzahl","Anzahl"],new(){new[]{"Anforderungen",entries.Count(e=>e.Kind=="Requirement").ToString()},new[]{"Controls",entries.Count(e=>e.Kind=="Control").ToString()},new[]{"Controls als Entwurf",entries.Count(e=>e.Kind=="Control"&&e.Status=="Entwurf").ToString()},new[]{"Offene Findings",entries.Count(e=>e.Kind=="Finding"&&e.Status!="Geschlossen").ToString()},new[]{"Ohne Verantwortung",entries.Count(e=>e.Owner=="").ToString()}}));
         foreach(var kind in Entry.Kinds)sheets.Add(new(kind,["ID","Code","Titel","Quelle","Fundstelle","Status","Verantwortung","Termin","Scope","Version","Beschreibung"],entries.Where(e=>e.Kind==kind).Select(e=>new[]{e.Id,e.Code,e.Title,e.SourceId,e.Locator,e.Status,e.Owner,e.DueDate,e.Scope,e.Version.ToString(),e.Body}).ToList()));
         var links=Query(c,null,"SELECT l.Id,l.SourceRecordId,l.TargetRecordId,l.Type,l.Reason,l.SourceId,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,'') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>Enumerable.Range(0,8).Select(r.GetString).ToArray()).Where(x=>ids.Contains(x[1])||ids.Contains(x[2])).ToList();sheets.Add(new("Mappings",["ID","Ausgangs-ID","Ziel-ID","Typ","Begründung","Quelle","Abdeckung","Scope"],links));
@@ -64,7 +85,11 @@ public sealed partial class Workspace
         sheets.Add(new("AuditTests",["ID","Audit-ID","Control-ID","Quelle","Evidence-ID","Ergebnis","Notiz","Prüfzeitpunkt"],Query(c,null,"SELECT * FROM AuditTests",r=>Enumerable.Range(0,8).Select(i=>r.IsDBNull(i)?"":r.GetString(i)).ToArray()).Where(x=>ids.Contains(x[1])).ToList()));
         var scopedProofs=Proofs(c,null).Where(p=>ids.Contains(p.ControlId)||proofIds.Contains(p.Id)).ToList();
         var metrics=sheets.Single(s=>s.Name=="Kennzahlen").Rows;metrics.Add(new[]{"Nachweise",scopedProofs.Count.ToString()});
-        var currentControls=entries.Where(e=>e.Kind=="Control").ToList();metrics.Add(new[]{"Controls ohne gültige Evidence",currentControls.Count(e=>!Proofs(c,null,e.Id).Any(p=>DateTimeOffset.TryParse(p.ValidUntil,out var until)&&until>DateTimeOffset.UtcNow)).ToString()});
+        var currentControls = entries.Where(entry => entry.Kind == "Control").Select(entry => entry.Id).ToList();
+        var controlEvidence = ReadControlEvidence(c, "SELECT value AS Id FROM json_each($p0)",
+            System.Text.Json.JsonSerializer.Serialize(currentControls), DateTimeOffset.UtcNow);
+        metrics.Add(new[] { "Controls ohne zeitlich aktuellen Nachweis",
+            currentControls.Count(id => !controlEvidence[id].Any(proof => proof.Status == TraceEvidenceStatus.Current)).ToString() });
         var today=DateOnly.FromDateTime(DateTime.Today);metrics.Add(new[]{"Überfällige Maßnahmen",entries.Count(e=>e.Kind=="Measure"&&e.Status!="Erledigt"&&DateOnly.TryParse(e.DueDate,out var d)&&d<today).ToString()});
         foreach(var kind in new[]{"Control","Requirement","Finding"})sheets.Add(new(kind+"Status",["Status","Anzahl"],Entry.Statuses(kind).Select(status=>new[]{status,entries.Count(e=>e.Kind==kind&&e.Status==status).ToString()}).ToList()));
         sheets.Add(new("Glossar",["Begriff","Langform","Definition"],Query(c,null,"SELECT Term,Expanded,CASE WHEN CustomDefinition='' THEN Definition ELSE CustomDefinition END FROM Glossary ORDER BY Term",r=>new[]{r.GetString(0),r.GetString(1),r.GetString(2)})));

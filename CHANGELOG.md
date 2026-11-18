@@ -1,3 +1,13 @@
+# 0.7.0
+
+- Registrierung mit direkt anschließender Anlage und Öffnung einer verschlüsselten Projektdatei.
+- Unternehmensprofil für KMU und größere Organisationen. Ein editierbarer Umsetzungsplan priorisiert Aufgaben nach Unternehmensmerkmalen und begründet die Zuordnung.
+- Überarbeitete Übersicht mit fachlich erklärten Kennzahlen, Umsetzungsplan und direkten Einstiegen in die Arbeitsbereiche.
+- Eigene Quellen mit Fundstelle und Themenzuordnung im Projekt erfassen und bearbeiten.
+- Formularwechsel erkennen tatsächliche Änderungen und bieten Speichern, Verwerfen und Abbrechen an.
+- Bestätigte Zuordnungen und zugehörige Nachweise je Anforderung gemeinsam anzeigen.
+- Neuere Wiederherstellungsstände als eigene Projektdatei erhalten. Nach einem Dateischreibfehler kann der bereits übernommene Stand separat gespeichert werden.
+
 # 0.6.1
 
 - Deutsche Tooltips für zentrale Aktionen und erklärungsbedürftige Eingaben in den Projekt- und Fachworkflows.
