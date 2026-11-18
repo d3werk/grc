@@ -1,6 +1,13 @@
 namespace D3.Grc.Core;
 public sealed record Choice(string Id,string Title){public override string ToString()=>Title;}
-public sealed record Source(string Id,string Title,string Url,string Reference,string Summary,string Note,string State,string LastSuccess){public override string ToString()=>Title;}
+public sealed record Source(string Id,string Title,string Url,string Reference,string Summary,string Note,string State,string LastSuccess)
+{
+    internal const string CustomIdPrefix = "CUSTOM-";
+
+    public bool IsCustom => IsCustomId(Id);
+    internal static bool IsCustomId(string id) => id.StartsWith(CustomIdPrefix, StringComparison.Ordinal);
+    public override string ToString() => Title;
+}
 public sealed record TextTemplate(string Id,string Kind,string Title,string SourceId,string Locator,string Body,string CustomBody){public string Effective=>CustomBody==""?Body:CustomBody;public override string ToString()=>Title;}
 public sealed class Entry
 {

@@ -1,4 +1,4 @@
-# D3 GRC 0.6.1 – Themen, Sitzungen, Tabs und Excel
+# D3 GRC 0.7.0 – Unternehmensprofil und Umsetzungsplan
 
 **Lieferumfang: vollständige Quellcode-Solution, kein kompilierter oder signierter Installer.**
 **Freigabestatus: Entwicklung / native Abnahme offen.**
@@ -17,9 +17,9 @@ Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser
 4. NuGet Restore ausführen, nicht alle Pakete auf neue Hauptversionen aktualisieren.
 5. Solution bauen und die Tests unter `tests/D3.Grc.Tests` ausführen.
 6. `D3.Grc.Desktop` als Startprojekt starten.
-7. Profilname und Profilpasswort eingeben; Registrieren / lokales Profil einrichten wählen. Anschließend anmelden.
-8. Neues Projekt mit separatem Projektpasswort anlegen oder eine KOPIE eines 0.5-Projekts öffnen.
-9. Konkretes Thema wählen, Anforderungen/Controls prüfen und Änderungen speichern.
+7. Mit einem bestehenden lokalen Profil anmelden oder ein neues Profil registrieren. Nach der Registrierung startet direkt die Projekteinrichtung.
+8. Unternehmen konfigurieren, den Umsetzungsplan prüfen und die Projektdatei mit einem separaten Passwort anlegen. Die Datei wird sofort geöffnet. Bestehende Projekte lassen sich öffnen und anschließend konfigurieren.
+9. In der Übersicht eine Aufgabe öffnen, Anforderungen und Controls prüfen und Änderungen speichern.
 
 Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindestens 12 Zeichen bei der Einrichtung. Kein Passwort-Reset.
 
@@ -53,7 +53,7 @@ Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindeste
 Die Zahlen gelten für ein neues Projekt aus dem mitgelieferten Starterkatalog. Bei Migration vorhandener 0.5-Projekte werden vorhandene Inhalte erhalten und neue V06-Inhalte ergänzt; die Gesamtzahlen können deshalb abweichen.
 
 ## Prüfstatus
-Die aktuelle Prüfung der Version 0.6.1 ist im [Prüfbericht](docs/PRUEFBERICHT-0.6.1.md) dokumentiert.
+Die Prüfung und der Funktionsabgleich für Version 0.7.0 sind im [Prüfbericht](docs/PRUEFBERICHT-0.7.0.md) dokumentiert. Die [Prüfung von 0.6.1](docs/PRUEFBERICHT-0.6.1.md) dokumentiert den Ausgangsstand.
 
 ### Historischer Prüfstand der Version 0.6
 

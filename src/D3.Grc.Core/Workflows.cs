@@ -54,7 +54,7 @@ public sealed partial class Workspace
             if(test.Outcome=="Abweichung"&&Scalar(c,t,"SELECT a.Id FROM Links a JOIN Links b ON a.SourceRecordId=b.SourceRecordId WHERE a.Type='Finding → Audit' AND a.TargetRecordId=$p0 AND b.Type='Finding → Control' AND b.TargetRecordId=$p1",audit,control)=="")throw new ArgumentException("Abweichung benötigt Finding mit Audit- und Control-Bezug.");}
         Exec(c,t,"UPDATE Records SET Status='Abgeschlossen',Version=Version+1 WHERE Id=$p0",audit);return true;
     });
-    public async Task CloseFindingAsync(string finding,string evidence,string review)=>await Change("FindingClosed",finding,review,(c,t)=>{
+    public async Task CloseFindingAsync(string finding,string evidence,string review)=>await Change("FindingClosed",finding,JsonSerializer.Serialize(new{ evidence, review }),(c,t)=>{
         Reason(review);var f=Get(c,t,finding);RequireKind(f,"Finding");if(f.Status!="Wirksamkeitsprüfung")throw new ArgumentException("Finding muss Wirksamkeitsprüfung sein.");
         var controls=Query(c,t,"SELECT TargetRecordId FROM Links WHERE SourceRecordId=$p0 AND Type='Finding → Control'",r=>r.GetString(0),finding);if(controls.Count==0)throw new ArgumentException("Finding hat keinen Control-Bezug.");foreach(var control in controls)RequireProof(c,t,evidence,control,DateTimeOffset.UtcNow);Exec(c,t,"UPDATE Records SET Status='Geschlossen',Version=Version+1 WHERE Id=$p0",finding);return true;
     });

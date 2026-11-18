@@ -1,15 +1,17 @@
-# Anwenderhandbuch 0.6
+# Anwenderhandbuch 0.7.0
 
 In Version 0.6.1 bieten zentrale Felder und Aktionen kurze Bedienhinweise. Den Mauszeiger auf dem Element stehen lassen oder das Element mit der Tastatur fokussieren und F1 drücken. Escape schließt einen geöffneten Hinweis.
 
 ## 1. Registrierung und Anmeldung
-Profilname und Profilpasswort eingeben. Registrieren / lokales Profil einrichten legt ausschließlich ein Profil im Benutzerverzeichnis dieses Rechners an. Es wird keine E-Mail verschickt und kein Onlinekonto erstellt. Danach mit demselben Profil anmelden. Nach fünf fehlgeschlagenen Versuchen wird das Profil vorübergehend gesperrt.
+Profilname und Profilpasswort eingeben. „Profil erstellen“ legt ein Profil im Benutzerverzeichnis dieses Rechners an und startet nach der Anmeldung die Projekteinrichtung. Beim Abbrechen des Assistenten bleibt das Profil angemeldet. Für bestehende Profile steht die normale Anmeldung zur Verfügung. Nach fünf fehlgeschlagenen Versuchen wird das Profil vorübergehend gesperrt.
 
 Das lokale Profil kennzeichnet Aktivitäten, ist aber keine verifizierte Organisationsidentität. Mehrere lokale Profile ersetzen keine Teamrechte. Bei Profilverlust kann ein neues Profil eingerichtet werden; der Zugriff auf Projekte erfordert weiterhin das Projektpasswort.
 
 ## 2. Projekt öffnen oder anlegen
-Neues Projekt: Name, separates Projektpasswort und neuen Speicherort wählen. Vorhandene Dateien werden bei der Neuanlage nicht still überschrieben.
-Öffnen: verschlüsselte `.d3grc`-Datei auswählen und Projektpasswort eingeben. Bei vorhandener Recovery wird Wiederherstellung angeboten. Der Hinweis im Dialog erklärt, dass Abbrechen dort die Hauptdatei auswählt; das folgende Passwortfenster kann weiterhin abgebrochen werden.
+**Neues Projekt.** Im Assistenten Unternehmensgröße, Branche, Standorte und Organisationseinheiten angeben. Merkmale und Themen auswählen und den daraus abgeleiteten Plan prüfen. Ein separates Projektpasswort vergeben und einen neuen Speicherort wählen. Die Projektdatei öffnet sich direkt in der Übersicht.
+
+**Unternehmensprofil.** Größe, Branche, Merkmale und Risikoschwerpunkt bestimmen, welche Aufgaben als wesentlich empfohlen werden. Für optionale Aufgaben steht der vollständige Arbeitsbereich weiterhin zur Verfügung. Über „Unternehmen konfigurieren“ lässt sich das Profil für bestehende Projekte ergänzen oder ändern. Fachliche Anwendbarkeit wird je Anforderung bewertet.
+**Öffnen.** Verschlüsselte `.d3grc`-Datei auswählen und Projektpasswort eingeben. Ist ein Wiederherstellungsstand vorhanden, im Auswahlfenster den gewünschten Stand wählen oder den Vorgang abbrechen.
 
 Die mitgelieferten `.db`-Dateien sind öffentliche Starter-/Referenzdatenbanken ohne Kundendaten. Sie sind keine verschlüsselten Projektdateien und werden nicht direkt über Öffnen geladen.
 
@@ -35,12 +37,16 @@ Die globale Schaltfläche Speichern und Strg/Cmd+S speichern ein bearbeitetes Fo
 
 Speichern unter übernimmt ein offenes Formular zuerst und erzeugt anschließend eine neue verschlüsselte Projektkopie mit demselben Passwort. Die alte Datei bleibt erhalten. Vorhandene Zieldateien werden nicht überschrieben.
 
-Bei Navigations-/Auswahlwechsel warnt die Anwendung vor ungespeicherten Formularänderungen. Abbrechen im Warnfenster erhält die Bearbeitung. Recovery ist ein Wiederherstellungsstand, kein Ersatz für eine erfolgreiche Hauptdateispeicherung. Bei Speicherfehler nicht schließen, sondern Ursache beheben und erneut speichern.
+Bei einem Wechsel fragt die Anwendung nur nach tatsächlichen Formularänderungen. „Speichern“ übernimmt die Änderung und setzt den Wechsel fort. „Verwerfen“ setzt den Wechsel ohne Übernahme fort. „Abbrechen“ behält den vorherigen Eintrag und die Bearbeitung bei.
+
+Meldet die Anwendung, dass eine Änderung bereits übernommen wurde, aber die Hauptdatei noch nicht gespeichert ist, zuerst den Dateifehler beheben und erneut „Speichern“ wählen. Öffnen der Hauptdatei bei vorhandener Recovery erhält den bisherigen Wiederherstellungsstand als separat öffnbare verschlüsselte Projektdatei.
 
 ## 6. Quellen passend auswählen
 Primäre Quellen und Vorlagen sind auf das Thema begrenzt. Beispiel Datenschutz: DSGVO, BDSG und interner Arbeitsstandard. BCM: BSI-Standard 200-4 und interner Arbeitsstandard. Ein konkretes Control kann mehrere Themen unterstützen.
 
 Weitere Quelle hinzufügen ist eine bewusste Cross-Zuordnung mit Fundstelle und Begründung. Ein bestehendes Objekt mit ausdrücklich ergänztem Themenbezug bleibt in diesem Thema bearbeitbar. Zusätzliche Quellen sind am Objekt sichtbar; die globale Quellenliste bleibt der standardmäßigen Themenpolitik zugeordnet.
+
+Unter „Quellen“ lassen sich eigene Quellen mit Titel, Fundstelle, Beschreibung und einem oder mehreren Themen anlegen. Eine HTTPS-Adresse ist optional. Eigene Quellen stehen in den zugeordneten Themen zur Auswahl und werden manuell gepflegt.
 
 Anforderungsquelle und Nachweisherkunft sind getrennt. Ein Konfigurationsexport ist ein Nachweis, kein Gesetz.
 
