@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "scope": "Balanced C# delimiters only; not compilation",
+  "files": [
+    "src/D3.Grc.Core/Database.cs",
+    "src/D3.Grc.Core/Exports.cs",
+    "src/D3.Grc.Core/Models.cs",
+    "src/D3.Grc.Core/Security.cs",
+    "src/D3.Grc.Core/SourceUpdates.cs",
+    "src/D3.Grc.Core/Workflows.cs",
+    "src/D3.Grc.Core/Workspace.cs",
+    "src/D3.Grc.Desktop/Dashboard.cs",
+    "src/D3.Grc.Desktop/EntryPages.cs",
+    "src/D3.Grc.Desktop/LibraryPages.cs",
+    "src/D3.Grc.Desktop/MainWindow.cs",
+    "src/D3.Grc.Desktop/Program.cs",
+    "src/D3.Grc.Desktop/Ui.cs",
+    "src/D3.Grc.Desktop/WorkflowPages.cs",
+    "tests/D3.Grc.Tests/RegressionTests.cs"
+  ]
+}

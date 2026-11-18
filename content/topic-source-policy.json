@@ -1,0 +1,48 @@
+{
+  "INTERNAL": [
+    "PRIVACY",
+    "ISMS",
+    "NIS2",
+    "AI",
+    "CLOUD",
+    "BCM",
+    "OSS",
+    "DORA"
+  ],
+  "GDPR": [
+    "PRIVACY"
+  ],
+  "BDSG": [
+    "PRIVACY"
+  ],
+  "NIS2": [
+    "NIS2"
+  ],
+  "BSIG": [
+    "NIS2"
+  ],
+  "ISO27001": [
+    "ISMS"
+  ],
+  "BSIGS": [
+    "ISMS"
+  ],
+  "BSI2004": [
+    "BCM"
+  ],
+  "AIACT": [
+    "AI"
+  ],
+  "MSSEC": [
+    "CLOUD"
+  ],
+  "SPDX": [
+    "OSS"
+  ],
+  "CYCLONEDX": [
+    "OSS"
+  ],
+  "DORA": [
+    "DORA"
+  ]
+}

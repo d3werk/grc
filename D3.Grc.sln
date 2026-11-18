@@ -1,0 +1,28 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "D3.Grc.Core", "src/D3.Grc.Core/D3.Grc.Core.csproj", "{F359CDE6-B53E-5599-9709-7034A1B46E0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "D3.Grc.Desktop", "src/D3.Grc.Desktop/D3.Grc.Desktop.csproj", "{10DD1FE7-2154-5E14-962C-7B83C028B105}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "D3.Grc.Tests", "tests/D3.Grc.Tests/D3.Grc.Tests.csproj", "{3EFEA3ED-4C45-5CA5-B3A7-FBAF886208D0}"
+EndProject
+Global
+ GlobalSection(SolutionConfigurationPlatforms) = preSolution
+  Debug|Any CPU = Debug|Any CPU
+  Release|Any CPU = Release|Any CPU
+ EndGlobalSection
+ GlobalSection(ProjectConfigurationPlatforms) = postSolution
+  {F359CDE6-B53E-5599-9709-7034A1B46E0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {F359CDE6-B53E-5599-9709-7034A1B46E0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {F359CDE6-B53E-5599-9709-7034A1B46E0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {F359CDE6-B53E-5599-9709-7034A1B46E0C}.Release|Any CPU.Build.0 = Release|Any CPU
+  {10DD1FE7-2154-5E14-962C-7B83C028B105}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {10DD1FE7-2154-5E14-962C-7B83C028B105}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {10DD1FE7-2154-5E14-962C-7B83C028B105}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {10DD1FE7-2154-5E14-962C-7B83C028B105}.Release|Any CPU.Build.0 = Release|Any CPU
+  {3EFEA3ED-4C45-5CA5-B3A7-FBAF886208D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+  {3EFEA3ED-4C45-5CA5-B3A7-FBAF886208D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  {3EFEA3ED-4C45-5CA5-B3A7-FBAF886208D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+  {3EFEA3ED-4C45-5CA5-B3A7-FBAF886208D0}.Release|Any CPU.Build.0 = Release|Any CPU
+ EndGlobalSection
+EndGlobal

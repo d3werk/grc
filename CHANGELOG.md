@@ -1,0 +1,12 @@
+# 0.6
+- Themenkontext und passende Quellenpolitik.
+- Lokale Registrierung/Anmeldung und vollständiger Logout.
+- Sichtbares Speichern und Speichern unter.
+- Detail-/Dashboard-/Quellentabs.
+- Grafische Statusbalken und Drill-down.
+- Echter XLSX-Export mit Kontext, Daten und Statusverteilungen.
+- Additive Migration auf dem bekannten 0.5-Schema; D3GRC005 bleibt erhalten.
+- Eigene Vorlagen, Quellen und Glossar erweitert.
+- Abhängigkeiten aktualisiert, Auditwarnungen nicht unterdrückt.
+- Der mehrdeutige Typname Template wurde durch TextTemplate ersetzt.
+- Keine native Kompilation/Tests/Installerfreigabe in dieser Umgebung.

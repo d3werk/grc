@@ -1,70 +1,73 @@
-# D3 GRC 0.5 – Brand Workspace
+# D3 GRC 0.6 – Themen, Sitzungen, Tabs und Excel
 
-Eigenständiger Desktop-Entwicklungsstand für Datenschutz, Informationssicherheit, KI-Governance und Open-Source-Governance. C#/.NET 10, Avalonia, SQLite, EF-Core-Schemamigrationen.
+**Lieferumfang: vollständige Quellcode-Solution, kein kompilierter oder signierter Installer.**
+**Freigabestatus: Entwicklung / native Abnahme offen.**
 
-**Status: Quellcode, keine erfolgreich kompilierte oder signierte Endanwenderdistribution.**
+Diese Lieferung setzt die besprochenen Änderungen im C#-Quellcode um: lokale Registrierung/Anmeldung, Logout, sichtbares Speichern, Themenkontext, passende Quellen, Detailtabs, Dashboard-Balken und echter XLSX-Export.
 
-## Zuerst ansehen
-`DESIGN-VORSCHAU.html` per Doppelklick im Browser öffnen. Die interaktive Offline-Vorschau zeigt Navigation, Quellenfilter, Vorlagenbearbeitung, Mapping-Bestätigung, Glossar und Drucklayout. Sie speichert Änderungen nur im Arbeitsspeicher und ist KEIN Screenshot oder Ersatz der nativen Anwendung. Keine produktiven Daten eingeben.
+## Wichtig zur Ausgangsbasis
+Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser Sitzung nicht als Dateien verfügbar. Deshalb ist dies eine konsolidierte neue Solution, kein gegen dein Repository getesteter In-place-Patch. Die bekannte 0.5-Datenbankstruktur und das D3GRC005-Containerformat werden weiter unterstützt; eine additive Migration ist enthalten. Die Migration wurde mit einer kompatiblen SQL-Testdatenbank geprüft, NICHT mit deiner persönlichen Projektdatei oder über die native C#-Laufzeit.
 
-## Wichtig zum bisherigen Stand
-Die zuvor erzeugte 0.4-ZIP war im aktuellen Arbeitsverzeichnis nicht mehr verfügbar. Diese Lieferung ist daher eine konsolidierte eigenständige Solution, kein getesteter In-place-Patch auf dein lokales Repository. Nicht ungeprüft über bestehende Quellen kopieren. Das neue Dateiformat D3GRC005 ist nicht mit alten D3GRC004-/ZIP-/JSON-Projekten kompatibel. Ein Datenimport muss separat implementiert und getestet werden.
+**Nicht über den alten Quellcode entpacken. Alte Projektdateien zunächst nur als Kopie öffnen.**
 
-## Enthalten
-- Logo unverändert eingebunden; Markenfarben Grün #486E31, Türkis #2E90B2 und Graubraun #584E44.
-- Native Sidebar, Dashboard, Listen-/Detailansichten, Suche, Quellen-/Statusfilter, Sortierung, Leerzustände und Bestätigungsdialoge.
-- Datensätze: Anforderungen, Controls, Risiken, Audits, Findings, Maßnahmen, KI-Systeme, OSS-Komponenten.
-- Quellenbezogene typisierte Mappings mit Begründung und vorbereiteten Vorschlägen.
-- Evidence-Dateiimport mit Herkunft, Quellenbezug, Control, Hash und Gültigkeit; Wiederverwendung für mehrere Controls.
-- Audit-Scope, passende Evidence-Auswahl, Prüftextvorlagen und Abschlussregeln.
-- Quellenaktualisierung auf Klick als technischer Abruf/Hashvergleich mit Prüfhistorie und expliziter Bestätigung.
-- Eigene Texte getrennt von Katalogoriginalen; Updates überschreiben keine eigenen Fassungen oder Datensätze.
-- Speichern unter als verschlüsselte Projektkopie mit gleichem Passwort.
-- Druckansichten im Standardbrowser mit Druckdialog / PDF-Ausgabe; CSV-Export.
-- Tatsächlich befüllte SQLite-Referenzdatenbank plus JSON-Katalog.
-- 48 editierbare Glossarbegriffe und druckbares Glossar.
-- AES-256-GCM-/Argon2id-Projektcontainer, lokale kooperative Sperre, verschlüsselte Recovery nach Mutation und alle 30 Sekunden bei Dirty-Stand.
-- C#-Tests, SQL-/Strukturtests und vorbereitete native CI-Matrix.
-
-## Vorbefüllung
-8 Quellen: 7 offizielle externe Referenzen plus 1 interner D3-Arbeitsstandard.
-59 eigene Textvorlagen: 16 Anforderungen, 14 Controls, 6 Risiken, 4 Audits, 4 Findings, 3 Maßnahmen, 6 Nachweisanforderungen, 4 Prüfhandlungen, 1 KI-Steckbrief, 1 OSS-Steckbrief.
-48 Glossarbegriffe, 18 Mapping-Vorschläge.
-30 aktive Ausgangsdatensätze (16 Anforderungen + 14 Controls) sind ausdrücklich als Entwurf / vorbelegt markiert.
-**Keine echten Evidence-Dateien, keine bestandenen Audits und keine erfundenen Organisationsdaten werden vorbefüllt.**
-
-## In JetBrains Rider
+## Schnellstart in JetBrains Rider
 1. ZIP in ein neues Verzeichnis entpacken.
 2. `D3.Grc.sln` öffnen.
-3. .NET 10 SDK erkennen lassen, NuGet Restore durchführen.
-4. `D3.Grc.Desktop` als Startprojekt ausführen.
-5. Neues Projekt mit Passwort (mindestens 12 Zeichen) anlegen.
-6. Anforderungen und Controls prüfen, Verantwortliche und Scope ergänzen.
-7. Unter Mappings Vorschläge prüfen und explizit bestätigen.
-8. Tatsächliche Nachweise importieren, Audits anlegen und Scope zuordnen.
+3. Ein stabiles .NET-10-SDK installieren/erkennen lassen. `global.json` schließt Preview-SDKs aus.
+4. NuGet Restore ausführen, nicht alle Pakete auf neue Hauptversionen aktualisieren.
+5. Solution bauen und die Tests unter `tests/D3.Grc.Tests` ausführen.
+6. `D3.Grc.Desktop` als Startprojekt starten.
+7. Profilname und Profilpasswort eingeben; Registrieren / lokales Profil einrichten wählen. Anschließend anmelden.
+8. Neues Projekt mit separatem Projektpasswort anlegen oder eine KOPIE eines 0.5-Projekts öffnen.
+9. Konkretes Thema wählen, Anforderungen/Controls prüfen und Änderungen speichern.
 
-Für Endanwender sind weiterhin signierte self-contained Pakete vorgesehen. Keine Endanwenderskripte nötig; solche fertigen Installer sind hier NICHT enthalten.
+Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindestens 12 Zeichen bei der Einrichtung. Kein Passwort-Reset.
 
-## Druck und Export
-Drucken erzeugt nach Warnung eine lokale Klartext-HTML-Datei und öffnet den Standardbrowser. Dort Drucken / als PDF speichern. Das ist kein eingebetteter plattformübergreifender nativer Druckdialog und kein eigener PDF-Renderer. CSV exportiert die aktuell gefilterte Ansicht mit Schutz gegen übliche Tabellenformel-Injektion. Exporte nach dem Löschkonzept behandeln.
+## Neu im Quellcode
+- Lokale Profilregistrierung, Argon2id-Passwortprüfung, temporäre Sperre nach Fehlversuchen.
+- Anmeldung als Voraussetzung für Projektzugriffe.
+- Logout und manuelles Sperren schließen das Projekt, geben die lokale Projektsperre und den Schlüsselkontext frei und führen zur Anmeldung zurück.
+- Sichtbare globale Aktionen Speichern und Speichern unter; Formularaktion Änderungen speichern.
+- Formularspeicherung schreibt Datensatz, verschlüsselte Recovery und Hauptprojektdatei.
+- Themenfilter für Datenschutz, Informationssicherheit, NIS2, KI, Cloud Security, BCM, Open Source und DORA; zusätzlich Zuordnung prüfen.
+- Quellen- und Vorlagenauswahl passend zum Thema; bewusste zusätzliche Quellenbezüge und Mehrfachthemen möglich.
+- Datensatz-Tabs: Details, Quellen, Bezüge, Evidence, Historie.
+- Dashboard-Tabs: Management, Umsetzung, Nachweise & Audits, Quellen & Qualität.
+- Grafische Statusbalken mit echten Bestandszahlen und Drill-down. Keine erfundenen Compliance-Werte.
+- XLSX-Export mit mehreren Arbeitsblättern, Zahlen-/Datumszellen, Filtern und fixierten Überschriften.
+- HTML-Druckansicht im Standardbrowser, PDF über den Browserdruckdialog.
+- Typisierte Mappings mit Abdeckung, Scope und Begründung; Vorschläge müssen bestätigt werden.
+- Evidence-Dateiimport, Hashprüfung, Gültigkeit und Wiederverwendung für mehrere Controls.
+- Audit-Scope, Prüfvorlagen, passende Evidence, Kriterien-Snapshot und Abschlussregeln.
+- Quellenbutton mit HTTPS-Allowlist, Größen-/Zeitlimit, Hashvergleich und Prüfhistorie.
 
-## Sicherheitsgrenze
-Projektdatei, Recovery und Backups sind verschlüsselt. Die aktive SQLite-Arbeitskopie im privaten Benutzerverzeichnis ist NICHT SQLCipher-verschlüsselt. Nach normalem Schließen wird sie entfernt; nach Absturz können Reste bleiben. Explizite Bereinigung vorhanden. Datenträgerverschlüsselung verwenden. Kein Schutz gegen Malware/Administrator/RAM-Dumps. Kein Passwort-Reset.
+## Vorbefüllung bei einem neuen Projekt
+- 8 Fachthemen plus Zuordnung prüfen.
+- 13 Quellen: 12 externe offizielle Referenzen plus interner D3-Arbeitsstandard.
+- 126 eigene editierbare Arbeitshilfen, keine vollständige Norm-/Gesetzesbibliothek.
+- 36 vorbereitete Datensätze: 18 Anforderungen und 18 Controls, alle Entwurf.
+- 12 nicht automatisch aktive Mapping-Vorschläge.
+- 48 Glossarbegriffe.
+- Keine echten Nachweisdateien, keine bestandenen Prüfungen, keine erfundenen Organisationsdaten.
+
+Die Zahlen gelten für ein neues Projekt aus dem mitgelieferten Starterkatalog. Bei Migration vorhandener 0.5-Projekte werden vorhandene Inhalte erhalten und neue V06-Inhalte ergänzt; die Gesamtzahlen können deshalb abweichen.
 
 ## Prüfstatus
-- Native C#-Kompilation: blockiert, kein dotnet SDK vorhanden; Buildversuch protokolliert.
-- C#-Tests: enthalten, hier nicht ausgeführt.
-- HTML-Designvorschau: Browserinteraktionen und Druck-CSS separat geprüft; nicht mit Avalonia-Tests verwechseln.
-- SQLite-/Seed-/Strukturprüfungen: siehe docs/validation.
-- Keine Installer, Signaturen oder native Plattformabnahme erzeugt.
+Die unabhängigen SQL-/XML-/Strukturprüfungen wurden ausgeführt; Ergebnis in `docs/validation.json`. Ein C#-Build wurde versucht, scheiterte aber an der Umgebung: `dotnet` ist nicht installiert, Exit 127. Auch der SDK-Download war hier nicht zugänglich. Deshalb sind C#-Tests, native GUI, tatsächlicher XLSX-Laufzeitexport und Installer NICHT als erfolgreich geprüft zu verstehen.
 
-## Eigenständigkeit
-Öffentlich beschriebene integrierte GRC-Funktionsprinzipien von SAVISCON dienen als fachliche Orientierung. Keine Kopie der Oberfläche, kein Zugriff auf interne Produktlogik, keine Übernahme proprietärer Texte und keine Verbindung/Partnerschaft behauptet. Die D3-Oberfläche und alle Vorlagentexte sind eigenständig.
+## Sicherheit und Grenzen
+- Lokale Profile sind KEIN zentraler Identitätsdienst und KEINE manipulationssichere Teamrechteverwaltung.
+- Jeder mit Dateizugriff und Projektpasswort kann grundsätzlich das Projekt öffnen; ein lokales Profil ist keine zusätzliche serverseitige Zugriffsgrenze.
+- Aktive SQLite-Arbeitskopie liegt unverschlüsselt im privaten Benutzerverzeichnis. Datenträgerverschlüsselung verwenden.
+- Projektdatei/Recovery/Backups sind im Quellcode AES-GCM-verschlüsselt vorgesehen; kein unabhängiges Kryptoaudit.
+- XLSX-, HTML- und Evidence-Exporte sind Klartext.
+- Kein automatischer juristischer Aktualisierungsdienst und keine lizenzierten ISO-Normtexte.
+- Kein SSO, keine E-Mail-Registrierung, keine serverseitigen Rollen, keine signierten Installer.
 
 ## Dokumentation
-- docs/UI-UX.md: Designsystem und Bedienregeln.
-- docs/ANWENDERHANDBUCH.md: vollständiger Arbeitsablauf.
-- docs/QUELLEN-UND-UPDATES.md: Herkunft, Updategrenzen und Lizenzhinweise.
-- docs/DATENMODELL.md: Tabellen und Migrationen.
-- docs/GLOSSAR.md und docs/GLOSSAR.html: Glossar.
-- docs/ABNAHME.md: Freigabecheckliste und Grenzen.
+- `docs/ANWENDERHANDBUCH.md`
+- `docs/MIGRATION-05-06.md`
+- `docs/ANFORDERUNGEN-STATUS.md`
+- `docs/SICHERHEIT-UND-ABHAENGIGKEITEN.md`
+- `docs/ABNAHME.md`
+- `docs/GLOSSAR.md`

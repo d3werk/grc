@@ -1,0 +1,1 @@
+/tmp/_bash_cmd_a5173d9a-d57a-464b-b7b2-a15942eaaedc_1767a7db-3310-4a1f-99ad-dfb1c5418aab.sh: line 25: dotnet: command not found
