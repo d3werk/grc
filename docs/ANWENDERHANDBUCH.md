@@ -1,5 +1,7 @@
 # Anwenderhandbuch 0.6
 
+In Version 0.6.1 bieten zentrale Felder und Aktionen kurze Bedienhinweise. Den Mauszeiger auf dem Element stehen lassen oder das Element mit der Tastatur fokussieren und F1 drücken. Escape schließt einen geöffneten Hinweis.
+
 ## 1. Registrierung und Anmeldung
 Profilname und Profilpasswort eingeben. Registrieren / lokales Profil einrichten legt ausschließlich ein Profil im Benutzerverzeichnis dieses Rechners an. Es wird keine E-Mail verschickt und kein Onlinekonto erstellt. Danach mit demselben Profil anmelden. Nach fünf fehlgeschlagenen Versuchen wird das Profil vorübergehend gesperrt.
 

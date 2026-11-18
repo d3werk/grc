@@ -1,3 +1,8 @@
+# 0.6.1
+
+- Deutsche Tooltips für zentrale Aktionen und erklärungsbedürftige Eingaben in den Projekt- und Fachworkflows.
+- Struktur-, Funktions- und Bedienprüfung mit priorisierten Befunden im [Prüfbericht](docs/PRUEFBERICHT-0.6.1.md).
+
 # 0.6
 - Themenkontext und passende Quellenpolitik.
 - Lokale Registrierung/Anmeldung und vollständiger Logout.

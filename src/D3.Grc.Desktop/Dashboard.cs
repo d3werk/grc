@@ -8,12 +8,20 @@ public sealed partial class MainWindow
         var controls=_entries.Where(e=>e.Kind=="Control").ToList();var requirements=_entries.Where(e=>e.Kind=="Requirement").ToList();var findings=_entries.Where(e=>e.Kind=="Finding").ToList();var measures=_entries.Where(e=>e.Kind=="Measure").ToList();
         var evidence=new Dictionary<string,Proof>();int without=0;foreach(var control in controls){var proofs=await _workspace.EvidenceAsync(control.Id);foreach(var p in proofs)evidence[p.Id]=p;if(!proofs.Any(p=>DateTimeOffset.TryParse(p.ValidUntil,out var until)&&until>DateTimeOffset.UtcNow))without++;}
         async Task Drill(string kind,string status=""){_page=kind;_statusFilter=status;await Render();}
-        Control MetricCard(string label,int value,string hint,string kind)=>Ui.Card(Ui.Stack(Ui.Text(label,13),Ui.Text(value.ToString(),34,true),Ui.Text(hint,12),Button("Details",()=>Drill(kind))));
+        Control MetricCard(string label,int value,string hint,string kind)=>Ui.Card(Ui.Stack(
+            Ui.Text(label,13),Ui.Text(value.ToString(),34,true),Ui.Text(hint,12),
+            Ui.Help(Button("Details", () => Drill(kind)), $"Öffnet {Pages[kind]} mit dem aktuellen Thema, Geltungsbereich und Suchtext.", $"Details zu {label}")));
         var cards=Ui.Row(MetricCard("Anforderungen",requirements.Count,"Anwendbarkeit separat bewerten","Requirement"),MetricCard("Controls",controls.Count,"Entwurf ist keine Umsetzung","Control"),MetricCard("Offene Findings",findings.Count(f=>f.Status!="Geschlossen"),"Aktueller Bearbeitungsstand","Finding"),MetricCard("Nachweise",evidence.Count,"Tatsächliche Dateien im Scope","Evidence"));
         Control Bars(string title,IEnumerable<(string Label,int Count,string Kind,string Status)> values)
         {
             var data=values.ToList();var panel=Ui.Stack(Ui.Text(title,18,true));var max=Math.Max(1,data.Select(x=>x.Count).DefaultIfEmpty().Max());
-            foreach(var item in data){var bar=new ProgressBar{Minimum=0,Maximum=max,Value=item.Count,Height=16,Foreground=Ui.Green};panel.Children.Add(Ui.Stack(Ui.Row(Ui.Text(item.Label,13),Ui.Text(item.Count.ToString(),15,true),Button("Ansehen",()=>Drill(item.Kind,item.Status))),bar));}
+            foreach (var item in data)
+            {
+                var bar = new ProgressBar { Minimum = 0, Maximum = max, Value = item.Count, Height = 16, Foreground = Ui.Green };
+                var details = Ui.Help(Button("Ansehen", () => Drill(item.Kind, item.Status)),
+                    $"Öffnet {Pages[item.Kind]} mit dem Listenstatus {item.Status}.", $"{Pages[item.Kind]} mit Status {item.Status} ansehen");
+                panel.Children.Add(Ui.Stack(Ui.Row(Ui.Text(item.Label,13),Ui.Text(item.Count.ToString(),15,true),details),bar));
+            }
             if(data.Sum(x=>x.Count)==0)panel.Children.Add(Ui.Notice("Noch keine Daten für diese Auswertung. Keine positive Erfüllungsaussage."));return Ui.Card(panel);
         }
         var statusBars=Bars("Control-Status",Entry.Statuses("Control").Select(s=>(s,controls.Count(c=>c.Status==s),"Control",s)));
