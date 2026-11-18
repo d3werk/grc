@@ -26,19 +26,50 @@ public sealed partial class MainWindow
         foreach(var b in new[]{code,title,owner,due,scope,locator,body,reason})Watch(b);Watch(source);Watch(status);
         async Task SaveRecord(){var e=new Entry{Id=selected?.Id??Guid.NewGuid().ToString("N"),Kind=kind,Code=code.Text??"",Title=title.Text??"",Owner=owner.Text??"",DueDate=due.Text??"",Scope=scope.Text??"",Locator=locator.Text??"",Body=body.Text??"",SourceId=Sid(source),TemplateId=templateId,Status=(string?)status.SelectedItem??"Entwurf",Version=selected?.Version??1};await _workspace.SaveEntryAsync(e,_topicId,reason.Text??"");_dirty=false;await Render();}
         _saveForm=SaveRecord;
-        var apply=Button("Vorlage übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(body.Text)&&!await Ui.Confirm(this,"Vorlage ersetzt den aktuellen Formulartext.","Übernehmen"))return;templateId=t.Id;code.Text=t.Id;title.Text=t.Title;locator.Text=t.Locator;body.Text=t.Effective;});
-        var addSource=Button("Weiteren Quellenbezug hinzufügen",async()=>{if(selected is null)throw new ArgumentException("Datensatz zuerst speichern.");if(!await Discard())return;var pick=await Ui.Pick(this,"Zusätzliche Quelle (bewusster Cross-Bezug)",_allSources.Cast<object>());if(pick is not Source s)return;var loc=await Ui.Prompt(this,"Konkrete Fundstelle");if(loc is null)return;var why=await Ui.Prompt(this,"Fachliche Begründung des zusätzlichen Quellenbezugs");if(why is null)return;await _workspace.AddSourceAsync(selected.Id,s.Id,loc,why);await Render();});
-        var addTopic=Button("Weiterem Thema zuordnen",async()=>{if(selected is null)throw new ArgumentException("Datensatz zuerst speichern.");if(!await Discard())return;var pick=await Ui.Pick(this,"Weiteres Thema",_topics.Where(t=>t.Id!=""&&t.Id!="REVIEW").Cast<object>());if(pick is not Choice t)return;var why=await Ui.Prompt(this,"Begründung");if(why is null)return;await _workspace.AddTopicAsync(selected.Id,t.Id,why);await Render();});
-        var general=Ui.Scroll(Ui.Stack(Ui.Notice(_topicId==""?"Gesamtansicht. Zum Speichern ein konkretes Thema auswählen.":"Quellen und Vorlagen sind auf das Thema eingeschränkt. Zusätzliche Bezüge werden separat begründet."),topics,Ui.Field("Code",code),Ui.Field("Titel *",title),Ui.Field("Status",status),Ui.Field("Verantwortung",owner),Ui.Field("Termin",due),Ui.Field("Scope",scope),Ui.Field("Beschreibung / Umsetzung",body),Ui.Field("Änderungs-/Bewertungsbegründung *",reason)));
-        var sources=Ui.Scroll(Ui.Stack(Ui.Field("Primäre Anforderungsquelle",source),Ui.Field("Fundstelle",locator),Ui.Field("Passende Textvorlage",template),apply,Ui.Text("Zugeordnete Quellen",16,true),refs,addSource,addTopic));
+        var apply=Button("Vorlage übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(body.Text)&&!await Ui.Confirm(this,"Vorlage ersetzt den aktuellen Formulartext.","Übernehmen"))return;templateId=t.Id;code.Text=t.Id;title.Text=t.Title;locator.Text=t.Locator;body.Text=t.Effective;},
+            help: "Ersetzt Code, Titel, Fundstelle und Beschreibung im Formular. Danach die Felder prüfen und speichern.");
+        var addSource=Button("Weiteren Quellenbezug hinzufügen",async()=>{if(selected is null)throw new ArgumentException("Datensatz zuerst speichern.");if(!await Discard())return;var pick=await Ui.Pick(this,"Zusätzliche Quelle (bewusster Cross-Bezug)",_allSources.Cast<object>());if(pick is not Source s)return;var loc=await Ui.Prompt(this,"Konkrete Fundstelle");if(loc is null)return;var why=await Ui.Prompt(this,"Fachliche Begründung des zusätzlichen Quellenbezugs");if(why is null)return;await _workspace.AddSourceAsync(selected.Id,s.Id,loc,why);await Render();},
+            help: "Ergänzt eine Quelle am gespeicherten Eintrag. Fundstelle und fachliche Begründung werden abgefragt.");
+        var addTopic=Button("Weiterem Thema zuordnen",async()=>{if(selected is null)throw new ArgumentException("Datensatz zuerst speichern.");if(!await Discard())return;var pick=await Ui.Pick(this,"Weiteres Thema",_topics.Where(t=>t.Id!=""&&t.Id!="REVIEW").Cast<object>());if(pick is not Choice t)return;var why=await Ui.Prompt(this,"Begründung");if(why is null)return;await _workspace.AddTopicAsync(selected.Id,t.Id,why);await Render();},
+            help: "Macht denselben gespeicherten Eintrag in einem zusätzlichen Thema auffindbar. Die Zuordnung braucht eine Begründung.");
+        var general = Ui.Scroll(Ui.Stack(
+            Ui.Notice(_topicId == "" ? "Gesamtansicht. Zum Speichern ein konkretes Thema auswählen." : "Quellen und Vorlagen sind auf das Thema eingeschränkt. Zusätzliche Bezüge werden separat begründet."),
+            topics,
+            Ui.Field("Code", code, "Kurzes internes Kennzeichen, um den Eintrag in Listen und Berichten wiederzufinden."),
+            Ui.Field("Titel *", title),
+            Ui.Field("Status", status, kind == "Requirement"
+                ? "Hält die fachliche Entscheidung zur Anwendbarkeit der Anforderung fest."
+                : "Hält den Bearbeitungsstand fest. Auditabschluss und Finding-Schließung erfolgen unter Bezüge."),
+            Ui.Field("Verantwortung", owner, "Rolle oder Person angeben, die den Eintrag fachlich betreut."),
+            Ui.Field("Termin", due, "Datum im Format JJJJ-MM-TT eingeben, zum Beispiel 2026-11-30."),
+            Ui.Field("Scope", scope, "Geltungsbereich des Eintrags, etwa ein System, eine Einheit oder ein Prozess. Der globale Filter sucht den exakten Text."),
+            Ui.Field("Beschreibung / Umsetzung", body),
+            Ui.Field("Änderungs-/Bewertungsbegründung *", reason, "Den Anlass der Änderung oder die fachlichen Gründe für die Entscheidung dokumentieren.")));
+        var sources = Ui.Scroll(Ui.Stack(
+            Ui.Field("Primäre Anforderungsquelle", source, "Hauptquelle für diesen Eintrag aus dem gewählten Thema auswählen."),
+            Ui.Field("Fundstelle", locator, "Die konkrete Stelle in der Hauptquelle angeben, etwa Artikel 32 Absatz 1."),
+            Ui.Field("Passende Textvorlage", template, "Zeigt Vorlagen für die gewählte Hauptquelle und diesen Eintragstyp."),
+            apply, Ui.Text("Zugeordnete Quellen", 16, true), refs, addSource, addTopic));
         var workflow=Ui.Stack(Ui.Text("Verknüpfungen",18,true),related,Button("Mappings öffnen",async()=>{if(!await Discard())return;_page="Mappings";await Render();}));
-        if(kind=="Audit")workflow.Children.Add(Button("Prüfungen dokumentieren",async()=>{if(selected is null)throw new ArgumentException("Audit auswählen.");if(!await Discard())return;_body.Content=await AuditPage(selected);},true));
+        if(kind=="Audit")workflow.Children.Add(Button("Prüfungen dokumentieren",async()=>{if(selected is null)throw new ArgumentException("Audit auswählen.");if(!await Discard())return;_body.Content=await AuditPage(selected);},true,
+            "Öffnet die Prüferfassung für Controls, die dem gespeicherten Audit unter Mappings zugeordnet sind."));
         if(kind=="Finding")workflow.Children.Add(Button("Mit Wirksamkeitsnachweis schließen",async()=>{
-            if(selected is null)throw new ArgumentException("Finding auswählen.");if(!await Discard())return;var ids=_mappings.Where(m=>m.From==selected.Id&&m.Type=="Finding → Control").Select(m=>m.To);var eligible=new List<Proof>();foreach(var id in ids)eligible.AddRange(await _workspace.EvidenceAsync(id));var pick=await Ui.Pick(this,"Wirksamkeitsnachweis",eligible.DistinctBy(p=>p.Id).Cast<object>());if(pick is not Proof p)return;var review=await Ui.Prompt(this,"Wirksamkeitsprüfung und Ergebnis dokumentieren");if(review is null)return;await _workspace.CloseFindingAsync(selected.Id,p.Id,review);await Render();}));
-        var tabs=new TabControl{ItemsSource=new[]{Ui.Tab("Details",general),Ui.Tab("Quellen",sources),Ui.Tab("Bezüge",Ui.Scroll(workflow)),Ui.Tab("Evidence",proofs),Ui.Tab("Historie",history)}};
-        var save=Button("Änderungen speichern",SaveRecord,true);var cancel=Button("Abbrechen",async()=>{if(!await Discard())return;await Render();});var duplicate=Button("Duplizieren",async()=>{if(selected is null)return;if(!await Discard())return;selected=null;code.Text=(code.Text??"")+"-KOPIE";status.SelectedIndex=0;_dirty=true;});
-        var delete=Button("Löschen",async()=>{if(selected is null)return;if(!await Discard())return;var why=await Ui.Prompt(this,"Löschbegründung (verknüpfte Datensätze bleiben geschützt)");if(why is null)return;await _workspace.DeleteAsync(selected.Id,why);await Render();});
+            if(selected is null)throw new ArgumentException("Finding auswählen.");if(!await Discard())return;var ids=_mappings.Where(m=>m.From==selected.Id&&m.Type=="Finding → Control").Select(m=>m.To);var eligible=new List<Proof>();foreach(var id in ids)eligible.AddRange(await _workspace.EvidenceAsync(id));var pick=await Ui.Pick(this,"Wirksamkeitsnachweis",eligible.DistinctBy(p=>p.Id).Cast<object>());if(pick is not Proof p)return;var review=await Ui.Prompt(this,"Wirksamkeitsprüfung und Ergebnis dokumentieren");if(review is null)return;await _workspace.CloseFindingAsync(selected.Id,p.Id,review);await Render();},
+            help: "Das Finding braucht den Status Wirksamkeitsprüfung und einen gültigen Nachweis für alle verknüpften Controls."));
+        var tabs=new TabControl{ItemsSource=new[]{Ui.Tab("Details",general),Ui.Tab("Quellen",sources),
+            Ui.Tab("Bezüge", Ui.Scroll(workflow), "Zeigt gespeicherte Zuordnungen und verfügbare Prüfschritte."),
+            Ui.Tab("Evidence", proofs, "Dateinachweise gehören zu Controls. Bei anderen Einträgen die verknüpften Controls prüfen."),
+            Ui.Tab("Historie", history, "Zeigt protokollierte Aktivitäten zu diesem Eintrag.")}};
+        var save=Button("Änderungen speichern",SaveRecord,true, "Speichert den Eintrag mit der angegebenen Begründung im Projekt.");
+        var cancel=Button("Abbrechen",async()=>{if(!await Discard())return;await Render();});
+        var duplicate=Button("Duplizieren",async()=>{if(selected is null)return;if(!await Discard())return;selected=null;code.Text=(code.Text??"")+"-KOPIE";status.SelectedIndex=0;_dirty=true;},
+            help: "Übernimmt die Formularwerte als Entwurf für einen neuen Eintrag. Erst Speichern legt die Kopie an.");
+        var delete=Button("Löschen",async()=>{if(selected is null)return;if(!await Discard())return;var why=await Ui.Prompt(this,"Löschbegründung (verknüpfte Datensätze bleiben geschützt)");if(why is null)return;await _workspace.DeleteAsync(selected.Id,why);await Render();},
+            help: "Löscht den ausgewählten Eintrag nach Eingabe einer Begründung. Verknüpfte Einträge sind vor dem Löschen geschützt.");
         var create=Button("Neuer Eintrag",async()=>{if(!await Discard())return;_loading=true;try{Clear();}finally{_loading=false;_dirty=false;}});
-        return Ui.Split(Ui.Card(Ui.Fill(Ui.Stack(Ui.Row(create),Ui.Field("Status",statusFilter),Ui.Field("Sortierung",sort)),list)),Ui.Card(Ui.Fill(Ui.Text("Details · "+Pages[kind],18,true),tabs,Ui.Row(save,cancel,duplicate,delete))));
+        return Ui.Split(Ui.Card(Ui.Fill(Ui.Stack(Ui.Row(create),
+            Ui.Field("Listenstatus", statusFilter, "Filtert nur diese Liste. Der Export richtet sich nach den globalen Filtern."),
+            Ui.Field("Sortierung", sort, "Sortiert diese Liste. Beim Sortieren nach Termin stehen Einträge ohne Datum am Ende.")), list)),
+            Ui.Card(Ui.Fill(Ui.Text("Details · "+Pages[kind],18,true),tabs,Ui.Row(save,cancel,duplicate,delete))));
     }
 }

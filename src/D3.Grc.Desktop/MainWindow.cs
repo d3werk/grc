@@ -14,7 +14,7 @@ namespace D3.Grc.Desktop;
 public sealed partial class MainWindow:Window
 {
     private readonly LocalIdentity _identity;private readonly Workspace _workspace;
-    private ContentControl _body=new();private TextBlock _status=Ui.Text("Entwicklungsstand 0.6 · noch keine Produktionsfreigabe",12);
+    private ContentControl _body=new();private TextBlock _status=Ui.Text("Entwicklungsstand 0.6.1 · noch keine Produktionsfreigabe",12);
     private ComboBox _topic=Ui.Combo();private TextBox _scope=Ui.Input("Scope exakt filtern (leer = alle)"),_search=Ui.Input("Suche: Titel, Code, Beschreibung, Owner");
     private TextBlock _context=Ui.Text("",18,true);private readonly DispatcherTimer _timer=new(){Interval=TimeSpan.FromSeconds(30)};
     private Grid? _shell;private bool _busy,_loading,_dirty,_allowClose;private Func<Task>? _saveForm;private string _page="Dashboard",_topicId="",_scopeValue="",_searchValue="",_statusFilter="";
@@ -22,14 +22,23 @@ public sealed partial class MainWindow:Window
     private static readonly Dictionary<string,string> Pages=new(){["Dashboard"]="Übersicht",["Requirement"]="Anforderungen",["Control"]="Controls",["Risk"]="Risiken",["Mappings"]="Mappings",["Evidence"]="Evidence",["Audit"]="Audits",["Finding"]="Findings",["Measure"]="Maßnahmen",["AiSystem"]="KI-Systeme",["OssComponent"]="Open Source",["Sources"]="Quellen",["Templates"]="Textvorlagen",["Glossary"]="Glossar",["Journal"]="Aktivitäten"};
     public MainWindow(LocalIdentity identity,Workspace workspace)
     {
-        _identity=identity;_workspace=workspace;Title="D3 GRC 0.6 · Datenschutz und Informationssicherheit";Width=1500;Height=1000;MinWidth=1200;MinHeight=800;Background=Brush.Parse("#F4F6F5");FontSize=14;
+        _identity=identity;_workspace=workspace;Title="D3 GRC 0.6.1 · Datenschutz und Informationssicherheit";Width=1500;Height=1000;MinWidth=1200;MinHeight=800;Background=Brush.Parse("#F4F6F5");FontSize=14;
         Opened+=(_,_)=>LoginScreen();
         Closing+=async(_,e)=>{if(_allowClose)return;e.Cancel=true;if(_busy)return;await Run(async()=>{if(!await Discard())return;if(_workspace.IsOpen)await _workspace.SaveAsync();await _workspace.LogoutAsync();_allowClose=true;_timer.Stop();Close();});};
         KeyDown+=async(_,e)=>{var command=e.KeyModifiers.HasFlag(KeyModifiers.Control)||e.KeyModifiers.HasFlag(KeyModifiers.Meta);if(command&&e.Key==Key.S){e.Handled=true;await Run(Save);}else if(command&&e.Key==Key.P){e.Handled=true;await Run(()=>Export(false));}};
         _timer.Tick+=async(_,_)=>{if(!_busy&&_identity.User is not null&&_workspace.IsOpen&&_workspace.IsDirty)await Run(async()=>{await _workspace.AutosaveAsync();_status.Text="Nur Recovery aktualisiert; Hauptdatei noch nicht gespeichert.";});};_timer.Start();
     }
-    private Button Button(string label,Func<Task> action,bool primary=false)
-    {var b=new Button{Content=label,MinHeight=38,Padding=new Thickness(13,8),CornerRadius=new CornerRadius(6)};if(primary){b.Background=Ui.Green;b.Foreground=Brushes.White;}b.Click+=async(_,_)=>await Run(action);return b;}
+    private Button Button(string label, Func<Task> action, bool primary = false, string? help = null)
+    {
+        var button = new Button { Content = label, MinHeight = 38, Padding = new Thickness(13, 8), CornerRadius = new CornerRadius(6) };
+        if (primary)
+        {
+            button.Background = Ui.Green;
+            button.Foreground = Brushes.White;
+        }
+        button.Click += async (_, _) => await Run(action);
+        return help is null ? button : Ui.Help(button, help);
+    }
     private async Task Run(Func<Task> action)
     {
         if(_busy)return;_busy=true;if(_shell is not null)_shell.IsEnabled=false;
@@ -46,9 +55,12 @@ public sealed partial class MainWindow:Window
         var login=Button("Anmelden",async()=>{if(!await _identity.LoginAsync(name.Text??"",password.Text??""))throw new UnauthorizedAccessException("Anmeldung fehlgeschlagen.");password.Text="";BuildShell();await Render();},true);
         var register=Button("Registrieren / lokales Profil einrichten",async()=>{
             var confirm=await Ui.Prompt(this,"Profilpasswort bestätigen (mindestens 12 Zeichen)",true);if(confirm is null)return;if(confirm!=password.Text)throw new ArgumentException("Passwörter stimmen nicht überein.");await _identity.RegisterAsync(name.Text??"",password.Text??"");password.Text="";await Ui.Confirm(this,"Lokales Profil eingerichtet. Jetzt anmelden. Es wurde kein Onlinekonto erstellt.","OK");
-        });
+        }, help: "Legt auf diesem Rechner ein Profil mit dem angegebenen Namen und Passwort an.");
         var logo=new Image{Source=new Bitmap(Path.Combine(AppContext.BaseDirectory,"content","logo.png")),Height=65,Stretch=Stretch.Uniform};
-        var card=Ui.Card(Ui.Stack(logo,Ui.Text("D3 GRC · Anmeldung",26,true),Ui.Notice("Lokales Profil auf diesem Rechner. Kein Cloudkonto, keine E-Mail-Registrierung und keine serverseitigen Teamrechte. Projektpasswort wird separat abgefragt."),Ui.Field("Profilname",name),Ui.Field("Profilpasswort",password),Ui.Row(login,register),Ui.Text("Kein Passwort-Reset. Bei Profilverlust kann ein neues lokales Profil eingerichtet werden; Projektdateien bleiben durch ihr eigenes Passwort geschützt.",12)));
+        var card=Ui.Card(Ui.Stack(logo,Ui.Text("D3 GRC · Anmeldung",26,true),Ui.Notice("Lokales Profil auf diesem Rechner. Kein Cloudkonto, keine E-Mail-Registrierung und keine serverseitigen Teamrechte. Projektpasswort wird separat abgefragt."),
+            Ui.Field("Profilname", name, "Der Profilname wird im Änderungsjournal als lokale Identität angezeigt."),
+            Ui.Field("Profilpasswort", password, "Ein neues Profilpasswort muss mindestens 12 Zeichen haben. Projektdateien haben ein separates Passwort."),
+            Ui.Row(login,register),Ui.Text("Kein Passwort-Reset. Bei Profilverlust kann ein neues lokales Profil eingerichtet werden; Projektdateien bleiben durch ihr eigenes Passwort geschützt.",12),Ui.Text(Ui.KeyboardHelp, 12)));
         card.MaxWidth=700;card.HorizontalAlignment=HorizontalAlignment.Center;card.VerticalAlignment=VerticalAlignment.Center;card.Margin=new Thickness(24);Content=card;
     }
     private void BuildShell()
@@ -57,19 +69,42 @@ public sealed partial class MainWindow:Window
         _body=new ContentControl();_status=Ui.Text("Angemeldet",12);_topic=Ui.Combo();_scope=Ui.Input("Scope exakt filtern (leer = alle)");_search=Ui.Input("Suche: Titel, Code, Beschreibung, Owner");_context=Ui.Text("",18,true);
         _topicId="";_scopeValue="";_searchValue="";_page="Dashboard";_statusFilter="";
         _shell=new Grid{ColumnDefinitions=new ColumnDefinitions("210,*"),RowDefinitions=new RowDefinitions("Auto,*,Auto")};
-        var header=Ui.Row(new Image{Source=new Bitmap(Path.Combine(AppContext.BaseDirectory,"content","logo.png")),Width=390,Height=65,Stretch=Stretch.Uniform},Ui.Text("Profil: "+_identity.User,14,true),Button("Sitzung sperren",Logout),Button("Logout / Abmelden",Logout));header.Margin=new Thickness(16);Grid.SetColumnSpan(header,2);_shell.Children.Add(header);
-        var nav=Ui.Stack(Ui.Text("ARBEITSBEREICH",12,true));foreach(var p in Pages){var key=p.Key;nav.Children.Add(Button(p.Value,async()=>{if(!await Discard())return;_page=key;_statusFilter="";await Render();}));}nav.Children.Add(Button("Arbeitskopien bereinigen",async()=>{if(await Ui.Confirm(this,"Erst Recovery prüfen. Verwaiste Klartext-Arbeitskopien endgültig löschen?","Bereinigen"))_status.Text=Workspace.CleanupOrphans()+" Arbeitskopien entfernt.";}));nav.Margin=new Thickness(12);var side=Ui.Scroll(nav);Grid.SetRow(side,1);_shell.Children.Add(side);
-        var actions=Ui.Row(Button("Neues Projekt",NewProject),Button("Öffnen",OpenProject),Button("Speichern",Save,true),Button("Speichern unter",SaveAs),Button("Projekt schließen",CloseProject),Button("Excel exportieren",()=>Export(true)),Button("Drucken / PDF",()=>Export(false)));
+        const string sessionHelp = "Schließt das Projekt und kehrt zur Anmeldung zurück. Zum Weiterarbeiten erneut anmelden und das Projekt öffnen.";
+        var header=Ui.Row(new Image{Source=new Bitmap(Path.Combine(AppContext.BaseDirectory,"content","logo.png")),Width=390,Height=65,Stretch=Stretch.Uniform},Ui.Text("Profil: "+_identity.User,14,true),Button("Sitzung sperren",Logout,help:sessionHelp),Button("Logout / Abmelden",Logout,help:sessionHelp));header.Margin=new Thickness(16);Grid.SetColumnSpan(header,2);_shell.Children.Add(header);
+        var nav=Ui.Stack(Ui.Text("ARBEITSBEREICH",12,true));foreach(var p in Pages){var key=p.Key;nav.Children.Add(Button(p.Value,async()=>{if(!await Discard())return;_page=key;_statusFilter="";await Render();}));}
+        nav.Children.Add(Button("Arbeitskopien bereinigen",async()=>{if(await Ui.Confirm(this,"Erst Recovery prüfen. Verwaiste Klartext-Arbeitskopien endgültig löschen?","Bereinigen"))_status.Text=Workspace.CleanupOrphans()+" Arbeitskopien entfernt.";},
+            help: "Löscht zurückgebliebene unverschlüsselte Arbeitskopien. Zuerst den verschlüsselten Wiederherstellungsstand prüfen."));
+        nav.Margin=new Thickness(12);var side=Ui.Scroll(nav);Grid.SetRow(side,1);_shell.Children.Add(side);
+        var actions = Ui.Row(
+            Button("Neues Projekt", NewProject, help: "Legt eine verschlüsselte Projektdatei mit einem eigenen Passwort an."),
+            Button("Öffnen", OpenProject, help: "Öffnet eine verschlüsselte .d3grc-Datei. Bei vorhandenem Wiederherstellungsstand erscheint eine Auswahl."),
+            Button("Speichern", Save, true, "Übernimmt das bearbeitete Formular oder speichert die verschlüsselte Hauptdatei. Tastenkürzel Strg+S oder Cmd+S."),
+            Button("Speichern unter", SaveAs, help: "Erstellt eine neue verschlüsselte Projektkopie mit demselben Passwort."),
+            Button("Projekt schließen", CloseProject, help: "Speichert und schließt das Projekt. Das lokale Profil bleibt angemeldet."),
+            Button("Excel exportieren", () => Export(true), help: "Exportiert Thema, Geltungsbereich und Suche als unverschlüsselte Excel-Datei."),
+            Button("Drucken / PDF", () => Export(false), help: "Erstellt eine unverschlüsselte HTML-Druckansicht. Im Browser drucken oder als PDF speichern."));
         _topic.MinWidth=250;_scope.Width=230;_search.Width=300;
-        var filters=Ui.Row(Ui.Field("Thema",_topic),Ui.Field("Geltungsbereich",_scope),Ui.Field("Suche",_search),Button("Filter anwenden",ApplyFilters),Button("Zurücksetzen",async()=>{if(!await Discard())return;_scope.Text="";_search.Text="";_scopeValue="";_searchValue="";_statusFilter="";await Render();}));
+        var filters = Ui.Row(
+            Ui.Field("Thema", _topic, "Die Auswahl wirkt sofort. Zum Speichern eines Eintrags ein konkretes Thema auswählen."),
+            Ui.Field("Geltungsbereich", _scope, "Filtert nach dem vollständigen Scope-Text. Ein leeres Feld zeigt alle Geltungsbereiche."),
+            Ui.Field("Suche", _search, "Findet Teiltexte in Titel, Code, Beschreibung oder Verantwortung der Einträge."),
+            Button("Filter anwenden", ApplyFilters, help: "Aktualisiert die Ansicht mit dem eingegebenen Geltungsbereich und Suchtext."),
+            Button("Zurücksetzen",async()=>{if(!await Discard())return;_scope.Text="";_search.Text="";_scopeValue="";_searchValue="";_statusFilter="";await Render();}, help: "Leert Suche, Geltungsbereich und Listenstatus. Das gewählte Thema bleibt aktiv."));
         _topic.SelectionChanged+=async(_,_)=>{if(_loading||_busy)return;await Run(async()=>{var next=(_topic.SelectedItem as Choice)?.Id??"";if(!await Discard()){_loading=true;_topic.SelectedItem=_topics.FirstOrDefault(t=>t.Id==_topicId);_loading=false;return;}_topicId=next;_statusFilter="";await Render();});};
-        var top=Ui.Stack(_context,actions,filters);var main=Ui.Fill(top,_body);main.Margin=new Thickness(20,8,20,16);Grid.SetRow(main,1);Grid.SetColumn(main,1);_shell.Children.Add(main);var footer=Ui.Card(_status);Grid.SetRow(footer,2);Grid.SetColumnSpan(footer,2);_shell.Children.Add(footer);Content=_shell;
+        var top=Ui.Stack(_context,actions,filters);var main=Ui.Fill(top,_body);main.Margin=new Thickness(20,8,20,16);Grid.SetRow(main,1);Grid.SetColumn(main,1);_shell.Children.Add(main);
+        var footerContent = new DockPanel();
+        var keyboardHelp = Ui.Text(Ui.KeyboardHelp, 12);
+        keyboardHelp.Margin = new Thickness(12, 0, 0, 0);
+        DockPanel.SetDock(keyboardHelp, Dock.Right);
+        footerContent.Children.Add(keyboardHelp);
+        footerContent.Children.Add(_status);
+        var footer=Ui.Card(footerContent);Grid.SetRow(footer,2);Grid.SetColumnSpan(footer,2);_shell.Children.Add(footer);Content=_shell;
     }
     private async Task ApplyFilters(){if(!await Discard())return;_scopeValue=_scope.Text?.Trim()??"";_searchValue=_search.Text?.Trim()??"";await Render();}
     private async Task Render()
     {
         _loading=true;_saveForm=null;try{
-            if(!_workspace.IsOpen){_body.Content=Ui.Card(Ui.Stack(Ui.Text("Projekt öffnen oder anlegen",24,true),Ui.Text("Anmeldung und Projektentsperrung sind getrennt. Bestehende 0.5-Dateien werden auf einer Arbeitskopie migriert; vorab wird ein verschlüsseltes Backup erstellt."),Ui.Notice("Entwicklungsstand. Native Kompilation und Plattformabnahme noch offen. Aktive SQLite-Arbeitskopie ist Klartext; Datenträgerverschlüsselung verwenden.")));_context.Text="Kein Projekt geöffnet · Profil "+_identity.User;return;}
+            if(!_workspace.IsOpen){_body.Content=Ui.Card(Ui.Stack(Ui.Text("Projekt öffnen oder anlegen",24,true),Ui.Text("Anmeldung und Projektentsperrung sind getrennt. Bestehende 0.5-Dateien werden auf einer Arbeitskopie migriert; vorab wird ein verschlüsseltes Backup erstellt."),Ui.Notice("Entwicklungsstand. Die aktive SQLite-Arbeitskopie liegt im Klartext vor. Datenträgerverschlüsselung verwenden.")));_context.Text="Kein Projekt geöffnet · Profil "+_identity.User;return;}
             _topics=new[]{new Choice("","Alle Themen")}.Concat(await _workspace.TopicsAsync()).ToList();_topic.ItemsSource=_topics;_topic.SelectedItem=_topics.FirstOrDefault(t=>t.Id==_topicId)??_topics[0];
             _all=await _workspace.EntriesAsync();_entries=(await _workspace.EntriesAsync(_topicId,"",_scopeValue)).Where(Matches).ToList();_sources=await _workspace.SourcesAsync(_topicId);_allSources=await _workspace.SourcesAsync();_mappings=await _workspace.MappingsAsync();
             _context.Text=$"{_workspace.Name} / {(_topic.SelectedItem as Choice)?.Title} / {Pages[_page]}";

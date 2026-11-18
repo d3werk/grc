@@ -7,7 +7,10 @@ public sealed partial class MainWindow
     private async Task<Control> MappingPage()
     {
         var ids=_entries.Select(e=>e.Id).ToHashSet();var list=new ListBox{ItemsSource=_mappings.Where(m=>ids.Contains(m.From)||ids.Contains(m.To)).Select(m=>new Choice(m.Id,$"{_all.FirstOrDefault(e=>e.Id==m.From)?.Title} → {_all.FirstOrDefault(e=>e.Id==m.To)?.Title}\n{m.Type} · {m.Coverage} · {m.Approval}\n{m.Reason}")).ToList()};
-        var type=Ui.Combo();type.ItemsSource=Workspace.LinkTypes.Keys.ToList();type.SelectedIndex=0;var from=Ui.Combo();var to=Ui.Combo();var source=SourceCombo();var cross=new CheckBox{Content="Zielobjekte aus anderen Themen/Scopes einbeziehen"};var coverage=Ui.Combo();coverage.ItemsSource=new[]{"Teilweise","Vollständig","Unterstützend"};coverage.SelectedIndex=0;var reason=Ui.Input("Abdeckung, Grenzen und fachliche Begründung",true);
+        var type=Ui.Combo();type.ItemsSource=Workspace.LinkTypes.Keys.ToList();type.SelectedIndex=0;var from=Ui.Combo();var to=Ui.Combo();var source=SourceCombo();
+        var cross = Ui.Help(new CheckBox { Content = "Zielobjekte aus anderen Themen/Scopes einbeziehen" },
+            "Erweitert die Zielauswahl über das aktuelle Thema, den Geltungsbereich und die Suche hinaus. Den fachlichen Bezug begründen.");
+        var coverage=Ui.Combo();coverage.ItemsSource=new[]{"Teilweise","Vollständig","Unterstützend"};coverage.SelectedIndex=0;var reason=Ui.Input("Abdeckung, Grenzen und fachliche Begründung",true);
         void Choices(){var pair=Workspace.LinkTypes[(string)type.SelectedItem!];from.ItemsSource=_entries.Where(e=>e.Kind==pair.From).ToList();to.ItemsSource=(cross.IsChecked==true?_all:_entries).Where(e=>e.Kind==pair.To).ToList();}
         type.SelectionChanged+=(_,_)=>Choices();cross.IsCheckedChanged+=(_,_)=>Choices();Choices();
         from.SelectionChanged+=async(_,_)=>{if(_loading||_busy)return;await Run(async()=>{if(from.SelectedItem is Entry e){var choices=await _workspace.RecordSourceChoicesAsync(e.Id);source.ItemsSource=choices;source.SelectedIndex=0;}});};
@@ -19,9 +22,20 @@ public sealed partial class MainWindow
             var parts=suggestion.Id.Split('|');var a=_entries.FirstOrDefault(e=>e.TemplateId==parts[0]&&e.Kind=="Requirement");var b=_all.FirstOrDefault(e=>e.TemplateId==parts[1]&&e.Kind=="Control");
             if(a is null||b is null)throw new ArgumentException("Passende Datensätze sind nicht im aktuellen Kontext. Filter prüfen.");
             type.SelectedItem="Anforderung → Control";cross.IsChecked=!_entries.Any(e=>e.Id==b.Id);Choices();from.SelectedItem=a;to.SelectedItem=b;source.ItemsSource=await _workspace.RecordSourceChoicesAsync(a.Id);source.SelectedIndex=0;reason.Text=suggestion.Title.Split('\n',2).Last();_dirty=true;
-        });
+        }, help: "Füllt das Formular aus, wenn die passenden Datensätze bereits angelegt sind. Erst Speichern bestätigt die Zuordnung.");
         var remove=Button("Auswahl entfernen",async()=>{if(list.SelectedItem is not Choice c)return;if(!await Discard())return;if(!await Ui.Confirm(this,"Zuordnung entfernen?","Entfernen"))return;await _workspace.UnlinkAsync(c.Id);await Render();});
-        return Ui.Split(Ui.Card(Ui.Fill(Ui.Text("Bestätigte und übernommene Zuordnungen",18,true),list,remove)),Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text("Zuordnung erstellen",20,true),Ui.Notice("Standardmäßig nur Objekte im Thema. Cross-Mappings müssen bewusst aktiviert und begründet werden. Vollständige Abdeckung ist eine fachliche Bewertung, keine automatische Aussage."),loadSuggestion,Ui.Field("Beziehung",type),Ui.Field("Ausgangsobjekt",from),cross,Ui.Field("Zielobjekt",to),Ui.Field("Quellenbezug des Ausgangsobjekts",source),Ui.Field("Abdeckung",coverage),Ui.Field("Begründung *",reason),Button("Zuordnung speichern",SaveMapping,true)))));
+        return Ui.Split(Ui.Card(Ui.Fill(Ui.Text("Bestätigte und übernommene Zuordnungen",18,true),list,remove)),
+            Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text("Zuordnung erstellen",20,true),
+                Ui.Notice("Standardmäßig nur Objekte im Thema. Cross-Mappings müssen bewusst aktiviert und begründet werden. Vollständige Abdeckung ist eine fachliche Bewertung, keine automatische Aussage."),
+                loadSuggestion,
+                Ui.Field("Beziehung", type, "Legt die Richtung und die Eintragstypen der Zuordnung fest."),
+                Ui.Field("Ausgangsobjekt", from, "Wählt den Ursprung der Beziehung aus dem aktuell gefilterten Arbeitsbereich."),
+                cross,
+                Ui.Field("Zielobjekt", to, "Wählt den Eintrag, auf den die Beziehung verweist."),
+                Ui.Field("Quellenbezug des Ausgangsobjekts", source, "Die Quelle muss am Ausgangsobjekt hinterlegt sein."),
+                Ui.Field("Abdeckung", coverage, "Fachlich bewerten, in welchem Umfang das Ziel zum Ausgangsobjekt beiträgt."),
+                Ui.Field("Begründung *", reason, "Erklären, worauf die Zuordnung und die gewählte Abdeckung beruhen."),
+                Button("Zuordnung speichern", SaveMapping, true)))));
     }
     private async Task<Control> EvidencePage()
     {
@@ -30,10 +44,23 @@ public sealed partial class MainWindow
         control.SelectionChanged+=async(_,_)=>{if(_loading||_busy)return;await Run(async()=>{if(control.SelectedItem is not Entry e)return;source.ItemsSource=await _workspace.RecordSourceChoicesAsync(e.Id);source.SelectedIndex=0;template.ItemsSource=templates.Where(t=>t.SourceId==e.SourceId).ToList();template.SelectedIndex=-1;});};
         list.SelectionChanged+=(_,_)=>{if(list.SelectedItem is Proof p)details.Text=$"Datei: {p.FileName}\nErhoben: {p.Collected}\nGültig bis: {p.ValidUntil}\nSHA256: {p.Hash}\nHerkunft: {p.Origin}";};Watch(title);Watch(origin);
         async Task Import(){if(control.SelectedItem is not Entry c)throw new ArgumentException("Control auswählen.");var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{AllowMultiple=false});var path=files.FirstOrDefault()?.TryGetLocalPath();if(path is null)return;var bytes=await Files.ReadAsync(path,8388608);await _workspace.ImportEvidenceAsync(c.Id,Sid(source),title.Text??"",origin.Text??"",Path.GetFileName(path),bytes,DateTimeOffset.UtcNow.AddDays((double)(days.Value??90)));_dirty=false;await Render();}_saveForm=Import;
-        var apply=Button("Nachweisanforderung übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(origin.Text)&&!await Ui.Confirm(this,"Text ersetzen?","Übernehmen"))return;title.Text=t.Title;origin.Text=t.Effective;});
-        var reuse=Button("Auswahl für Control wiederverwenden",async()=>{if(list.SelectedItem is not Proof p||control.SelectedItem is not Entry c)throw new ArgumentException("Evidence und zusätzliches Control auswählen.");if(!await Discard())return;await _workspace.ReuseEvidenceAsync(p.Id,c.Id);await Render();});
-        var export=Button("Datei exportieren",async()=>{if(list.SelectedItem is not Proof p)return;if(!await Ui.Confirm(this,"Evidence als unverschlüsselte Datei exportieren?","Exportieren"))return;var path=await SavePath(p.FileName,Path.GetExtension(p.FileName).TrimStart('.'));if(path is null)return;await Files.AtomicAsync(path,await _workspace.EvidenceBytesAsync(p.Id));await _workspace.RecordExportAsync(path,_topicId,_scopeValue,"Evidence");});
-        return Ui.Split(Ui.Card(Ui.Fill(Ui.Text(visible.Count+" tatsächliche Nachweise",18,true),list,export)),Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text("Evidence erfassen",20,true),Ui.Notice("Quellen stammen vom ausgewählten Control. Nachweisherkunft ist ein separates Feld. Vorlagen erzeugen keine Evidence ohne tatsächlichen Dateiimport."),Ui.Field("Control",control),Ui.Field("Anforderungsquelle",source),Ui.Field("Nachweisvorlage",template),apply,Ui.Field("Titel *",title),Ui.Field("Herkunft / Scope *",origin),Ui.Field("Gültigkeit ab heute in Tagen",days),Button("Datei importieren und speichern",Import,true),reuse,details))));
+        var apply=Button("Nachweisanforderung übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(origin.Text)&&!await Ui.Confirm(this,"Text ersetzen?","Übernehmen"))return;title.Text=t.Title;origin.Text=t.Effective;},
+            help: "Füllt Titel und Herkunft mit Vorlagentext. Vor dem Dateiimport die tatsächliche Herkunft ergänzen.");
+        var reuse=Button("Auswahl für Control wiederverwenden",async()=>{if(list.SelectedItem is not Proof p||control.SelectedItem is not Entry c)throw new ArgumentException("Evidence und zusätzliches Control auswählen.");if(!await Discard())return;await _workspace.ReuseEvidenceAsync(p.Id,c.Id);await Render();},
+            help: "Wähle links einen gültigen Nachweis und rechts das zusätzliche Control. Die Datei wird verknüpft.");
+        var export=Button("Datei exportieren",async()=>{if(list.SelectedItem is not Proof p)return;if(!await Ui.Confirm(this,"Evidence als unverschlüsselte Datei exportieren?","Exportieren"))return;var path=await SavePath(p.FileName,Path.GetExtension(p.FileName).TrimStart('.'));if(path is null)return;await Files.AtomicAsync(path,await _workspace.EvidenceBytesAsync(p.Id));await _workspace.RecordExportAsync(path,_topicId,_scopeValue,"Evidence");},
+            help: "Speichert den links ausgewählten Nachweis als unverschlüsselte Datei.");
+        return Ui.Split(Ui.Card(Ui.Fill(Ui.Text(visible.Count+" tatsächliche Nachweise",18,true),list,export)),
+            Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text("Evidence erfassen",20,true),
+                Ui.Notice("Quellen stammen vom ausgewählten Control. Nachweisherkunft ist ein separates Feld. Vorlagen erzeugen keine Evidence ohne tatsächlichen Dateiimport."),
+                Ui.Field("Control", control, "Ordnet die Nachweisdatei einem Control aus dem aktuellen Arbeitsbereich zu."),
+                Ui.Field("Anforderungsquelle", source, "Fachliche Referenz aus den Quellenbezügen des ausgewählten Controls."),
+                Ui.Field("Nachweisvorlage", template, "Zeigt Erfassungshilfen für die ausgewählte Quelle."),
+                apply, Ui.Field("Titel *",title),
+                Ui.Field("Herkunft / Scope *", origin, "Dokumentiere, wo und wie der Nachweis erhoben wurde, etwa System, Umgebung und Erhebungsmethode."),
+                Ui.Field("Gültigkeit ab heute in Tagen", days, "Legt fest, bis wann der Nachweis für neue Prüfungen verwendet werden kann. Zulässig sind 1 bis 3650 Tage."),
+                Button("Datei importieren und speichern", Import, true, "Wählt eine tatsächliche Nachweisdatei bis 8 MiB und speichert sie im verschlüsselten Projekt."),
+                reuse, details))));
     }
     private async Task<Control> AuditPage(Entry audit)
     {
@@ -42,8 +69,18 @@ public sealed partial class MainWindow
             var templates=await _workspace.TemplatesAsync(_topicId,"AuditTest");var template=Ui.Combo();template.ItemsSource=templates;source.SelectionChanged+=(_,_)=>{template.ItemsSource=templates.Where(t=>t.SourceId==(source.SelectedItem as Source)?.Id).ToList();template.SelectedIndex=-1;};
             control.SelectionChanged+=async(_,_)=>{if(_loading||_busy)return;await Run(async()=>{if(control.SelectedItem is not Entry c)return;source.ItemsSource=await _workspace.RecordSourceChoicesAsync(c.Id);source.SelectedIndex=0;evidence.ItemsSource=new object[]{"Kein Nachweis"}.Concat((await _workspace.EvidenceAsync(c.Id)).Where(p=>DateTimeOffset.TryParse(p.ValidUntil,out var until)&&until>DateTimeOffset.UtcNow).Cast<object>()).ToList();evidence.SelectedIndex=0;});};Watch(notes);Watch(outcome);
             async Task SaveTest(){if(control.SelectedItem is not Entry c||outcome.SelectedIndex==0)throw new ArgumentException("Control und tatsächliches Ergebnis auswählen.");await _workspace.TestAsync(audit.Id,c.Id,Sid(source),(evidence.SelectedItem as Proof)?.Id,(string)outcome.SelectedItem!,notes.Text??"");_dirty=false;results.ItemsSource=await _workspace.TestsAsync(audit.Id);_status.Text="Prüfergebnis und Projekt gespeichert.";}_saveForm=SaveTest;
-            var complete=Button("Audit abschließen",async()=>{if(!await Discard())return;var why=await Ui.Prompt(this,"Abschlussbegründung");if(why is null)return;await _workspace.CompleteAuditAsync(audit.Id,why);await Render();});
-            var editor=Ui.Stack(Ui.Text("Prüfung dokumentieren",20,true),Ui.Field("Control im Audit-Scope",control),Ui.Field("Prüfquelle",source),Ui.Field("Passende gültige Evidence",evidence),Ui.Field("Prüfvorlage",template),Button("Prüftext übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)return;if(!string.IsNullOrWhiteSpace(notes.Text)&&!await Ui.Confirm(this,"Prüftext ersetzen?","Ersetzen"))return;notes.Text=t.Effective;}),Ui.Field("Ergebnis",outcome),Ui.Field("Prüfnotiz *",notes),Button("Prüfergebnis speichern",SaveTest,true),complete);
+            var complete=Button("Audit abschließen",async()=>{if(!await Discard())return;var why=await Ui.Prompt(this,"Abschlussbegründung");if(why is null)return;await _workspace.CompleteAuditAsync(audit.Id,why);await Render();},
+                help: "Für jedes Control wird ein Prüfergebnis benötigt. Abweichungen brauchen ein mit Audit und Control verknüpftes Finding.");
+            var editor = Ui.Stack(Ui.Text("Prüfung dokumentieren",20,true),
+                Ui.Field("Control im Audit-Scope", control, "Zeigt Controls, die unter Mappings mit diesem Audit verknüpft sind."),
+                Ui.Field("Prüfquelle", source, "Wählt den Quellenbezug des Controls aus, der für diese Prüfung maßgeblich ist."),
+                Ui.Field("Passende gültige Evidence", evidence, "Für das Ergebnis Bestanden ist ein am Prüfzeitpunkt gültiger Nachweis erforderlich."),
+                Ui.Field("Prüfvorlage", template, "Zeigt Prüftexte für die ausgewählte Quelle."),
+                Button("Prüftext übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)return;if(!string.IsNullOrWhiteSpace(notes.Text)&&!await Ui.Confirm(this,"Prüftext ersetzen?","Ersetzen"))return;notes.Text=t.Effective;},
+                    help: "Kopiert den Vorlagentext in die Prüfnotiz. Die tatsächliche Beobachtung anschließend ergänzen."),
+                Ui.Field("Ergebnis", outcome, "Tatsächliches Ergebnis auswählen. Bei Nicht anwendbar die Gründe in der Prüfnotiz festhalten."),
+                Ui.Field("Prüfnotiz *", notes, "Prüfhandlung, Stichprobe und beobachtetes Ergebnis so festhalten, dass andere die Entscheidung nachvollziehen können."),
+                Button("Prüfergebnis speichern", SaveTest, true), complete);
             return Ui.Split(Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text(audit.Title,22,true),Ui.Text(audit.Body),Ui.Notice(ids.Count+" Controls im Scope. Scope unter Mappings pflegen. Bestanden benötigt gültige Evidence; Abweichung benötigt vor Abschluss ein verknüpftes Finding. Auditabschluss lässt offene Findings ausdrücklich bestehen."),results,Button("Zurück zu Audits",async()=>{if(!await Discard())return;await Render();})))),Ui.Card(Ui.Scroll(editor)));
         }finally{_loading=false;_dirty=false;}
     }

@@ -1,4 +1,4 @@
-# D3 GRC 0.6 – Themen, Sitzungen, Tabs und Excel
+# D3 GRC 0.6.1 – Themen, Sitzungen, Tabs und Excel
 
 **Lieferumfang: vollständige Quellcode-Solution, kein kompilierter oder signierter Installer.**
 **Freigabestatus: Entwicklung / native Abnahme offen.**
@@ -53,6 +53,10 @@ Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindeste
 Die Zahlen gelten für ein neues Projekt aus dem mitgelieferten Starterkatalog. Bei Migration vorhandener 0.5-Projekte werden vorhandene Inhalte erhalten und neue V06-Inhalte ergänzt; die Gesamtzahlen können deshalb abweichen.
 
 ## Prüfstatus
+Die aktuelle Prüfung der Version 0.6.1 ist im [Prüfbericht](docs/PRUEFBERICHT-0.6.1.md) dokumentiert.
+
+### Historischer Prüfstand der Version 0.6
+
 Die unabhängigen SQL-/XML-/Strukturprüfungen wurden ausgeführt; Ergebnis in `docs/validation.json`. Ein C#-Build wurde versucht, scheiterte aber an der Umgebung: `dotnet` ist nicht installiert, Exit 127. Auch der SDK-Download war hier nicht zugänglich. Deshalb sind C#-Tests, native GUI, tatsächlicher XLSX-Laufzeitexport und Installer NICHT als erfolgreich geprüft zu verstehen.
 
 ## Sicherheit und Grenzen
