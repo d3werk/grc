@@ -1,3 +1,10 @@
+# 0.8.0
+
+- Lieferantenregister mit Leistungen, Kritikalität, Vertragsreferenz, Verantwortung und fälligen Prüfungen.
+- Bewertungsverlauf und begründete Zuordnungen zwischen Lieferanten, Risiken, Controls und Maßnahmen.
+- Lieferantenaufgaben im Unternehmensplan, Kennzahlen im Dashboard und gefilterte Berichtsblätter.
+- Additive Datenbankmigration mit verschlüsselter Sicherung der bisherigen Projektdatei.
+
 # 0.7.0
 
 - Registrierung mit direkt anschließender Anlage und Öffnung einer verschlüsselten Projektdatei.

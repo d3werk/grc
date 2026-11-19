@@ -15,6 +15,7 @@ public sealed class CompanyConfigurationTests
             .Where(module => module.Priority == CompanyModulePriority.Key)
             .Select(module => module.Id));
         Assert.Equal(CompanyModulePriority.Optional, plan.Single(module => module.Id == "audit").Priority);
+        Assert.Equal(CompanyModulePriority.Optional, plan.Single(module => module.Id == "supplier").Priority);
         Assert.All(plan, module =>
         {
             Assert.False(string.IsNullOrWhiteSpace(module.Why));
@@ -34,7 +35,7 @@ public sealed class CompanyConfigurationTests
         Assert.Equal("DORA-Betroffenheit prüfen", plan["dora"].Title);
         Assert.Contains("Finanzbranche", plan["dora"].Why);
         Assert.Equal(CompanyModulePriority.Optional, plan["nis2"].Priority);
-        foreach (string id in new[] { "cloud", "privacy", "evidence", "audit", "mapping" })
+        foreach (string id in new[] { "cloud", "privacy", "evidence", "audit", "mapping", "supplier" })
         {
             Assert.Equal(CompanyModulePriority.Key, plan[id].Priority);
         }
@@ -67,10 +68,20 @@ public sealed class CompanyConfigurationTests
     {
         Assert.Throws<ArgumentException>(() => CompanyPlanning.Validate(CompanyProfile.Default with { SiteCount = 0 }));
         Assert.Throws<ArgumentException>(() => CompanyPlanning.Validate(CompanyProfile.Default with { Topics = ["REVIEW"] }));
-        Assert.Throws<ArgumentException>(() => CompanyPlanning.Validate(CompanyProfile.Default with { Factors = (CompanyFactors)128 }));
+        Assert.Throws<ArgumentException>(() => CompanyPlanning.Validate(CompanyProfile.Default with { Factors = (CompanyFactors)256 }));
 
         var validated = CompanyPlanning.Validate(CompanyProfile.Default with { Topics = ["CLOUD", "OSS", "CLOUD"] });
         Assert.Equal(new[] { "CLOUD", "OSS" }, validated.Topics);
+    }
+
+    [Fact]
+    public void External_suppliers_enable_register_for_a_small_company()
+    {
+        var profile = CompanyProfile.Default with { Factors = CompanyFactors.ExternalSuppliers };
+        var module = Assert.Single(CompanyPlanning.Build(profile), module => module.Id == "supplier");
+        Assert.Equal(CompanyModulePriority.Key, module.Priority);
+        Assert.Equal("Supplier", module.TargetPage);
+        Assert.Contains("externe Partner", module.Why);
     }
 
     [Fact]

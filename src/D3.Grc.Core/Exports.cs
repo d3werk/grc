@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Xml.Linq;
+using Microsoft.Data.Sqlite;
 using static D3.Grc.Core.Database;
 namespace D3.Grc.Core;
 public static class ExcelExport
@@ -11,6 +12,8 @@ public static class ExcelExport
     private static readonly XNamespace R="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private static readonly XNamespace P="http://schemas.openxmlformats.org/package/2006/relationships";
     private static readonly XNamespace C="http://schemas.openxmlformats.org/package/2006/content-types";
+    private static readonly HashSet<string> DateHeaders = new(StringComparer.Ordinal)
+        { "Termin", "Gültig bis", "Erhoben", "Prüfdatum", "Nächste Prüfung" };
     private static string Clean(string value)=>new(value.Where(ch=>ch=='\t'||ch=='\n'||ch=='\r'||ch>=32).Take(32767).ToArray());
     private static string Column(int n){var text="";do{text=(char)('A'+n%26)+text;n=n/26-1;}while(n>=0);return text;}
     public static byte[] Build(IReadOnlyList<ExportSheet> sheets)
@@ -32,7 +35,7 @@ public static class ExcelExport
                     for(int col=0;col<sheet.Headers.Length;col++){
                         var value=col<rows[row].Length?rows[row][col]:"";var cell=new XElement(S+"c",new XAttribute("r",Column(col)+(row+1)),new XAttribute("s",row==0?1:0));
                         if(row>0&&sheet.Headers[col]=="Anzahl"&&int.TryParse(value,NumberStyles.Integer,CultureInfo.InvariantCulture,out var number))cell.Add(new XElement(S+"v",number));
-                        else if(row>0&&new[]{"Termin","Gültig bis","Erhoben"}.Contains(sheet.Headers[col])&&DateTime.TryParse(value,CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind,out var date)&&date.Year>=1900){cell.SetAttributeValue("s",2);cell.Add(new XElement(S+"v",date.ToOADate().ToString(CultureInfo.InvariantCulture)));}
+                        else if(row>0&&DateHeaders.Contains(sheet.Headers[col])&&DateTime.TryParse(value,CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind,out var date)&&date.Year>=1900){cell.SetAttributeValue("s",2);cell.Add(new XElement(S+"v",date.ToOADate().ToString(CultureInfo.InvariantCulture)));}
                         else{cell.SetAttributeValue("t","inlineStr");cell.Add(new XElement(S+"is",new XElement(S+"t",new XAttribute(XNamespace.Xml+"space","preserve"),Clean(value))));}line.Add(cell);
                     }data.Add(line);
                 }
@@ -78,7 +81,7 @@ public sealed partial class Workspace
             sheets.Add(new("Umsetzungsplan", ["Priorität", "Modul", "Fachthema", "Begründung", "Nächster Schritt"], planRows));
         }
         sheets.Add(new("Kennzahlen",["Kennzahl","Anzahl"],new(){new[]{"Anforderungen",entries.Count(e=>e.Kind=="Requirement").ToString()},new[]{"Controls",entries.Count(e=>e.Kind=="Control").ToString()},new[]{"Controls als Entwurf",entries.Count(e=>e.Kind=="Control"&&e.Status=="Entwurf").ToString()},new[]{"Offene Findings",entries.Count(e=>e.Kind=="Finding"&&e.Status!="Geschlossen").ToString()},new[]{"Ohne Verantwortung",entries.Count(e=>e.Owner=="").ToString()}}));
-        foreach(var kind in Entry.Kinds)sheets.Add(new(kind,["ID","Code","Titel","Quelle","Fundstelle","Status","Verantwortung","Termin","Scope","Version","Beschreibung"],entries.Where(e=>e.Kind==kind).Select(e=>new[]{e.Id,e.Code,e.Title,e.SourceId,e.Locator,e.Status,e.Owner,e.DueDate,e.Scope,e.Version.ToString(),e.Body}).ToList()));
+        foreach(var kind in Entry.Kinds.Where(kind => kind != "Supplier"))sheets.Add(new(kind,["ID","Code","Titel","Quelle","Fundstelle","Status","Verantwortung","Termin","Scope","Version","Beschreibung"],entries.Where(e=>e.Kind==kind).Select(e=>new[]{e.Id,e.Code,e.Title,e.SourceId,e.Locator,e.Status,e.Owner,e.DueDate,e.Scope,e.Version.ToString(),e.Body}).ToList()));
         var links=Query(c,null,"SELECT l.Id,l.SourceRecordId,l.TargetRecordId,l.Type,l.Reason,l.SourceId,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,'') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>Enumerable.Range(0,8).Select(r.GetString).ToArray()).Where(x=>ids.Contains(x[1])||ids.Contains(x[2])).ToList();sheets.Add(new("Mappings",["ID","Ausgangs-ID","Ziel-ID","Typ","Begründung","Quelle","Abdeckung","Scope"],links));
         var proofIds=Query(c,null,"SELECT EvidenceId,ControlId FROM EvidenceLinks",r=>(Evidence:r.GetString(0),Control:r.GetString(1))).Where(x=>ids.Contains(x.Control)).Select(x=>x.Evidence).ToHashSet();
         sheets.Add(new("Evidence",["ID","Titel","Primär-Control-ID","Quelle","Datei","SHA256","Erhoben","Gültig bis","Herkunft"],Proofs(c,null).Where(p=>ids.Contains(p.ControlId)||proofIds.Contains(p.Id)).Select(p=>new[]{p.Id,p.Title,p.ControlId,p.SourceId,p.FileName,p.Hash,p.Collected,p.ValidUntil,p.Origin}).ToList()));
@@ -91,10 +94,65 @@ public sealed partial class Workspace
         metrics.Add(new[] { "Controls ohne zeitlich aktuellen Nachweis",
             currentControls.Count(id => !controlEvidence[id].Any(proof => proof.Status == TraceEvidenceStatus.Current)).ToString() });
         var today=DateOnly.FromDateTime(DateTime.Today);metrics.Add(new[]{"Überfällige Maßnahmen",entries.Count(e=>e.Kind=="Measure"&&e.Status!="Erledigt"&&DateOnly.TryParse(e.DueDate,out var d)&&d<today).ToString()});
+        var suppliers = entries.Where(entry => entry.Kind == "Supplier").ToArray();
+        if (suppliers.Length > 0)
+            AddSupplierExport(c, sheets, metrics, suppliers, today);
         foreach(var kind in new[]{"Control","Requirement","Finding"})sheets.Add(new(kind+"Status",["Status","Anzahl"],Entry.Statuses(kind).Select(status=>new[]{status,entries.Count(e=>e.Kind==kind&&e.Status==status).ToString()}).ToList()));
         sheets.Add(new("Glossar",["Begriff","Langform","Definition"],Query(c,null,"SELECT Term,Expanded,CASE WHEN CustomDefinition='' THEN Definition ELSE CustomDefinition END FROM Glossary ORDER BY Term",r=>new[]{r.GetString(0),r.GetString(1),r.GetString(2)})));
         sheets.Add(new("Quellen",["ID","Titel","URL","Referenz","Status","Letzter Erfolg"],Query(c,null,"SELECT Id,Title,Url,Reference,CheckState,LastSuccess FROM Sources s WHERE $p0='' OR EXISTS(SELECT 1 FROM TopicSources t WHERE t.SourceId=s.Id AND t.TopicId=$p0)",r=>Enumerable.Range(0,6).Select(r.GetString).ToArray(),topic)));
         sheets.Add(new("Definitionen",["Begriff","Definition"],new(){new[]{"Entwurf","Vorlage oder noch nicht bestätigte Umsetzung"},new[]{"Geprüft","Vom Anwender bewerteter Status, kein Zertifikat"},new[]{"Evidence","Metadaten tatsächlicher Dateien; Inhalte nicht eingebettet"},new[]{"Externe IDs","Mappings können auf außerhalb des Filters liegende Objekte verweisen"},new[]{"Excel","Texte als Inline-Strings, keine Benutzerformeln, keine externen Verknüpfungen"}}));return sheets;
     });
+
+    private static void AddSupplierExport(SqliteConnection connection, List<ExportSheet> sheets, List<string[]> metrics,
+        IReadOnlyList<Entry> suppliers, DateOnly today)
+    {
+        var suppliersById = suppliers.ToDictionary(supplier => supplier.Id);
+        var details = ReadSupplierDetails(connection, suppliersById.Keys);
+        var supplierRows = suppliers.OrderBy(supplier => supplier.Title, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(supplier => supplier.Code).ThenBy(supplier => supplier.Id).Select(supplier =>
+            {
+                var detail = details.GetValueOrDefault(supplier.Id);
+                return new[]
+                {
+                    supplier.Id, supplier.Code, supplier.Title, detail?.Service ?? "",
+                    detail is null ? "" : SupplierRegister.CriticalityLabels[detail.Criticality],
+                    supplier.Status, supplier.Owner, supplier.DueDate, supplier.Scope, detail?.AgreementReference ?? "",
+                    detail?.RiskRationale ?? "", supplier.SourceId, supplier.Locator, supplier.Body
+                };
+            }).ToList();
+        sheets.Add(new("Lieferanten",
+            ["ID", "Code", "Lieferant / Dienstleister", "Leistung", "Kritikalität", "Status", "Verantwortung", "Nächste Prüfung",
+                "Geltungsbereich", "Vertragsreferenz", "Risikobegründung", "Quelle", "Fundstelle", "Beschreibung"], supplierRows));
+
+        var reviewRows = ReadSupplierReviews(connection, suppliersById.Keys).Select(review => new[]
+        {
+            review.Id, review.SupplierId, suppliersById[review.SupplierId].Title,
+            review.ReviewedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), review.Reviewer,
+            SupplierRegister.ReviewOutcomeLabels[review.Outcome],
+            review.NextReview?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "", review.Notes
+        }).ToList();
+        sheets.Add(new("Lieferantenprüfungen",
+            ["Prüfungs-ID", "Lieferanten-ID", "Lieferant / Dienstleister", "Prüfdatum", "Geprüft durch",
+                "Ergebnis", "Nächste Prüfung", "Prüfnotiz"], reviewRows));
+
+        var currentSuppliers = suppliers.Where(supplier => supplier.Status != "Beendet").ToArray();
+        var dueDates = currentSuppliers.Select(supplier =>
+            DateOnly.TryParseExact(supplier.DueDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var due)
+                ? (DateOnly?)due : null).ToArray();
+        metrics.Add(["Lieferanten im Register", suppliers.Count.ToString(CultureInfo.InvariantCulture)]);
+        metrics.Add(["Kritisch eingestufte Lieferanten (laufend)", currentSuppliers
+            .Count(supplier => details.GetValueOrDefault(supplier.Id)?.Criticality == SupplierCriticality.Critical)
+            .ToString(CultureInfo.InvariantCulture)]);
+        metrics.Add(["Hoch eingestufte Lieferanten (laufend)", currentSuppliers
+            .Count(supplier => details.GetValueOrDefault(supplier.Id)?.Criticality == SupplierCriticality.High)
+            .ToString(CultureInfo.InvariantCulture)]);
+        metrics.Add(["Überfällige Lieferantenprüfungen", dueDates.Count(due => due is { } date && date < today)
+            .ToString(CultureInfo.InvariantCulture)]);
+        metrics.Add(["Heute fällige Lieferantenprüfungen", dueDates.Count(due => due == today)
+            .ToString(CultureInfo.InvariantCulture)]);
+        metrics.Add(["Lieferanten ohne nächsten Prüftermin (laufend)", dueDates.Count(due => due is null)
+            .ToString(CultureInfo.InvariantCulture)]);
+    }
+
     public async Task RecordExportAsync(string path,string topic,string scope,string format)=>await Change("ExportCompleted","",Path.GetFileName(path),(c,t)=>{Exec(c,t,"INSERT INTO ExportJobs VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p6,'Erfolgreich geschrieben')",Guid.NewGuid().ToString("N"),DateTimeOffset.UtcNow.ToString("O"),identity.User,topic,scope,format,Path.GetFileName(path));return true;});
 }

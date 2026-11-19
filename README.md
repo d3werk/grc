@@ -1,9 +1,9 @@
-# D3 GRC 0.7.0 – Unternehmensprofil und Umsetzungsplan
+# D3 GRC 0.8.0 – Unternehmensprofil, Umsetzungsplan und Lieferantenregister
 
 **Lieferumfang: vollständige Quellcode-Solution, kein kompilierter oder signierter Installer.**
 **Freigabestatus: Entwicklung / native Abnahme offen.**
 
-Diese Lieferung setzt die besprochenen Änderungen im C#-Quellcode um: lokale Registrierung/Anmeldung, Logout, sichtbares Speichern, Themenkontext, passende Quellen, Detailtabs, Dashboard-Balken und echter XLSX-Export.
+Nach der lokalen Registrierung führt der Unternehmensassistent von der verschlüsselten Projektanlage zu einem begründeten Umsetzungsplan. Das Lieferantenregister ergänzt den bestehenden Arbeitsbereich aus Anforderungen, Risiken, Controls, Quellen, Nachweisen und Audits. Prüftermine, Bewertungen und Berichte übernehmen den ausgewählten Projektkontext.
 
 ## Wichtig zur Ausgangsbasis
 Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser Sitzung nicht als Dateien verfügbar. Deshalb ist dies eine konsolidierte neue Solution, kein gegen dein Repository getesteter In-place-Patch. Die bekannte 0.5-Datenbankstruktur und das D3GRC005-Containerformat werden weiter unterstützt; eine additive Migration ist enthalten. Die Migration wurde mit einer kompatiblen SQL-Testdatenbank geprüft, NICHT mit deiner persönlichen Projektdatei oder über die native C#-Laufzeit.
@@ -53,7 +53,7 @@ Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindeste
 Die Zahlen gelten für ein neues Projekt aus dem mitgelieferten Starterkatalog. Bei Migration vorhandener 0.5-Projekte werden vorhandene Inhalte erhalten und neue V06-Inhalte ergänzt; die Gesamtzahlen können deshalb abweichen.
 
 ## Prüfstatus
-Die Prüfung und der Funktionsabgleich für Version 0.7.0 sind im [Prüfbericht](docs/PRUEFBERICHT-0.7.0.md) dokumentiert. Die [Prüfung von 0.6.1](docs/PRUEFBERICHT-0.6.1.md) dokumentiert den Ausgangsstand.
+Die Abnahme des Lieferantenregisters ist im [Prüfbericht 0.8.0](docs/PRUEFBERICHT-0.8.0.md) dokumentiert. Der [Prüfbericht 0.7.0](docs/PRUEFBERICHT-0.7.0.md) enthält den bisherigen Funktionsabgleich und die Abnahme des Unternehmensassistenten.
 
 ### Historischer Prüfstand der Version 0.6
 
