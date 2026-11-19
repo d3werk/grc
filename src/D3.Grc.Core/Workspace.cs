@@ -80,16 +80,21 @@ public sealed partial class Workspace:IDisposable
     public async Task OpenAsync(string path,string password,bool recovery=false)
     {
         identity.Demand();await _gate.WaitAsync();var wasOpen=IsOpen;try{
-            if(wasOpen)throw new InvalidOperationException("Aktuelles Projekt schließen.");path=Path.GetFullPath(path);Prepare(path);var bytes=await Files.ReadAsync(recovery?path+".recovery":path,Cipher.Limit+52);
+            if(wasOpen)throw new InvalidOperationException("Aktuelles Projekt schließen.");path=Path.GetFullPath(path);Prepare(path);
+            var sourcePath = recovery ? path + ".recovery" : path;
+            var bytes = await Files.ReadAsync(sourcePath, Cipher.Limit + 52);
             _cipher=new Cipher();await _cipher.InitializeAsync(password,Cipher.Salt(bytes));var plain=_cipher.Decrypt(bytes);
             try{await using var output=new FileStream(DbPath,FileMode.Truncate,FileAccess.Write,FileShare.None);await output.WriteAsync(plain);}finally{CryptographicOperations.ZeroMemory(plain);}
+            bool requiresSupplierMigration;
             using(var c=Open(DbPath)){
                 if(Scalar(c,null,"SELECT name FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'")=="")throw new InvalidDataException("Keine bekannte Migrationshistorie.");
-                if(Scalar(c,null,"SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId='20261118120000_BrandWorkspace'")=="")throw new InvalidDataException("Kein unterstützter 0.5-/0.6-Datenbankstand.");
+                if(Scalar(c,null,"SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId='20261118120000_BrandWorkspace'")=="")throw new InvalidDataException("Kein unterstützter Datenbankstand.");
                 if(!Verify(c))throw new InvalidDataException("Journal inkonsistent.");
-                var migrated=Scalar(c,null,"SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId='20261118210000_TopicsAndSessions'")!="";
-                if(!migrated&&File.Exists(path)){var backup=path+".pre06-"+DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")+".bak";File.Copy(path,backup,false);}
+                requiresSupplierMigration = Scalar(c, null,
+                    "SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId=$p0", SupplierMigrationId) == "";
             }
+            if (requiresSupplierMigration)
+                await Files.AtomicAsync(sourcePath + $".pre08-{DateTime.UtcNow:yyyyMMddHHmmssfff}.bak", bytes);
             await Database.MigrateAsync(DbPath);
             if (!recovery && File.Exists(path + ".recovery"))
                 await PreserveRecoveryAsync(path);
@@ -98,7 +103,7 @@ public sealed partial class Workspace:IDisposable
             {
                 Name = Scalar(c, null, "SELECT Value FROM Metadata WHERE Key='ProjectName'");
                 using var transaction = c.BeginTransaction();
-                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.7");
+                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.8.0");
                 transaction.Commit();
             }
             IsDirty = true;
@@ -162,18 +167,30 @@ public sealed partial class Workspace:IDisposable
     public Task<List<TextTemplate>> TemplatesAsync(string topic="",string kind="")=>Read(c=>Query(c,null,"SELECT Id,Kind,Title,SourceId,Locator,Body,CustomBody FROM Templates x WHERE ($p0='' OR EXISTS(SELECT 1 FROM TopicSources s WHERE s.SourceId=x.SourceId AND s.TopicId=$p0)) AND ($p1='' OR Kind=$p1) ORDER BY Title",r=>new TextTemplate(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6)),topic,kind));
     public Task<List<Choice>> MappingSuggestionsAsync(string topic)=>Read(c=>Query(c,null,"SELECT m.RequirementId||'|'||m.ControlId,a.Title||' → '||b.Title||char(10)||m.Reason FROM MappingSuggestions m JOIN Templates a ON a.Id=m.RequirementId JOIN Templates b ON b.Id=m.ControlId WHERE $p0='' OR EXISTS(SELECT 1 FROM TopicSources s WHERE s.SourceId=a.SourceId AND s.TopicId=$p0)",r=>new Choice(r.GetString(0),r.GetString(1)),topic));
     private static bool SourceFits(SqliteConnection c,SqliteTransaction t,string source,string topic)=>Scalar(c,t,"SELECT SourceId FROM TopicSources WHERE SourceId=$p0 AND TopicId=$p1",source,topic)!="";
-    public async Task SaveEntryAsync(Entry e,string topic,string reason)
+    public async Task SaveEntryAsync(Entry e,string topic,string reason,SupplierDetails? supplierDetails=null)
     {
         e.Validate();Reason(reason);if(topic=="")throw new ArgumentException("Zum Speichern ein konkretes Thema wählen.");
-        await Change("EntrySaved",e.Id,JsonSerializer.Serialize(new{reason,e}), (c,t)=>{
+        if (e.Kind == "Supplier")
+            supplierDetails = SupplierRegister.ValidateDetails(supplierDetails);
+        else if (supplierDetails is not null)
+            throw new ArgumentException("Dienstleisterdaten gehören zu einem Dienstleister.", nameof(supplierDetails));
+
+        var detail = supplierDetails is null
+            ? JsonSerializer.Serialize(new { reason, e })
+            : JsonSerializer.Serialize(new { reason, e, supplierDetails });
+        await Change("EntrySaved",e.Id,detail, (c,t)=>{
             var old=Query(c,t,"SELECT * FROM Records WHERE Id=$p0",ReadEntry,e.Id).SingleOrDefault();if(old is not null&&(old.Kind!=e.Kind||old.Version!=e.Version))throw new ArgumentException("Veralteter Stand. Neu laden.");
             if(old?.Status is "Abgeschlossen" or "Geschlossen")throw new ArgumentException("Abgeschlossener Datensatz gesperrt.");
             if(e.Status is "Abgeschlossen" or "Geschlossen")throw new ArgumentException("Abschluss nur über geprüften Workflow.");
+            if (supplierDetails is not null)
+                ValidateSupplierEdit(c, t, e, old);
             if(!SourceFits(c,t,e.SourceId,topic)&&!(old is not null&&old.SourceId==e.SourceId&&Scalar(c,t,"SELECT TopicId FROM RecordTopics WHERE RecordId=$p0 AND TopicId=$p1",e.Id,topic)!=""))throw new ArgumentException("Quelle passt nicht zum Thema. Zusätzlichen Quellenbezug separat begründen.");
             if(e.TemplateId is not null&&Scalar(c,t,"SELECT Kind FROM Templates WHERE Id=$p0",e.TemplateId)!=e.Kind)throw new ArgumentException("Vorlage passt nicht zum Typ.");
             if(e.Kind=="Control"&&e.Status=="Geprüft"){var proof=Proofs(c,t,e.Id).FirstOrDefault(p=>DateTimeOffset.Parse(p.ValidUntil)>DateTimeOffset.UtcNow)??throw new ArgumentException("Gültiger Nachweis erforderlich.");RequireProof(c,t,proof.Id,e.Id,DateTimeOffset.UtcNow);}
             if(old is not null)Log(c,t,"EntryBefore",e.Id,JsonSerializer.Serialize(old));
             Exec(c,t,"INSERT INTO Records(Id,Kind,Code,Title,SourceId,TemplateId,Locator,Body,Owner,Status,DueDate,Scope,Version,IsSeed) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p6,$p7,$p8,$p9,$p10,$p11,1,0) ON CONFLICT(Id) DO UPDATE SET Code=excluded.Code,Title=excluded.Title,SourceId=excluded.SourceId,TemplateId=excluded.TemplateId,Locator=excluded.Locator,Body=excluded.Body,Owner=excluded.Owner,Status=excluded.Status,DueDate=excluded.DueDate,Scope=excluded.Scope,Version=Records.Version+1,IsSeed=0",e.Id,e.Kind,e.Code,e.Title,e.SourceId,e.TemplateId,e.Locator,e.Body,e.Owner,e.Status,e.DueDate,e.Scope);
+            if (supplierDetails is not null)
+                SaveSupplierDetails(c, t, e.Id, supplierDetails);
             Exec(c,t,"INSERT OR IGNORE INTO RecordTopics VALUES($p0,$p1)",e.Id,topic);if(topic!="REVIEW")Exec(c,t,"DELETE FROM RecordTopics WHERE RecordId=$p0 AND TopicId='REVIEW'",e.Id);
             Exec(c,t,"UPDATE RecordSources SET Role='Sekundär' WHERE RecordId=$p0",e.Id);Exec(c,t,"INSERT INTO RecordSources VALUES($p0,$p1,$p2,'Primär') ON CONFLICT(RecordId,SourceId) DO UPDATE SET Locator=excluded.Locator,Role='Primär'",e.Id,e.SourceId,e.Locator);
             if(e.Kind=="Requirement")Exec(c,t,"INSERT INTO Applicability VALUES($p0,$p1,$p2,$p3,$p4) ON CONFLICT(RecordId) DO UPDATE SET Decision=excluded.Decision,Reason=excluded.Reason,Reviewer=excluded.Reviewer,ReviewedUtc=excluded.ReviewedUtc WHERE Applicability.Decision<>excluded.Decision",e.Id,e.Status,reason,identity.User,DateTimeOffset.UtcNow.ToString("O"));return true;
@@ -183,7 +200,16 @@ public sealed partial class Workspace:IDisposable
     public async Task AddSourceAsync(string id,string source,string locator,string reason)=>await Change("SecondarySourceAdded",id,reason,(c,t)=>{Reason(reason);if(Get(c,t,id).Status is "Abgeschlossen" or "Geschlossen")throw new ArgumentException("Abgeschlossener Datensatz gesperrt.");Exec(c,t,"INSERT INTO RecordSources VALUES($p0,$p1,$p2,'Sekundär') ON CONFLICT(RecordId,SourceId) DO UPDATE SET Locator=excluded.Locator",id,source,locator);return true;});
     public Task<List<Source>> RecordSourceChoicesAsync(string id)=>Read(c=>Query(c,null,"SELECT s.Id,s.Title,s.Url,s.Reference,s.Summary,s.CustomSummary,s.CheckState,s.LastSuccess FROM Sources s JOIN RecordSources r ON r.SourceId=s.Id WHERE r.RecordId=$p0 ORDER BY r.Role,s.Title",r=>new Source(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7)),id));
     public Task<List<string>> RecordSourcesAsync(string id)=>Read(c=>Query(c,null,"SELECT s.Title,r.Locator,r.Role FROM RecordSources r JOIN Sources s ON s.Id=r.SourceId WHERE r.RecordId=$p0",r=>$"{r.GetString(0)} | {r.GetString(1)} | {r.GetString(2)}",id));
-    public async Task DeleteAsync(string id,string reason)=>await Change("EntryDeleted",id,reason,(c,t)=>{Reason(reason);var e=Get(c,t,id);if(e.Kind is "Audit" or "Finding")throw new ArgumentException("Audits/Findings bleiben erhalten.");Log(c,t,"EntryBefore",id,JsonSerializer.Serialize(e));Exec(c,t,"DELETE FROM Records WHERE Id=$p0",id);return true;});
+    public async Task DeleteAsync(string id,string reason)=>await Change("EntryDeleted",id,reason,(c,t)=>{
+        Reason(reason);
+        var e=Get(c,t,id);
+        if(e.Kind is "Audit" or "Finding")throw new ArgumentException("Audits/Findings bleiben erhalten.");
+        if (e.Kind == "Supplier" && LatestSupplierReviewDate(c, t, id) != "")
+            throw new ArgumentException("Dienstleister mit Prüfungen bleiben im Register. Setzen Sie den Status bei Bedarf auf „Beendet“.");
+        Log(c,t,"EntryBefore",id,JsonSerializer.Serialize(e));
+        Exec(c,t,"DELETE FROM Records WHERE Id=$p0",id);
+        return true;
+    });
     public async Task SaveTemplateAsync(string id,string body)=>await Change("TemplateCustomized",id,body,(c,t)=>{Reason(body);Exec(c,t,"UPDATE Templates SET CustomBody=$p0 WHERE Id=$p1",body,id);return true;});
     public Task<List<Choice>> GlossaryAsync()=>Read(c=>Query(c,null,"SELECT Id,Term||' – '||Expanded||char(10)||CASE WHEN CustomDefinition='' THEN Definition ELSE CustomDefinition END FROM Glossary ORDER BY Term",r=>new Choice(r.GetString(0),r.GetString(1))));
     public async Task SaveGlossaryAsync(string id,string text)=>await Change("GlossaryCustomized",id,text,(c,t)=>{Reason(text);Exec(c,t,"UPDATE Glossary SET CustomDefinition=$p0 WHERE Id=$p1",text,id);return true;});

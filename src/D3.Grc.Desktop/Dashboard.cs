@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -17,6 +18,7 @@ public sealed partial class MainWindow
         var findings = _entries.Where(entry => entry.Kind == "Finding").ToArray();
         var measures = _entries.Where(entry => entry.Kind == "Measure").ToArray();
         var audits = _entries.Where(entry => entry.Kind == "Audit").ToArray();
+        var suppliers = _entries.Where(entry => entry.Kind == "Supplier").ToArray();
 
         var controlIds = controls.Select(control => control.Id).ToHashSet();
         var evidence = await _workspace.ControlEvidenceTraceAsync(controlIds, now);
@@ -153,6 +155,38 @@ public sealed partial class MainWindow
             return Ui.Card(steps);
         }
 
+        async Task<Control> SupplierReviews()
+        {
+            var active = suppliers.Where(supplier => supplier.Status != "Beendet").ToArray();
+            var details = await _workspace.SupplierDetailsAsync(active.Select(supplier => supplier.Id).ToArray());
+            var critical = details.Values.Count(supplier => supplier.Criticality == SupplierCriticality.Critical);
+            var high = details.Values.Count(supplier => supplier.Criticality == SupplierCriticality.High);
+            var deadlines = active.Select(supplier =>
+                DateOnly.TryParseExact(supplier.DueDate, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var date) ? (DateOnly?)date : null).ToArray();
+            var overdue = deadlines.Count(date => date is { } due && due < today);
+            var dueToday = deadlines.Count(date => date == today);
+            var unscheduled = deadlines.Count(date => date is null);
+
+            Control Count(string label, int value, string? description = null)
+            {
+                var count = Ui.Stack(Ui.Text(value.ToString(), 24, true), Ui.Text(label, 14, true));
+                count.Spacing = 4;
+                if (description is not null)
+                    count.Children.Add(Ui.Secondary(description));
+                return count;
+            }
+
+            return Ui.Card(Ui.Stack(
+                Ui.Heading("Lieferantenprüfungen"),
+                Ui.Secondary($"Prüfbestand im aktuellen Filter · {active.Length} von {suppliers.Length} Einträgen"),
+                Ui.AdaptiveCards(3, 150,
+                    Count("Kritisch eingestuft", critical, $"{high} hoch eingestuft"),
+                    Count("Fällige Prüfungen", overdue + dueToday, $"{dueToday} heute fällig · {overdue} überfällig"),
+                    Count("Ohne Prüftermin", unscheduled)),
+                OpenRegister("Lieferantenregister öffnen", "Supplier")));
+        }
+
         var metrics = Ui.AdaptiveCards(4, 170,
             Metric("Anforderungen", requirements.Length, "Requirement", "Einträge für die Anwendbarkeitsprüfung"),
             Metric("Controls", controls.Length, "Control", "Kontrollen im gewählten Kontext"),
@@ -176,8 +210,11 @@ public sealed partial class MainWindow
         var context = Ui.Stack(Ui.Heading("Projektüberblick", 27, 1),
             Ui.Secondary($"Aktueller Filterbestand am {today:dd.MM.yyyy}"));
         context.Spacing = 5;
-        var overview = Ui.Scroll(Ui.Stack(context, metrics, Ui.AdaptiveCards(2, 342, attention, coverage),
-            NextSteps()));
+        var overviewContent = Ui.Stack(context, metrics, Ui.AdaptiveCards(2, 342, attention, coverage));
+        if (suppliers.Length > 0)
+            overviewContent.Children.Add(await SupplierReviews());
+        overviewContent.Children.Add(NextSteps());
+        var overview = Ui.Scroll(overviewContent);
 
         var implementation = Ui.Scroll(Ui.AdaptiveCards(2, 340,
             Distribution("Anwendbarkeit der Anforderungen", "Requirement", requirements),

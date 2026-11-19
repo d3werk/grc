@@ -5,7 +5,20 @@ using static D3.Grc.Core.Database;
 namespace D3.Grc.Core;
 public sealed partial class Workspace
 {
-    public static readonly Dictionary<string,(string From,string To)> LinkTypes=new(){["Anforderung → Control"]=("Requirement","Control"),["Risiko → Control"]=("Risk","Control"),["Audit → Control"]=("Audit","Control"),["Finding → Audit"]=("Finding","Audit"),["Finding → Control"]=("Finding","Control"),["Maßnahme → Finding"]=("Measure","Finding"),["KI-System → Control"]=("AiSystem","Control"),["OSS-Komponente → Control"]=("OssComponent","Control")};
+    public static readonly Dictionary<string, (string From, string To)> LinkTypes = new()
+    {
+        ["Anforderung → Control"] = ("Requirement", "Control"),
+        ["Risiko → Control"] = ("Risk", "Control"),
+        ["Audit → Control"] = ("Audit", "Control"),
+        ["Finding → Audit"] = ("Finding", "Audit"),
+        ["Finding → Control"] = ("Finding", "Control"),
+        ["Maßnahme → Finding"] = ("Measure", "Finding"),
+        ["KI-System → Control"] = ("AiSystem", "Control"),
+        ["OSS-Komponente → Control"] = ("OssComponent", "Control"),
+        ["Dienstleister → Control"] = ("Supplier", "Control"),
+        ["Dienstleister → Risiko"] = ("Supplier", "Risk"),
+        ["Maßnahme → Dienstleister"] = ("Measure", "Supplier")
+    };
     public Task<List<Mapping>> MappingsAsync()=>Read(c=>Query(c,null,"SELECT l.*,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,''),COALESCE(a.Approval,'Entwurf') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>new Mapping(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),r.GetString(8))));
     public async Task LinkAsync(string from,string to,string type,string source,string coverage,string scope,string reason)=>await Change("MappingCreated",from,JsonSerializer.Serialize(new{to,type,source,coverage,scope,reason}),(c,t)=>{
         Reason(reason);if(!LinkTypes.TryGetValue(type,out var pair)||!new[]{"Teilweise","Vollständig","Unterstützend"}.Contains(coverage))throw new ArgumentException("Beziehung/Abdeckung ungültig.");var a=Get(c,t,from);var b=Get(c,t,to);RequireKind(a,pair.From);RequireKind(b,pair.To);

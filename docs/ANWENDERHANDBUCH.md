@@ -1,4 +1,4 @@
-# Anwenderhandbuch 0.7.0
+# Anwenderhandbuch 0.8.0
 
 In Version 0.6.1 bieten zentrale Felder und Aktionen kurze Bedienhinweise. Den Mauszeiger auf dem Element stehen lassen oder das Element mit der Tastatur fokussieren und F1 drücken. Escape schließt einen geöffneten Hinweis.
 
@@ -96,3 +96,13 @@ Beide Aktionen beenden in diesem Einzelplatzstand die Sitzung vollständig: Form
 
 ## 14. Grenzen
 Aktive SQLite-Arbeitskopien sind Klartext im privaten Benutzerverzeichnis. Nach Absturz können Reste bestehen. Erst verschlüsselte Recovery prüfen, danach verwaiste Arbeitskopien bereinigen. Datenträgerverschlüsselung verwenden. Exporte und Backups nach dem eigenen Schutz-/Löschkonzept behandeln.
+
+## 15. Lieferanten und Dienstleister
+
+Unter **Lieferanten** pro externem Partner den Namen, die Leistung und die verantwortliche Rolle oder Organisationseinheit pflegen. Ein konkretes Fachthema und ein Geltungsbereich machen die Zuordnung in gefilterten Arbeitsbereichen sichtbar. Kritikalität und Risikobegründung dokumentieren. Eine Vertragsreferenz kann auf die verwaltete Vertragsfassung verweisen.
+
+Eine dokumentierte Prüfung hält Datum, Ergebnis und Begründung fest. Der zuletzt geprüfte Stand steuert die Anzeige und den nächsten Termin. Frühere Prüfungen bleiben in der Historie sichtbar. Lieferanten lassen sich über Mappings mit Risiken, Controls und Maßnahmen verbinden. Die zugeordneten Controls bilden den Einstieg in die vorhandene Nachweisverwaltung.
+
+Ein relevanter externer Dienstleister, ein gewählter Drittparteien-Risikofokus oder andere passende Unternehmensmerkmale priorisieren das Register im Umsetzungsplan. Im Dashboard sind kritische Lieferanten und Prüfbedarf im aktuellen Filter sichtbar. Berichte enthalten die zugehörigen Lieferantendaten und Prüfungen.
+
+Beim ersten Öffnen eines älteren Projektstands legt 0.8.0 vor der Migration eine verschlüsselte Sicherung an. Für die Rückkehr zur alten Version eine Kopie der Sicherung mit der Dateiendung `.d3grc` in der ursprünglichen App öffnen.

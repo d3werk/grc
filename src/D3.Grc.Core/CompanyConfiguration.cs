@@ -35,7 +35,8 @@ public enum CompanyFactors
     AiSystems = 1 << 3,
     CloudServices = 1 << 4,
     CriticalProcesses = 1 << 5,
-    OpenSourceSoftware = 1 << 6
+    OpenSourceSoftware = 1 << 6,
+    ExternalSuppliers = 1 << 7
 }
 
 public enum CompanyRiskFocus
@@ -78,7 +79,7 @@ public static class CompanyPlanning
 {
     private const CompanyFactors AllFactors = CompanyFactors.PersonalData | CompanyFactors.Nis2Review |
         CompanyFactors.DoraReview | CompanyFactors.AiSystems | CompanyFactors.CloudServices |
-        CompanyFactors.CriticalProcesses | CompanyFactors.OpenSourceSoftware;
+        CompanyFactors.CriticalProcesses | CompanyFactors.OpenSourceSoftware | CompanyFactors.ExternalSuppliers;
 
     public static IReadOnlyDictionary<CompanySize, string> SizeLabels { get; } =
         new ReadOnlyDictionary<CompanySize, string>(new Dictionary<CompanySize, string>
@@ -111,7 +112,8 @@ public static class CompanyPlanning
             [CompanyFactors.AiSystems] = "KI-Systeme werden genutzt oder bereitgestellt",
             [CompanyFactors.CloudServices] = "Cloud-Dienste werden genutzt",
             [CompanyFactors.CriticalProcesses] = "Kritische Geschäftsprozesse sind vorhanden",
-            [CompanyFactors.OpenSourceSoftware] = "Open-Source-Software wird eingesetzt oder weitergegeben"
+            [CompanyFactors.OpenSourceSoftware] = "Open-Source-Software wird eingesetzt oder weitergegeben",
+            [CompanyFactors.ExternalSuppliers] = "Externe Lieferanten oder Dienstleister sind für wesentliche Leistungen relevant"
         });
 
     public static IReadOnlyDictionary<CompanyRiskFocus, string> RiskFocusLabels { get; } =
@@ -223,6 +225,14 @@ public static class CompanyPlanning
             "Wesentliche Dienste und Abhängigkeiten im Geltungsbereich beschreiben und Kontrollen für Zugriff, Ausfall und Dienstleisterwechsel festlegen.",
             "Das Modul rückt bei genutzten Cloud-Diensten oder einem Risikofokus auf IT-Dienstleister nach vorn.",
             When(Has(CompanyFactors.CloudServices), "Das Profil nennt genutzte Cloud-Dienste."),
+            Focus(CompanyRiskFocus.ThirdPartyRisk));
+
+        Add("supplier", "Lieferanten und Dienstleister bewerten", "", "Supplier",
+            "Wesentliche Leistungen, Verträge, verantwortliche Einheiten und Prüftermine im Lieferantenregister erfassen. Risiken und Controls zuordnen.",
+            "Das Register lässt sich bei wesentlichen externen Abhängigkeiten ergänzen.",
+            When(Has(CompanyFactors.ExternalSuppliers), "Das Profil nennt für wesentliche Leistungen relevante externe Partner."),
+            When(Has(CompanyFactors.CloudServices), "Genutzte Cloud-Dienste schaffen Abhängigkeiten von externen Anbietern."),
+            When(Has(CompanyFactors.DoraReview) || profile.Industry == CompanyIndustry.Finance, "Für die DORA-Prüfung sollten die IKT-Dienstleister und ihre Leistungen erhoben werden."),
             Focus(CompanyRiskFocus.ThirdPartyRisk));
 
         AddTopic("bcm", "Notfallvorsorge und Wiederanlauf", "BCM", "Control",

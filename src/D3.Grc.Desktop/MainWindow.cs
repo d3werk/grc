@@ -14,16 +14,16 @@ namespace D3.Grc.Desktop;
 public sealed partial class MainWindow:Window
 {
     private readonly LocalIdentity _identity;private readonly Workspace _workspace;
-    private ContentControl _body=new();private TextBlock _status=Ui.Text("Entwicklungsstand 0.7.0 · noch keine Produktionsfreigabe",12);
+    private ContentControl _body=new();private TextBlock _status=Ui.Text("Entwicklungsstand 0.8.0 · noch keine Produktionsfreigabe",12);
     private ComboBox _topic=Ui.Combo();private TextBox _scope=Ui.Input("Scope exakt filtern (leer = alle)"),_search=Ui.Input("Suche: Titel, Code, Beschreibung, Owner");
     private TextBlock _context=Ui.Text("",18,true);private readonly DispatcherTimer _timer=new(){Interval=TimeSpan.FromSeconds(30)};
     private Grid? _shell;private bool _busy,_loading,_allowClose;private string _page="Dashboard",_topicId="",_scopeValue="",_searchValue="",_statusFilter="";
     private List<Choice> _topics=[];private List<Entry> _entries=[];private List<Entry> _all=[];private List<Source> _sources=[];private List<Source> _allSources=[];private List<Mapping> _mappings=[];
-    private static readonly Dictionary<string,string> Pages=new(){["Dashboard"]="Übersicht",["Requirement"]="Anforderungen",["Control"]="Controls",["Risk"]="Risiken",["Mappings"]="Mappings",["Evidence"]="Evidence",["Audit"]="Audits",["Finding"]="Findings",["Measure"]="Maßnahmen",["AiSystem"]="KI-Systeme",["OssComponent"]="Open Source",["Sources"]="Quellen",["Templates"]="Textvorlagen",["Glossary"]="Glossar",["Journal"]="Aktivitäten"};
+    private static readonly Dictionary<string,string> Pages=new(){["Dashboard"]="Übersicht",["Requirement"]="Anforderungen",["Control"]="Controls",["Risk"]="Risiken",["Supplier"]="Lieferanten",["Mappings"]="Mappings",["Evidence"]="Evidence",["Audit"]="Audits",["Finding"]="Findings",["Measure"]="Maßnahmen",["AiSystem"]="KI-Systeme",["OssComponent"]="Open Source",["Sources"]="Quellen",["Templates"]="Textvorlagen",["Glossary"]="Glossar",["Journal"]="Aktivitäten"};
     private static readonly (string Title, string[] Pages)[] NavigationGroups =
     [
         ("Arbeitsbereich", ["Dashboard"]),
-        ("Governance und Risiken", ["Requirement", "Control", "Risk", "Measure", "Mappings"]),
+        ("Governance und Risiken", ["Requirement", "Control", "Risk", "Supplier", "Measure", "Mappings"]),
         ("Prüfung", ["Evidence", "Audit", "Finding"]),
         ("Register und Wissen", ["AiSystem", "OssComponent", "Sources", "Templates", "Glossary", "Journal"])
     ];
@@ -32,7 +32,7 @@ public sealed partial class MainWindow:Window
     private Control[] _projectOpeningActions = [];
     public MainWindow(LocalIdentity identity,Workspace workspace)
     {
-        _identity=identity;_workspace=workspace;Title="D3 GRC 0.7.0 · Datenschutz und Informationssicherheit";Width=1440;Height=960;MinWidth=1040;MinHeight=700;Background=Ui.Canvas;FontSize=14;
+        _identity=identity;_workspace=workspace;Title="D3 GRC 0.8.0 · Datenschutz und Informationssicherheit";Width=1440;Height=960;MinWidth=1040;MinHeight=700;Background=Ui.Canvas;FontSize=14;
         Opened+=(_,_)=>LoginScreen();
         Closing+=async(_,e)=>{if(_allowClose)return;e.Cancel=true;if(_busy)return;await Run(async()=>{if(!await CanLeaveFormAsync())return;await _workspace.LogoutAsync();_allowClose=true;_timer.Stop();Close();});};
         KeyDown+=async(_,e)=>{if(!_workspace.IsOpen)return;var command=e.KeyModifiers.HasFlag(KeyModifiers.Control)||e.KeyModifiers.HasFlag(KeyModifiers.Meta);if(command&&e.Key==Key.S){e.Handled=true;await Run(Save);}else if(command&&e.Key==Key.P){e.Handled=true;await Run(()=>Export(false));}};
