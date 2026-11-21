@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -42,7 +43,55 @@ public sealed class App : Application
             Setters =
             {
                 new Setter(Layoutable.MinHeightProperty, 38.0),
-                new Setter(TemplatedControl.PaddingProperty, new Thickness(10, 7))
+                new Setter(TemplatedControl.PaddingProperty, new Thickness(11, 7)),
+                new Setter(TemplatedControl.FontWeightProperty, FontWeight.Medium)
+            }
+        });
+        Styles.Add(new Style(selector => selector.OfType<Button>().Class("grc-action"))
+        {
+            Setters =
+            {
+                new Setter(TemplatedControl.BackgroundProperty, Ui.Surface),
+                new Setter(TemplatedControl.BorderBrushProperty, Ui.Line),
+                new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(1)),
+                new Setter(TemplatedControl.ForegroundProperty, Ui.Ink)
+            }
+        });
+        Styles.Add(new Style(selector => selector.OfType<Button>().Class("grc-nav"))
+        {
+            Setters =
+            {
+                new Setter(TemplatedControl.BackgroundProperty, Brushes.Transparent),
+                new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(0)),
+                new Setter(TemplatedControl.ForegroundProperty, Ui.NavText)
+            }
+        });
+        Styles.Add(new Style(selector => selector.OfType<Button>().Class("grc-nav").Class("grc-current"))
+        {
+            Setters =
+            {
+                new Setter(TemplatedControl.BackgroundProperty, Ui.NavySelected),
+                new Setter(TemplatedControl.ForegroundProperty, Ui.Mint),
+                new Setter(TemplatedControl.FontWeightProperty, FontWeight.SemiBold)
+            }
+        });
+        SetButtonState("grc-action", ":pointerover", Ui.SoftBlue, Ui.Line);
+        SetButtonState("grc-action", ":pressed", Ui.Line, Ui.Line);
+        SetButtonState("grc-nav", ":pointerover", Ui.NavyHover, Brushes.Transparent);
+        SetButtonState("grc-nav", ":pressed", Ui.NavySelected, Brushes.Transparent);
+        SetButtonState("grc-nav", ":disabled", Brushes.Transparent, Brushes.Transparent);
+    }
+
+    private void SetButtonState(string styleClass, string pseudoClass, IBrush background, IBrush border)
+    {
+        Styles.Add(new Style(selector => selector.OfType<Button>().Class(styleClass).Class(pseudoClass)
+            .Template().OfType<ContentPresenter>().Name("PART_ContentPresenter"))
+        {
+            Setters =
+            {
+                new Setter(ContentPresenter.BackgroundProperty, background),
+                new Setter(ContentPresenter.BorderBrushProperty, border),
+                new Setter(ContentPresenter.ForegroundProperty, styleClass == "grc-nav" ? Ui.NavText : Ui.Ink)
             }
         });
     }

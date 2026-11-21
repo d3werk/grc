@@ -160,7 +160,14 @@ public sealed partial class MainWindow
         }, help: "Verknüpft den ausgewählten Nachweis mit einem weiteren Control aus dem aktuellen Arbeitsbereich.");
         var export=Button("Datei exportieren",async()=>{if(list.SelectedItem is not Proof p)return;if(!await Ui.Confirm(this,"Evidence als unverschlüsselte Datei exportieren?","Exportieren"))return;var path=await SavePath(p.FileName,Path.GetExtension(p.FileName).TrimStart('.'));if(path is null)return;await Files.AtomicAsync(path,await _workspace.EvidenceBytesAsync(p.Id));await _workspace.RecordExportAsync(path,_topicId,_scopeValue,"Evidence");},
             help: "Speichert den links ausgewählten Nachweis als unverschlüsselte Datei.");
-        return Ui.Split(Ui.Card(Ui.Fill(heading,list,export)),
+        var preview=Button("Vorschau",async()=>
+        {
+            if (list.SelectedItem is Proof proof)
+                await PreviewEvidenceAsync(proof);
+        },help:"Zeigt Text- und PNG-Nachweise in der App. Unterstützte Inhalte bleiben im Projekt.", glyph: Glyph.Documents);
+        preview.IsEnabled = list.SelectedItem is Proof;
+        list.SelectionChanged += (_, _) => preview.IsEnabled = list.SelectedItem is Proof;
+        return Ui.Split(Ui.Card(Ui.Fill(heading,list,Ui.Row(preview, export))),
             Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text("Evidence erfassen",20,true),
                 Ui.Notice("Quellen stammen vom ausgewählten Control. Nachweisherkunft ist ein separates Feld. Vorlagen erzeugen keine Evidence ohne tatsächlichen Dateiimport."),
                 Ui.Field("Control", control, "Ordnet die Nachweisdatei einem Control aus dem aktuellen Arbeitsbereich zu."),

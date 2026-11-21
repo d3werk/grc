@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
+using Avalonia.Input;
 using Avalonia.Input.Platform;
 using D3.Grc.Core;
 namespace D3.Grc.Desktop;
@@ -111,18 +113,131 @@ public sealed partial class MainWindow
             ? uri : null;
     private async Task<Control> TemplatePage()
     {
-        var templates=await _workspace.TemplatesAsync(_topicId);var list=new ListBox{ItemsSource=templates};TextTemplate? selected=null;var title=Ui.Text("Vorlage auswählen",20,true);var original=Ui.Input("Original",true);original.IsReadOnly=true;var edit=Ui.Input("Eigene Fassung",true);
-        var save = Button("Vorlage speichern", SaveEditorButtonAsync, true);
-        edit.IsEnabled = save.IsEnabled = false;
-        SafeSelection(list, () => selected, obj =>
+        var templates = await _workspace.TemplatesAsync(_topicId);
+        TextTemplate? selected = null;
+        var title = Ui.Heading("Vorlage auswählen", 24, 1);
+        var meta = Ui.Secondary("");
+        var search = Ui.Input("Titel, Kürzel oder Inhalt");
+        var types = Ui.Combo();
+        var anyType = new Choice("", "Alle Vorlagenarten");
+        types.ItemsSource = new[] { anyType }.Concat(templates.Select(template => template.Kind).Distinct()
+            .Select(kind => new Choice(kind, TemplateKindLabel(kind)))
+            .OrderBy(type => type.Title, StringComparer.CurrentCultureIgnoreCase)).ToArray();
+        types.SelectedItem = anyType;
+        var total = Ui.Secondary("");
+        var list = new ListBox
         {
-            selected = obj as TextTemplate;
+            ItemTemplate = new FuncDataTemplate<TextTemplate>((template, _) =>
+            {
+                if (template is null)
+                    return null;
+                return new StackPanel
+                {
+                    Spacing = 4,
+                    Children =
+                    {
+                        Ui.Text(template.Title, 14, true),
+                        Ui.Secondary($"{TemplateKindLabel(template.Kind)} · {template.Id}")
+                    }
+                };
+            })
+        };
+
+        var effectivePreview = new ContentControl();
+        var originalPreview = new ContentControl();
+        var edit = Ui.Input("Eigene Fassung", true);
+        edit.MinHeight = 315;
+        edit.MaxLength = 30000;
+        var save = Button("Vorlage speichern", SaveEditorButtonAsync, true, glyph: Glyph.Save);
+        var createDocument = Button("Als Dokument verwenden", async () =>
+        {
+            if (selected is null || !await CanLeaveFormAsync())
+                return;
+            await StartDocumentFromTemplateAsync(selected);
+        }, help: "Öffnet einen neuen Entwurf mit der gespeicherten Fassung dieser Vorlage.", glyph: Glyph.Documents);
+
+        var tabs = new TabControl
+        {
+            ItemsSource = new[]
+            {
+                Ui.Tab("Vorschau", Ui.Scroll(effectivePreview), glyph: Glyph.Documents),
+                Ui.Tab("Bearbeiten", Ui.Scroll(Ui.Stack(
+                    Ui.Notice("Eigene Fassung und Katalogtext bleiben getrennt. Bereits angelegte Dokumente und Einträge behalten ihren Inhalt."),
+                    Ui.Field("Eigene Fassung", edit, "Überschriften, Listen und Markdown-Tabellen werden in der Vorschau formatiert."),
+                    save)), glyph: Glyph.Templates),
+                Ui.Tab("Katalogfassung", Ui.Scroll(originalPreview), glyph: Glyph.Sources)
+            },
+            SelectedIndex = 0
+        };
+
+        void RefreshPreview()
+        {
+            effectivePreview.Content = selected is null
+                ? Ui.Notice("Wählen Sie links eine Vorlage. Hier sehen Sie Inhalt und Aufbau.")
+                : DocumentPreview.Create(edit.Text ?? "");
+        }
+
+        void Load(TextTemplate? template)
+        {
+            selected = template;
             title.Text = selected?.Title ?? "Vorlage auswählen";
-            original.Text = selected?.Body ?? "";
+            meta.Text = selected is null ? "" :
+                $"{TemplateKindLabel(selected.Kind)} · {selected.Id} · "
+                + (_allSources.FirstOrDefault(source => source.Id == selected.SourceId)?.Title ?? selected.SourceId);
+            meta.IsVisible = selected is not null;
             edit.Text = selected?.Effective ?? "";
-            edit.IsEnabled = save.IsEnabled = selected is not null;
+            edit.IsEnabled = save.IsEnabled = createDocument.IsEnabled = selected is not null;
+            originalPreview.Content = selected is null ? Ui.Notice("Wählen Sie eine Vorlage.") :
+                DocumentPreview.Create(selected.Body);
+            RefreshPreview();
+        }
+
+        var appliedText = "";
+        var appliedType = "";
+        void FillList()
+        {
+            var matches = templates.Where(template => (appliedType == "" || template.Kind == appliedType) &&
+                (appliedText == "" || new[] { template.Title, template.Id, template.Effective }.Any(
+                    text => text.Contains(appliedText, StringComparison.CurrentCultureIgnoreCase))))
+                .OrderBy(template => template.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+            list.ItemsSource = matches;
+            list.SelectedItem = matches.FirstOrDefault(template => template.Id == selected?.Id);
+            total.Text = matches.Count == 1 ? "1 Vorlage" : $"{matches.Count} Vorlagen";
+        }
+
+        async Task ApplySearch()
+        {
+            var text = search.Text?.Trim() ?? "";
+            var type = (types.SelectedItem as Choice)?.Id ?? "";
+            if ((text == appliedText && type == appliedType) || !await CanLeaveFormAsync())
+                return;
+            appliedText = text;
+            appliedType = type;
+            FillList();
+            Load(list.SelectedItem as TextTemplate);
+            AcceptFormState();
+        }
+
+        Load(null);
+        FillList();
+        SafeSelection(list, () => selected, item =>
+        {
+            Load(item as TextTemplate);
             return Task.CompletedTask;
         });
+        tabs.SelectionChanged += (_, _) =>
+        {
+            if (tabs.SelectedIndex == 0)
+                RefreshPreview();
+        };
+        search.KeyDown += async (_, e) =>
+        {
+            if (e.Key != Key.Enter)
+                return;
+            e.Handled = true;
+            await Run(ApplySearch);
+        };
+
         Task<bool> SaveTemplate()
         {
             var template = selected ?? throw new ArgumentException("Vorlage auswählen.");
@@ -130,16 +245,33 @@ public sealed partial class MainWindow
             return CommitFormChangeAsync(() => _workspace.SaveTemplateAsync(template.Id, text), () =>
             {
                 selected = template with { CustomBody = text };
-                templates[templates.FindIndex(t => t.Id == template.Id)] = selected;
-                list.ItemsSource = templates.ToList();
-                list.SelectedItem = selected;
+                templates[templates.FindIndex(item => item.Id == template.Id)] = selected;
+                FillList();
+                RefreshPreview();
             });
         }
+
         TrackForm(() => edit.Text ?? "", SaveTemplate, null, edit);
-        return Ui.Split(Ui.Card(Ui.Fill(Ui.Text("Themenbezogene Textvorlagen",18,true),list)),Ui.Card(Ui.Scroll(Ui.Stack(title,Ui.Notice("Eigene Fassung und Original bleiben getrennt. Bereits angelegte Datensätze werden nicht rückwirkend überschrieben."),Ui.Field("Original",original),
-            Ui.Field("Eigene Fassung", edit, "Die eigene Fassung wird künftig beim Übernehmen dieser Vorlage verwendet."),
-            save))));
+        var filter = Ui.Stack(Ui.Heading("Textvorlagen", 20), Ui.Field("Vorlagen suchen", search),
+            Ui.Field("Vorlagenart", types), Button("Filter anwenden", ApplySearch, glyph: Glyph.Filter), total);
+        return Ui.Split(Ui.Card(Ui.Fill(filter, list)), Ui.Card(Ui.Fill(Ui.Stack(title, meta), tabs, Ui.Row(createDocument))));
     }
+
+    private static string TemplateKindLabel(string kind) => kind switch
+    {
+        "Requirement" => "Anforderung",
+        "Control" => "Control",
+        "Risk" => "Risiko",
+        "Audit" => "Prüfung",
+        "Evidence" => "Nachweis",
+        "Measure" => "Maßnahme",
+        "Finding" => "Feststellung",
+        "AiSystem" => "KI-System",
+        "OssComponent" => "OSS-Komponente",
+        "Supplier" => "Lieferant",
+        "Policy" => "Richtlinie",
+        _ => kind
+    };
     private async Task<Control> GlossaryPage()
     {
         var rows=(await _workspace.GlossaryAsync()).Where(g=>_searchValue==""||g.Title.Contains(_searchValue,StringComparison.CurrentCultureIgnoreCase)).ToList();var list=new ListBox{ItemsSource=rows};Choice? selected=null;var edit=Ui.Input("Eigene Erläuterung",true);

@@ -1,5 +1,7 @@
 # Anforderungsabdeckung und ehrlicher Lieferstatus
 
+Diese Übersicht dokumentiert den Stand der ursprünglichen 0.6-Lieferung. Die aktuelle Funktionsabdeckung und Abnahme stehen im [Prüfbericht 0.9.0](PRUEFBERICHT-0.9.0.md).
+
 Status „im Quellcode“ bedeutet nicht „nativ erfolgreich getestet“.
 
 | Anforderung | Stand |

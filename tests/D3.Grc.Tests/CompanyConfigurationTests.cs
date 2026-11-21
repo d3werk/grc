@@ -16,6 +16,7 @@ public sealed class CompanyConfigurationTests
             .Select(module => module.Id));
         Assert.Equal(CompanyModulePriority.Optional, plan.Single(module => module.Id == "audit").Priority);
         Assert.Equal(CompanyModulePriority.Optional, plan.Single(module => module.Id == "supplier").Priority);
+        Assert.Equal(CompanyModulePriority.Optional, plan.Single(module => module.Id == "documents").Priority);
         Assert.All(plan, module =>
         {
             Assert.False(string.IsNullOrWhiteSpace(module.Why));
@@ -35,12 +36,24 @@ public sealed class CompanyConfigurationTests
         Assert.Equal("DORA-Betroffenheit prüfen", plan["dora"].Title);
         Assert.Contains("Finanzbranche", plan["dora"].Why);
         Assert.Equal(CompanyModulePriority.Optional, plan["nis2"].Priority);
-        foreach (string id in new[] { "cloud", "privacy", "evidence", "audit", "mapping", "supplier" })
+        foreach (string id in new[] { "cloud", "privacy", "evidence", "audit", "mapping", "supplier", "documents" })
         {
             Assert.Equal(CompanyModulePriority.Key, plan[id].Priority);
         }
 
         Assert.Equal("CLOUD", plan["risk"].TopicId);
+    }
+
+    [Fact]
+    public void Document_register_is_a_cross_topic_key_module_for_critical_processes()
+    {
+        var profile = CompanyProfile.Default with { Factors = CompanyFactors.CriticalProcesses };
+        var module = Assert.Single(CompanyPlanning.Build(profile), module => module.Id == "documents");
+
+        Assert.Equal(CompanyModulePriority.Key, module.Priority);
+        Assert.Equal("Documents", module.TargetPage);
+        Assert.Equal("", module.TopicId);
+        Assert.Contains("kritische Geschäftsprozesse", module.Why);
     }
 
     [Fact]
