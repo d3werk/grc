@@ -163,8 +163,102 @@ for statement, label in [
         check(label)
     else:
         check(label, False)
-db.execute('ROLLBACK TO document_fixture')
 db.execute('RELEASE document_fixture')
+
+# Migration 009 leaves existing risks unassessed and retains the supplier and document graph.
+db.execute("INSERT INTO DocumentLinks VALUES('fixture-document-link','fixture-document',1,?,'Synthetic control link')", (control_id,))
+db.execute("""INSERT INTO Records(Id,Kind,Code,Title,SourceId,Body,Owner,Status,Scope,Version)
+    VALUES('fixture-risk','Risk','R-1','Existing risk','INTERNAL','Original scenario','Risk owner','Offen','North',4)""")
+db.execute("INSERT INTO RecordTopics VALUES('fixture-risk','ISMS')")
+db.execute("INSERT INTO RecordSources VALUES('fixture-risk','INTERNAL','Local risk policy','Primär')")
+db.execute("""INSERT INTO Links(Id,SourceRecordId,TargetRecordId,Type,Reason,SourceId)
+    VALUES('fixture-risk-link','fixture-risk',?,'Risiko → Control','Synthetic mitigation','INTERNAL')""",
+    (control_id,))
+db.execute("""INSERT INTO MappingAssessments(LinkId,Coverage,Scope,Approval)
+    VALUES('fixture-risk-link','Teilweise','North','Bestätigt')""")
+migration_009_tables = migration_008_tables + [
+    'Topics', 'TopicSources', 'EvidenceLinks', 'Applicability', 'AuditCriteria', 'ExportJobs',
+    'Documents', 'PublishedDocumentVersions', 'DocumentLinks'
+]
+before_009 = {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in migration_009_tables}
+existing_metadata = "SELECT Key,Value FROM Metadata WHERE Key<>'MinAppVersion' ORDER BY Key"
+metadata_before_009 = db.execute(existing_metadata).fetchall()
+db.executescript((R/'src/D3.Grc.Core/Migrations/009.sql').read_text())
+for table, rows in before_009.items():
+    check(f'Risk migration preserves {table}', db.execute(f'SELECT * FROM {table}').fetchall() == rows)
+check('Risk migration preserves other metadata', db.execute(existing_metadata).fetchall() == metadata_before_009)
+check('Risk minimum app version', db.execute("SELECT Value FROM Metadata WHERE Key='MinAppVersion'").fetchone() == ('0.10.0',))
+check('No fabricated risk assessments', db.execute('SELECT COUNT(*) FROM RiskAssessments').fetchone()[0] == 0)
+
+def violates_integrity(statement, parameters=()):
+    try:
+        db.execute(statement, parameters)
+    except sqlite3.IntegrityError:
+        return True
+    return False
+
+assessment_insert = """INSERT INTO RiskAssessments(Id,RiskId,AssessedOn,InherentLikelihood,InherentImpact,
+    ResidualLikelihood,ResidualImpact,Response,Rationale,Actor,RiskVersion,RecordedUtc)
+    VALUES(:id,:risk_id,:date,:inherent_likelihood,:inherent_impact,:residual_likelihood,:residual_impact,
+    :response,:rationale,:actor,:risk_version,:recorded)"""
+assessment = {
+    'id': 'fixture-assessment-inherent', 'risk_id': 'fixture-risk', 'date': '2026-11-21',
+    'inherent_likelihood': 1, 'inherent_impact': 5, 'residual_likelihood': None, 'residual_impact': None,
+    'response': 0, 'rationale': 'Synthetic assessment', 'actor': 'Fixture reviewer',
+    'risk_version': 4, 'recorded': '2026-11-21T09:00:00Z'
+}
+db.execute('SAVEPOINT risk_fixture')
+db.execute(assessment_insert, assessment)
+db.execute(assessment_insert, {
+    **assessment, 'id': 'fixture-assessment-residual', 'inherent_likelihood': 5,
+    'residual_likelihood': 1, 'residual_impact': 5
+})
+history = db.execute("""SELECT Id,InherentLikelihood,InherentImpact,ResidualLikelihood,ResidualImpact,RiskVersion
+    FROM RiskAssessments WHERE RiskId='fixture-risk' ORDER BY Sequence""").fetchall()
+check('Risk assessment history retains assessed and unassessed residual fields', history == [
+    ('fixture-assessment-inherent', 1, 5, None, None, 4), ('fixture-assessment-residual', 5, 5, 1, 5, 4)
+])
+control_version = db.execute('SELECT Version FROM Records WHERE Id=?', (control_id,)).fetchone()[0]
+for index, (label, changes) in enumerate([
+    ('Assessment date must be a valid calendar date', {'date': '2026-02-29'}),
+    ('Inherent likelihood must be at least 1', {'inherent_likelihood': 0}),
+    ('Inherent impact must be at most 5', {'inherent_impact': 6}),
+    ('Inherent ratings must be integers', {'inherent_likelihood': 1.5}),
+    ('Residual impact requires residual likelihood', {'residual_impact': 3}),
+    ('Residual likelihood requires residual impact', {'residual_likelihood': 3}),
+    ('Residual likelihood must be at least 1', {'residual_likelihood': 0, 'residual_impact': 3}),
+    ('Residual impact must be at most 5', {'residual_likelihood': 3, 'residual_impact': 6}),
+    ('Risk response must be known', {'response': 5}),
+    ('Risk assessment requires a rationale', {'rationale': '   '}),
+    ('Risk assessment requires an actor', {'actor': '   '}),
+    ('Risk assessment requires a valid risk version', {'risk_version': 0}),
+    ('Risk assessment rejects stale risk versions', {'risk_version': 3}),
+    ('Risk assessment requires an existing record', {'risk_id': 'missing-risk'}),
+    ('Risk assessment requires a Risk record', {'risk_id': control_id, 'risk_version': control_version}),
+]):
+    check(label, violates_integrity(assessment_insert, {**assessment, 'id': f'fixture-assessment-invalid-{index}', **changes}))
+check('Risk assessment ID is unique', violates_integrity(assessment_insert, assessment))
+replace_assessment = assessment_insert.replace('INSERT INTO', 'INSERT OR REPLACE INTO', 1)
+check('Risk assessment history cannot be replaced by ID', violates_integrity(
+    replace_assessment, {**assessment, 'rationale': 'Replacement rationale'}))
+sequence = db.execute("SELECT Sequence FROM RiskAssessments WHERE Id='fixture-assessment-inherent'").fetchone()[0]
+replace_sequence = replace_assessment.replace('(Id,RiskId,', '(Sequence,Id,RiskId,', 1).replace('VALUES(:id,', 'VALUES(:sequence,:id,', 1)
+check('Risk assessment history cannot be replaced by sequence', violates_integrity(
+    replace_sequence, {**assessment, 'sequence': sequence, 'id': 'fixture-assessment-replacement'}))
+check('Risk assessment history cannot be updated', violates_integrity(
+    "UPDATE RiskAssessments SET Rationale='Edited' WHERE Id='fixture-assessment-inherent'"))
+check('Risk assessment history cannot be deleted', violates_integrity(
+    "DELETE FROM RiskAssessments WHERE Id='fixture-assessment-inherent'"))
+
+db.execute("""INSERT INTO Records(Id,Kind,Code,Title,SourceId,Body,Version)
+    VALUES('fixture-assessed-risk','Risk','R-2','Assessed risk','INTERNAL','',4)""")
+db.execute(assessment_insert, {**assessment, 'id': 'fixture-protect-assessment', 'risk_id': 'fixture-assessed-risk'})
+check('Risk assessment history protects its risk from removal', violates_integrity(
+    "DELETE FROM Records WHERE Id='fixture-assessed-risk'"))
+check('Risk migration FK', db.execute('PRAGMA foreign_key_check').fetchall() == [])
+check('Risk migration integrity', db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok')
+db.execute('ROLLBACK TO risk_fixture')
+db.execute('RELEASE risk_fixture')
 
 # Compile static parameterized SQL against the migrated schema. No C# execution.
 db.execute("CREATE TABLE Profiles(Name TEXT PRIMARY KEY,Salt BLOB,Verifier BLOB,Failures INTEGER,LockedUntil TEXT)")

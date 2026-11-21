@@ -17,6 +17,7 @@ public sealed partial class MainWindow
         ["Requirement"] = ("Anforderungen", Glyph.Requirements),
         ["Control"] = ("Controls", Glyph.Shield),
         ["Risk"] = ("Risiken", Glyph.Risk),
+        ["RiskMatrix"] = ("Risikomatrix", Glyph.RiskMatrix),
         ["Supplier"] = ("Lieferanten", Glyph.Supplier),
         ["Measure"] = ("Maßnahmen", Glyph.Tasks),
         ["Mappings"] = ("Mappings", Glyph.Mapping),
@@ -38,7 +39,7 @@ public sealed partial class MainWindow
     private static readonly (string Title, string[] Pages)[] NavigationGroups =
     [
         ("Arbeitsbereich", ["Dashboard", "Documents"]),
-        ("Governance und Risiken", ["Requirement", "Control", "Risk", "Measure", "Mappings"]),
+        ("Governance und Risiken", ["Requirement", "Control", "Risk", "RiskMatrix", "Measure", "Mappings"]),
         ("Prüfung und Nachweise", ["Evidence", "Audit", "Finding"]),
         ("Register", ["Supplier", "AiSystem", "OssComponent"]),
         ("Wissen und Verlauf", ["Sources", "Templates", "Glossary", "Journal"])

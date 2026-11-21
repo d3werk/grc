@@ -6,7 +6,7 @@ namespace D3.Grc.Desktop;
 
 internal enum Glyph
 {
-    Dashboard, Requirements, Shield, Risk, Supplier, Tasks, Mapping, Evidence, Audit, Finding,
+    Dashboard, Requirements, Shield, Risk, RiskMatrix, Supplier, Tasks, Mapping, Evidence, Audit, Finding,
     Ai, Code, Sources, Templates, Documents, Glossary, History, Save, Copy, Close, Settings,
     Export, Print, Open, Plus, Filter, Reset, Logout, Person, Arrow, Info, Cleanup
 }
@@ -34,6 +34,7 @@ internal static class Icons
         [Glyph.Requirements] = "F0 M5,3 H19 V21 H5 Z M7,5 H17 V19 H7 Z M9,8 H15 V10 H9 Z M9,12 H15 V14 H9 Z M9,16 H13 V17 H9 Z",
         [Glyph.Shield] = "F0 M12,2 L21,6 V11 Q21,18 12,22 Q3,18 3,11 V6 Z M12,4 L5,7 V11 Q5,17 12,20 Q19,17 19,11 V7 Z M8,11 L11,14 L16,9 L17,10 L11,16 L7,12 Z",
         [Glyph.Risk] = "F0 M12,3 L23,21 H1 Z M12,7 L5,19 H19 Z M11,10 H13 V14 H11 Z M11,16 H13 V18 H11 Z",
+        [Glyph.RiskMatrix] = "F0 M3,3 H21 V21 H3 Z M5,5 V19 H19 V5 Z M9,5 H10 V19 H9 Z M14,5 H15 V19 H14 Z M5,9 H19 V10 H5 Z M5,14 H19 V15 H5 Z",
         [Glyph.Supplier] = "F0 M3,4 H13 V8 L17,6 V9 L21,7 V20 H3 Z M5,6 V18 H19 V10 L15,12 V9 L11,12 V6 Z M8,14 H11 V16 H8 Z M13,14 H16 V16 H13 Z",
         [Glyph.Tasks] = "M3,6 L5,8 L9,4 L10,5 L5,10 L2,7 Z M12,6 H22 V8 H12 Z M3,15 L5,17 L9,13 L10,14 L5,19 L2,16 Z M12,15 H22 V17 H12 Z",
         [Glyph.Mapping] = "F0 M3,4 H9 V10 H3 Z M5,6 V8 H7 V6 Z M15,14 H21 V20 H15 Z M17,16 V18 H19 V16 Z M5,10 H7 V16 H15 V18 H5 Z M13,6 H19 V12 H17 V8 H13 Z",

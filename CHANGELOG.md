@@ -1,3 +1,10 @@
+# 0.10.0
+
+- Risikobewertung auf einer transparenten 5×5-Skala mit Eintrittswahrscheinlichkeit und Auswirkung.
+- Getrennte Brutto- und Restrisikobewertung, begründete Behandlungsentscheidung und dauerhafter Bewertungsverlauf.
+- Anklickbare Risikomatrix im Projektkontext, direkter Einstieg in bewertete Risiken und gefilterter XLSX- und HTML-Bericht.
+- Maßnahmen lassen sich mit Risiken verknüpfen. Die additive Migration sichert ältere Projektstände.
+
 # 0.9.0
 
 - Dokumentenregister mit Vorschau, Entwurf, Prüfung, Freigabe und lesbaren historischen Fassungen.

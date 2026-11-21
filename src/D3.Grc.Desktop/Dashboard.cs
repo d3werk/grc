@@ -20,6 +20,7 @@ public sealed partial class MainWindow
         var measures = _entries.Where(entry => entry.Kind == "Measure").ToArray();
         var audits = _entries.Where(entry => entry.Kind == "Audit").ToArray();
         var suppliers = _entries.Where(entry => entry.Kind == "Supplier").ToArray();
+        var openRisks = _entries.Where(entry => entry.Kind == "Risk" && entry.Status != "Erledigt").ToArray();
 
         var controlIds = controls.Select(control => control.Id).ToHashSet();
         var evidence = await _workspace.ControlEvidenceTraceAsync(controlIds, now);
@@ -235,11 +236,21 @@ public sealed partial class MainWindow
             caption.VerticalAlignment = VerticalAlignment.Center;
             return Ui.Row(badge, caption);
         }
-        var attention = Ui.Card(Ui.Stack(SectionHeading("Offene Arbeit", Glyph.Tasks),
+        var attentionContent = Ui.Stack(SectionHeading("Offene Arbeit", Glyph.Tasks),
             WorkItem("Controls ohne zeitlich gültigen Nachweis", missingEvidenceCount),
             WorkItem("Datensätze ohne Verantwortung", missingOwnerCount),
-            WorkItem("Überfällige Maßnahmen", overdueCount),
-            Ui.Row(OpenRegister("Nachweise öffnen", "Evidence"), OpenRegister("Maßnahmen öffnen", "Measure"))));
+            WorkItem("Überfällige Maßnahmen", overdueCount));
+        if (openRisks.Length > 0)
+        {
+            var latest = await _workspace.LatestRiskAssessmentsAsync(openRisks.Select(risk => risk.Id).ToArray());
+            attentionContent.Children.Add(WorkItem("Offene Risiken mit hohem oder kritischem Restrisiko",
+                latest.Values.Count(assessment => assessment.ResidualLevel is RiskLevel.High or RiskLevel.Critical)));
+            attentionContent.Children.Add(WorkItem("Offene Risiken ohne Restrisikobewertung",
+                openRisks.Length - latest.Values.Count(assessment => assessment.ResidualScore is not null)));
+        }
+        attentionContent.Children.Add(
+            Ui.Row(OpenRegister("Nachweise öffnen", "Evidence"), OpenRegister("Maßnahmen öffnen", "Measure")));
+        var attention = Ui.Card(attentionContent);
 
         var heroTitle = Ui.Heading("Projektüberblick", 31, 1);
         heroTitle.Foreground = Brushes.White;
@@ -249,11 +260,14 @@ public sealed partial class MainWindow
         heroText.Spacing = 4;
         var docs = Ui.Help(Button("Dokumente öffnen", () => Drill("Documents"), glyph: Glyph.Documents),
             "Öffnet das Dokumentenregister mit Vorschau und Versionsverlauf im aktuellen Projekt.");
-        docs.VerticalAlignment = VerticalAlignment.Center;
+        var openRiskMatrix = Ui.Help(Button("Risikomatrix öffnen", () => Drill("RiskMatrix"), glyph: Glyph.RiskMatrix),
+            "Zeigt die Bewertung nach Eintrittswahrscheinlichkeit und Auswirkung im aktuellen Filter.");
+        var heroActions = Ui.Row(docs, openRiskMatrix);
+        heroActions.VerticalAlignment = VerticalAlignment.Center;
         var heroContent = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16 };
         heroContent.Children.Add(heroText);
-        Grid.SetColumn(docs, 1);
-        heroContent.Children.Add(docs);
+        Grid.SetColumn(heroActions, 1);
+        heroContent.Children.Add(heroActions);
         var hero = new Border
         {
             Background = new LinearGradientBrush

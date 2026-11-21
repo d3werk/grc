@@ -1,4 +1,4 @@
-# Anwenderhandbuch 0.9.0
+# Anwenderhandbuch 0.10.0
 
 In Version 0.6.1 bieten zentrale Felder und Aktionen kurze Bedienhinweise. Den Mauszeiger auf dem Element stehen lassen oder das Element mit der Tastatur fokussieren und F1 drücken. Escape schließt einen geöffneten Hinweis.
 
@@ -116,3 +116,11 @@ Nach Bearbeitung den Entwurf zur Prüfung einreichen. Das Prüfergebnis und die 
 Unter **Textvorlagen** nach Titel, Kürzel und Inhalt suchen und nach Art filtern. Über **Vorschau** und **Katalogfassung** lassen sich die eigene und ursprüngliche Fassung ansehen. **Als Dokument verwenden** öffnet einen vorausgefüllten Entwurf. Der allgemeine XLSX- und HTML-Bericht enthält den Dokumentenbestand im gewählten Kontext.
 
 Die Nachweisvorschau zeigt UTF-8-Text und PNG direkt im Arbeitsbereich. Für andere Dateiformate steht der separate Dateiexport zur Verfügung.
+
+## 17. Risiken bewerten
+
+Ein gespeichertes Risiko im Register **Risiken** auswählen und im Reiter **Bewertungen** Eintrittswahrscheinlichkeit und Auswirkung jeweils auf einer Skala von 1 bis 5 festhalten. Die Bruttobewertung beschreibt das Risiko vor Berücksichtigung von Controls. Sobald ein begründeter Wert für das Risiko mit berücksichtigten Controls vorliegt, können beide Restrisikowerte ergänzt werden. Datum, Behandlung und Begründung werden der Bewertung zugeordnet.
+
+Die Risikomatrix trennt Brutto- und Restrisiken. Eine ausgewählte Zelle zeigt die zugehörigen Risiken im aktuellen Thema, Geltungsbereich und Suchkontext. Risiken ohne Bewertung und Risiken ohne Restrisikowerte werden sichtbar ausgewiesen. Für ein Risiko lassen sich Controls und Maßnahmen über typisierte Mappings dokumentieren.
+
+Das Produkt aus Eintrittswahrscheinlichkeit und Auswirkung ergibt die Bewertungszahl. Die Einteilung lautet 1–4 niedrig, 5–9 mittel, 10–15 hoch und 16–25 kritisch. Maßstäbe und Annahmen bei der Bewertung so festhalten, dass die Werte im Projekt vergleichbar bleiben.
