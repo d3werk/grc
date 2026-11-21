@@ -191,7 +191,7 @@ public static class CompanyPlanning
             When(distributed, $"Das Profil umfasst {profile.SiteCount} Standorte und {profile.OrganizationalUnitCount} Organisationseinheiten."));
 
         Add("risk", "Risiken und Maßnahmen priorisieren", riskTopic, "Risk",
-            "Wesentliche Risiken im gewählten Schwerpunkt erfassen, Auswirkungen und Verantwortung beschreiben und Maßnahmen ableiten.",
+            "Wesentliche Risiken im gewählten Schwerpunkt erfassen. Eintrittswahrscheinlichkeit und Auswirkung vor Controls jeweils von 1 bis 5 bewerten. Das Restrisiko nach bestehenden Controls ebenso einschätzen, sobald eine belastbare Grundlage vorliegt. Annahmen begründen und Maßnahmen priorisieren.",
             null,
             $"Der gewählte Risikofokus lautet „{RiskFocusLabels[profile.RiskFocus]}“.");
 

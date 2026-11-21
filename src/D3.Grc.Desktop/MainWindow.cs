@@ -155,6 +155,7 @@ public sealed partial class MainWindow:Window
             {
                 "Dashboard" => await Dashboard(),
                 "Documents" => await DocumentsPage(),
+                "RiskMatrix" => await RiskMatrixPage(),
                 "Mappings" => await MappingPage(),
                 "Evidence" => await EvidencePage(),
                 "Sources" => SourcePage(),
@@ -250,6 +251,7 @@ public sealed partial class MainWindow:Window
         _scopeValue = "";
         _searchValue = "";
         _statusFilter = "";
+        _showResidualRiskMatrix = false;
         _scope.Text = "";
         _search.Text = "";
     }

@@ -7,6 +7,7 @@ public sealed partial class MainWindow
     private async Task<Control> EntryPage(string kind)
     {
         var isSupplier = kind == "Supplier";
+        var isRisk = kind == "Risk";
         var list=new ListBox();var statusFilter=Ui.Combo();statusFilter.ItemsSource=new[]{"Alle Status"}.Concat(Entry.Statuses(kind)).ToArray();statusFilter.SelectedItem=_statusFilter==""?"Alle Status":_statusFilter;
         if (isSupplier)
             list.ItemTemplate = new FuncDataTemplate<Entry>((entry, _) => entry is null ? null : Ui.Stack(
@@ -25,6 +26,8 @@ public sealed partial class MainWindow
         var supplier = isSupplier ? new SupplierFields() : null;
         var reviews = isSupplier ? Ui.Stack() : null;
         Button? addReview = null;
+        var riskAssessments = isRisk ? Ui.Stack() : null;
+        Button? assessRisk = null;
 
         void SetStatusChoices(string current)
         {
@@ -37,6 +40,9 @@ public sealed partial class MainWindow
         var refs=new ListBox{MinHeight=130};var related=new ListBox{MinHeight=180};var proofs=new ListBox{MinHeight=180};var history=new ListBox{MinHeight=180};var topics=Ui.Text("");
         if (isSupplier)
             addReview = Button("Bewertung erfassen", RecordReview, true, "Dokumentiert ein Prüfergebnis. Die neueste Bewertung aktualisiert Status und Folgetermin.");
+        if (isRisk)
+            assessRisk = Button("Risiko bewerten", RecordRiskAssessment, true,
+                "Erfasst Eintrittswahrscheinlichkeit, Auswirkung, Behandlung und die Gründe für diese Bewertung.", Glyph.Risk);
         void Clear()
         {
             selected=null;templateId=null;source.ItemsSource=_sources;source.SelectedIndex=isSupplier ? -1 : 0;code.Text="";title.Text="";owner.Text="";due.Text="";scope.Text=_scopeValue;locator.Text="";body.Text="";reason.Text="";refs.ItemsSource=null;related.ItemsSource=null;proofs.ItemsSource=null;history.ItemsSource=null;topics.Text="";
@@ -44,6 +50,8 @@ public sealed partial class MainWindow
             supplier?.Load(null);
             if (reviews is not null && addReview is not null)
                 PresentSupplierReviews(reviews, addReview, null, []);
+            if (riskAssessments is not null && assessRisk is not null)
+                PresentRiskAssessments(riskAssessments, assessRisk, null, []);
         }
         Clear();
         async Task LoadEntry(object? obj)
@@ -60,6 +68,8 @@ public sealed partial class MainWindow
                 supplier.Load(await _workspace.SupplierDetailsAsync(e.Id));
                 PresentSupplierReviews(reviews, addReview, e, await _workspace.SupplierReviewsAsync(e.Id));
             }
+            if (riskAssessments is not null && assessRisk is not null)
+                PresentRiskAssessments(riskAssessments, assessRisk, e, await _workspace.RiskAssessmentsAsync(e.Id));
         }
         SafeSelection(list, () => selected, LoadEntry);
 
@@ -126,6 +136,29 @@ public sealed partial class MainWindow
                 : $"Bewertung gespeichert · {updated.Title} hat jetzt den Status {updated.Status}. Zum Anzeigen den Listenfilter ändern.";
         }
 
+        async Task RecordRiskAssessment()
+        {
+            if (selected is null || !await CanLeaveFormAsync())
+                return;
+            if (_refreshAfterPersistence)
+            {
+                await _workspace.SaveAsync();
+                _refreshAfterPersistence = false;
+            }
+            var current = selected;
+            var result = await ShowRiskAssessmentAsync(current);
+            if (!result.Saved)
+                return;
+            if (result.Failure is not null)
+                _refreshAfterPersistence = true;
+            await LoadEntry(current);
+            list.SelectedItem = selected;
+            AcceptFormState();
+            if (result.Failure is not null)
+                throw result.Failure;
+            _status.Text = $"Risikobewertung gespeichert · {current.Title}";
+        }
+
         async Task<bool> SaveRecord()
         {
             var entry = new Entry
@@ -180,7 +213,9 @@ public sealed partial class MainWindow
         var generalFields = Ui.Stack(
             Ui.Notice(_topicId == ""
                 ? isSupplier ? "Gesamtansicht. Zum Anlegen oder Ändern oben ein Fachthema auswählen." : "Gesamtansicht. Zum Speichern ein konkretes Thema auswählen."
-                : isSupplier ? "Bewertungen und ihre Folgetermine werden im Reiter Bewertungen dokumentiert." : "Quellen und Vorlagen sind auf das Thema eingeschränkt. Zusätzliche Bezüge werden separat begründet."),
+                : isSupplier ? "Bewertungen und ihre Folgetermine werden im Reiter Bewertungen dokumentiert."
+                : isRisk ? "Eintrittswahrscheinlichkeit, Auswirkung und Behandlung werden unter Bewertungen erfasst."
+                : "Quellen und Vorlagen sind auf das Thema eingeschränkt. Zusätzliche Bezüge werden separat begründet."),
             topics);
         var codeField = Ui.Field("Code", code, "Kurzes internes Kennzeichen, um den Eintrag in Listen und Berichten wiederzufinden.");
         var titleField = Ui.Field(isSupplier ? "Lieferantenname *" : "Titel *", title);
@@ -229,6 +264,8 @@ public sealed partial class MainWindow
         sourceFields.Children.Add(addTopic);
         var sources = Ui.Scroll(sourceFields);
         var workflow=Ui.Stack(Ui.Text("Verknüpfungen",18,true),related,Button("Mappings öffnen",async()=>{if(!await CanLeaveFormAsync())return;_page="Mappings";await Render();}));
+        if (isRisk)
+            workflow.Children.Add(Ui.Notice("Nachweise sind über zugeordnete Controls erreichbar."));
         if (kind == "Requirement")
         {
             workflow.Children.Add(Button("Abdeckung und Nachweise", async () =>
@@ -259,9 +296,16 @@ public sealed partial class MainWindow
         if (reviews is not null && addReview is not null)
             tabItems.Add(Ui.Tab("Bewertungen", Ui.Fill(Ui.Row(addReview), Ui.Scroll(reviews)),
                 "Zeigt Ergebnisse, Begründungen und Folgetermine der Lieferantenprüfungen."));
+        TabItem? riskTab = null;
+        if (riskAssessments is not null && assessRisk is not null)
+        {
+            riskTab = Ui.Tab("Bewertungen", Ui.Fill(Ui.Row(assessRisk), Ui.Scroll(riskAssessments)),
+                "Zeigt Ausgangsrisiko, Restrisiko, Behandlung und frühere Bewertungen.");
+            tabItems.Add(riskTab);
+        }
         tabItems.Add(Ui.Tab("Quellen", sources));
         tabItems.Add(Ui.Tab("Bezüge", Ui.Scroll(workflow), "Zeigt gespeicherte Zuordnungen und verfügbare Prüfschritte."));
-        if (!isSupplier)
+        if (!isSupplier && !isRisk)
             tabItems.Add(Ui.Tab("Evidence", proofs, "Dateinachweise gehören zu Controls. Bei anderen Einträgen die verknüpften Controls prüfen."));
         tabItems.Add(Ui.Tab("Historie", history, "Zeigt protokollierte Aktivitäten zu diesem Eintrag."));
         var tabs = new TabControl { ItemsSource = tabItems };
@@ -275,7 +319,10 @@ public sealed partial class MainWindow
             AcceptFormState();
         });
         var duplicate=Button("Duplizieren",async()=>{if(selected is null)return;if(!await CanLeaveFormAsync())return;await LoadEntry(selected);selected=null;list.SelectedItem=null;code.Text=(code.Text??"")+"-KOPIE";SetStatusChoices(Entry.Statuses(kind)[0]);
-            if (reviews is not null && addReview is not null){due.Text="";PresentSupplierReviews(reviews,addReview,null,[]);}UpdateFormStatus();},
+            if (reviews is not null && addReview is not null){due.Text="";PresentSupplierReviews(reviews,addReview,null,[]);}
+            if (riskAssessments is not null && assessRisk is not null)
+                PresentRiskAssessments(riskAssessments, assessRisk, null, []);
+            UpdateFormStatus();},
             help: "Übernimmt die Formularwerte als Entwurf für einen neuen Eintrag. Erst Speichern legt die Kopie an.");
         duplicate.IsEnabled = !supplierOverview;
         var delete=Button("Löschen",async()=>{if(selected is null)return;if(!await CanLeaveFormAsync())return;var why=await Ui.Prompt(this,"Löschbegründung (verknüpfte Datensätze bleiben geschützt)");if(why is null)return;await _workspace.DeleteAsync(selected.Id,why);await Render();},
@@ -296,12 +343,21 @@ public sealed partial class MainWindow
             Clear();
             list.SelectedItem = null;
             AcceptFormState();
-            if (isSupplier)
+            if (isSupplier || isRisk)
             {
                 tabs.SelectedIndex = 0;
                 title.Focus();
             }
         });
+        if (riskTab is not null && _riskToFocus is { } requestedRiskId &&
+            ((IEnumerable<Entry>)list.ItemsSource!).FirstOrDefault(e => e.Id == requestedRiskId) is { } requestedRisk)
+        {
+            await LoadEntry(requestedRisk);
+            list.SelectedItem = selected;
+            tabs.SelectedItem = riskTab;
+            AcceptFormState();
+            _riskToFocus = null;
+        }
         return Ui.Split(Ui.Card(Ui.Fill(Ui.Stack(Ui.Row(create),
             Ui.Field("Listenstatus", statusFilter, "Filtert nur diese Liste. Der Export richtet sich nach den globalen Filtern."),
             Ui.Field("Sortierung", sort, "Sortiert diese Liste. Beim Sortieren nach Termin stehen Einträge ohne Datum am Ende.")), list)),

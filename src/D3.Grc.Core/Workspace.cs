@@ -94,7 +94,15 @@ public sealed partial class Workspace:IDisposable
                     "SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId=$p0", SupplierMigrationId) != "";
                 var hasDocumentSchema = Scalar(c, null,
                     "SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId=$p0", DocumentMigrationId) != "";
-                backupPrefix = !hasSupplierSchema ? "pre08" : !hasDocumentSchema ? "pre09" : null;
+                var hasRiskAssessmentSchema = Scalar(c, null,
+                    "SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId=$p0", RiskAssessmentMigrationId) != "";
+                backupPrefix = (hasSupplierSchema, hasDocumentSchema, hasRiskAssessmentSchema) switch
+                {
+                    (false, _, _) => "pre08",
+                    (_, false, _) => "pre09",
+                    (_, _, false) => "pre010",
+                    _ => null
+                };
             }
             if (backupPrefix is not null)
                 await Files.AtomicAsync(sourcePath + $".{backupPrefix}-{DateTime.UtcNow:yyyyMMddHHmmssfff}.bak", bytes);
@@ -106,7 +114,7 @@ public sealed partial class Workspace:IDisposable
             {
                 Name = Scalar(c, null, "SELECT Value FROM Metadata WHERE Key='ProjectName'");
                 using var transaction = c.BeginTransaction();
-                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.9.0");
+                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.10.0");
                 transaction.Commit();
             }
             IsDirty = true;
@@ -209,6 +217,8 @@ public sealed partial class Workspace:IDisposable
         if(e.Kind is "Audit" or "Finding")throw new ArgumentException("Audits/Findings bleiben erhalten.");
         if (e.Kind == "Supplier" && LatestSupplierReviewDate(c, t, id) != "")
             throw new ArgumentException("Dienstleister mit Prüfungen bleiben im Register. Setzen Sie den Status bei Bedarf auf „Beendet“.");
+        if (e.Kind == "Risk" && Scalar(c, t, "SELECT Id FROM RiskAssessments WHERE RiskId=$p0 LIMIT 1", id) != "")
+            throw new ArgumentException("Risiken mit Bewertungen bleiben im Register, damit ihre Historie erhalten bleibt.");
         if ((e.Kind is "Requirement" or "Control") && Scalar(c, t, "SELECT Id FROM DocumentLinks WHERE RecordId=$p0 LIMIT 1", id) != "")
             throw new ArgumentException("Der Datensatz bleibt erhalten, solange ein Dokument darauf verweist.");
         Log(c,t,"EntryBefore",id,JsonSerializer.Serialize(e));

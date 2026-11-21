@@ -1,9 +1,9 @@
-# D3 GRC 0.9.0 – GRC-Arbeitsbereiche, Dokumente und Textvorlagen
+# D3 GRC 0.10.0 – GRC-Arbeitsbereiche, Dokumente und Risikobewertung
 
 **Lieferumfang: vollständige Quellcode-Solution, kein kompilierter oder signierter Installer.**
 **Freigabestatus: Entwicklung / native Abnahme offen.**
 
-Nach der lokalen Registrierung führt der Unternehmensassistent von der verschlüsselten Projektanlage zu einem begründeten Umsetzungsplan. Der Arbeitsbereich verbindet Anforderungen, Risiken, Controls, Lieferanten, Quellen, Nachweise und Audits mit einem Dokumentenregister. Textvorlagen lassen sich ansehen, bearbeiten und als Ausgangspunkt für Dokumententwürfe verwenden. Freigaben und veröffentlichte Fassungen bleiben im Projekt nachvollziehbar.
+Nach der lokalen Registrierung führt der Unternehmensassistent von der verschlüsselten Projektanlage zu einem begründeten Umsetzungsplan. Der Arbeitsbereich verbindet Anforderungen, Risiken, Controls, Lieferanten, Quellen, Nachweise und Audits mit einem Dokumentenregister. Textvorlagen lassen sich ansehen, bearbeiten und als Ausgangspunkt für Dokumententwürfe verwenden. Die Risikomatrix macht Behandlungsbedarf im gewählten Geltungsbereich sichtbar.
 
 ## Wichtig zur Ausgangsbasis
 Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser Sitzung nicht als Dateien verfügbar. Deshalb ist dies eine konsolidierte neue Solution, kein gegen dein Repository getesteter In-place-Patch. Die bekannte 0.5-Datenbankstruktur und das D3GRC005-Containerformat werden weiter unterstützt; eine additive Migration ist enthalten. Die Migration wurde mit einer kompatiblen SQL-Testdatenbank geprüft, NICHT mit deiner persönlichen Projektdatei oder über die native C#-Laufzeit.
@@ -53,7 +53,7 @@ Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindeste
 Die Zahlen gelten für ein neues Projekt aus dem mitgelieferten Starterkatalog. Bei Migration vorhandener 0.5-Projekte werden vorhandene Inhalte erhalten und neue V06-Inhalte ergänzt; die Gesamtzahlen können deshalb abweichen.
 
 ## Prüfstatus
-Die aktuelle Funktionsabdeckung und Abnahme sind im [Prüfbericht 0.9.0](docs/PRUEFBERICHT-0.9.0.md) dokumentiert. Der [Prüfbericht 0.8.0](docs/PRUEFBERICHT-0.8.0.md) dokumentiert die Einführung des Lieferantenregisters.
+Die Abnahme der Risikobewertung und ihre Methodik sind im [Prüfbericht 0.10.0](docs/PRUEFBERICHT-0.10.0.md) dokumentiert. Der [Prüfbericht 0.9.0](docs/PRUEFBERICHT-0.9.0.md) enthält den Funktionsabgleich und die Abnahme von Dokumenten, Vorschauen und Vorlagen.
 
 ### Historischer Prüfstand der Version 0.6
 

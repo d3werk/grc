@@ -13,9 +13,13 @@ public static class ExcelExport
     private static readonly XNamespace P="http://schemas.openxmlformats.org/package/2006/relationships";
     private static readonly XNamespace C="http://schemas.openxmlformats.org/package/2006/content-types";
     private static readonly HashSet<string> NumberHeaders = new(StringComparer.Ordinal)
-        { "Anzahl", "Aktuelle Version", "Zuletzt veröffentlichte Version" };
+    {
+        "Anzahl", "Aktuelle Version", "Zuletzt veröffentlichte Version", "Risikodatensatzversion",
+        "Eintritt (Ausgangsrisiko)", "Auswirkung (Ausgangsrisiko)", "Risikowert (Ausgangsrisiko)",
+        "Eintritt (Restrisiko)", "Auswirkung (Restrisiko)", "Risikowert (Restrisiko)"
+    };
     private static readonly HashSet<string> DateHeaders = new(StringComparer.Ordinal)
-        { "Termin", "Gültig bis", "Erhoben", "Prüfdatum", "Nächste Prüfung", "Geändert am (UTC)" };
+        { "Termin", "Gültig bis", "Erhoben", "Prüfdatum", "Nächste Prüfung", "Geändert am (UTC)", "Bewertungsstichtag" };
     private static string Clean(string value)=>new(value.Where(ch=>ch=='\t'||ch=='\n'||ch=='\r'||ch>=32).Take(32767).ToArray());
     private static string Column(int n){var text="";do{text=(char)('A'+n%26)+text;n=n/26-1;}while(n>=0);return text;}
     public static byte[] Build(IReadOnlyList<ExportSheet> sheets)
@@ -84,6 +88,7 @@ public sealed partial class Workspace
         }
         sheets.Add(new("Kennzahlen",["Kennzahl","Anzahl"],new(){new[]{"Anforderungen",entries.Count(e=>e.Kind=="Requirement").ToString()},new[]{"Controls",entries.Count(e=>e.Kind=="Control").ToString()},new[]{"Controls als Entwurf",entries.Count(e=>e.Kind=="Control"&&e.Status=="Entwurf").ToString()},new[]{"Offene Findings",entries.Count(e=>e.Kind=="Finding"&&e.Status!="Geschlossen").ToString()},new[]{"Ohne Verantwortung",entries.Count(e=>e.Owner=="").ToString()}}));
         foreach(var kind in Entry.Kinds.Where(kind => kind != "Supplier"))sheets.Add(new(kind,["ID","Code","Titel","Quelle","Fundstelle","Status","Verantwortung","Termin","Scope","Version","Beschreibung"],entries.Where(e=>e.Kind==kind).Select(e=>new[]{e.Id,e.Code,e.Title,e.SourceId,e.Locator,e.Status,e.Owner,e.DueDate,e.Scope,e.Version.ToString(),e.Body}).ToList()));
+        AddRiskAssessmentExport(c, sheets, meta, entries.Where(entry => entry.Kind == "Risk"));
         var links=Query(c,null,"SELECT l.Id,l.SourceRecordId,l.TargetRecordId,l.Type,l.Reason,l.SourceId,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,'') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>Enumerable.Range(0,8).Select(r.GetString).ToArray()).Where(x=>ids.Contains(x[1])||ids.Contains(x[2])).ToList();sheets.Add(new("Mappings",["ID","Ausgangs-ID","Ziel-ID","Typ","Begründung","Quelle","Abdeckung","Scope"],links));
         var proofIds=Query(c,null,"SELECT EvidenceId,ControlId FROM EvidenceLinks",r=>(Evidence:r.GetString(0),Control:r.GetString(1))).Where(x=>ids.Contains(x.Control)).Select(x=>x.Evidence).ToHashSet();
         sheets.Add(new("Evidence",["ID","Titel","Primär-Control-ID","Quelle","Datei","SHA256","Erhoben","Gültig bis","Herkunft"],Proofs(c,null).Where(p=>ids.Contains(p.ControlId)||proofIds.Contains(p.Id)).Select(p=>new[]{p.Id,p.Title,p.ControlId,p.SourceId,p.FileName,p.Hash,p.Collected,p.ValidUntil,p.Origin}).ToList()));
@@ -110,6 +115,47 @@ public sealed partial class Workspace
         sheets.Add(new("Quellen",["ID","Titel","URL","Referenz","Status","Letzter Erfolg"],Query(c,null,"SELECT Id,Title,Url,Reference,CheckState,LastSuccess FROM Sources s WHERE $p0='' OR EXISTS(SELECT 1 FROM TopicSources t WHERE t.SourceId=s.Id AND t.TopicId=$p0)",r=>Enumerable.Range(0,6).Select(r.GetString).ToArray(),topic)));
         sheets.Add(new("Definitionen",["Begriff","Definition"],new(){new[]{"Entwurf","Vorlage oder noch nicht bestätigte Umsetzung"},new[]{"Geprüft","Vom Anwender bewerteter Status, kein Zertifikat"},new[]{"Evidence","Metadaten tatsächlicher Dateien; Inhalte nicht eingebettet"},new[]{"Externe IDs","Mappings können auf außerhalb des Filters liegende Objekte verweisen"},new[]{"Excel","Texte als Inline-Strings, keine Benutzerformeln, keine externen Verknüpfungen"}}));return sheets;
     });
+
+    private static void AddRiskAssessmentExport(SqliteConnection connection, List<ExportSheet> sheets, List<string[]> meta,
+        IEnumerable<Entry> risks)
+    {
+        var risksById = risks.ToDictionary(risk => risk.Id, StringComparer.Ordinal);
+        if (risksById.Count == 0)
+            return;
+        var assessments = ReadRiskAssessments(connection, risksById.Keys);
+        if (assessments.Count == 0)
+            return;
+
+        var latest = ReadLatestRiskAssessments(connection, risksById.Keys);
+        var rows = assessments.Select(assessment =>
+        {
+            var risk = risksById[assessment.RiskId];
+            return new[]
+            {
+                assessment.Id, risk.Id, risk.Code, risk.Title, risk.Scope,
+                assessment.AssessedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                latest[assessment.RiskId].Id == assessment.Id ? "Ja" : "Nein",
+                assessment.RiskVersion.ToString(CultureInfo.InvariantCulture),
+                assessment.InherentLikelihood.ToString(CultureInfo.InvariantCulture),
+                assessment.InherentImpact.ToString(CultureInfo.InvariantCulture),
+                assessment.InherentScore.ToString(CultureInfo.InvariantCulture),
+                RiskAssessmentMethod.LevelLabels[assessment.InherentLevel],
+                assessment.ResidualLikelihood?.ToString(CultureInfo.InvariantCulture) ?? "",
+                assessment.ResidualImpact?.ToString(CultureInfo.InvariantCulture) ?? "",
+                assessment.ResidualScore?.ToString(CultureInfo.InvariantCulture) ?? "",
+                assessment.ResidualLevel is { } level ? RiskAssessmentMethod.LevelLabels[level] : "",
+                RiskAssessmentMethod.ResponseLabels[assessment.Response], assessment.Rationale, assessment.Actor
+            };
+        }).ToList();
+        sheets.Add(new("Risikobewertungen",
+            ["Bewertungs-ID", "Risiko-ID", "Kürzel", "Risiko", "Geltungsbereich", "Bewertungsstichtag", "Aktuelle Bewertung",
+                "Risikodatensatzversion", "Eintritt (Ausgangsrisiko)", "Auswirkung (Ausgangsrisiko)", "Risikowert (Ausgangsrisiko)",
+                "Risikostufe (Ausgangsrisiko)", "Eintritt (Restrisiko)", "Auswirkung (Restrisiko)", "Risikowert (Restrisiko)",
+                "Risikostufe (Restrisiko)", "Behandlung", "Begründung", "Erfasst von"], rows));
+        meta.Add(["Risikobewertungen", "Bewertungsverläufe der gefilterten Risiken mit ihrem aktuellen Geltungsbereich. " +
+            "Als aktuell gilt je Risiko die letzte Erfassung zum neuesten Bewertungsstichtag. " +
+            "Eintritt bezeichnet die Eintrittswahrscheinlichkeit."]);
+    }
 
     private static void AddDocumentExport(SqliteConnection connection, List<ExportSheet> sheets, List<string[]> metrics,
         IReadOnlyList<DocumentRecord> documents)

@@ -13,6 +13,7 @@ public sealed partial class Workspace
         ["Finding → Audit"] = ("Finding", "Audit"),
         ["Finding → Control"] = ("Finding", "Control"),
         ["Maßnahme → Finding"] = ("Measure", "Finding"),
+        ["Maßnahme → Risiko"] = ("Measure", "Risk"),
         ["KI-System → Control"] = ("AiSystem", "Control"),
         ["OSS-Komponente → Control"] = ("OssComponent", "Control"),
         ["Dienstleister → Control"] = ("Supplier", "Control"),
