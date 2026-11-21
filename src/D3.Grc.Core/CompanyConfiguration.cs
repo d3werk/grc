@@ -247,6 +247,12 @@ public static class CompanyPlanning
             When(Has(CompanyFactors.OpenSourceSoftware), "Das Profil nennt eingesetzte oder weitergegebene Open-Source-Software."),
             Focus(CompanyRiskFocus.SupplyChain));
 
+        Add("documents", "Richtlinien und Dokumente pflegen", "", "Documents",
+            "Bestehende Richtlinien und Verfahren mit Verantwortung und Geltungsbereich erfassen. Entwürfe prüfen und die geprüfte Fassung im Dokumentenregister veröffentlichen.",
+            "Sobald schriftliche Vorgaben entstehen, lassen sich ihre Zuständigkeiten und Fassungen im Register nachvollziehen.",
+            When(enterprise || distributed, "Gemeinsame Vorgaben und bereichsspezifische Fassungen benötigen klare Zuständigkeiten."),
+            When(criticalProcesses, "Für kritische Geschäftsprozesse sind früh verfügbare und gepflegte Verfahren sinnvoll."));
+
         Add("evidence", "Nachweise bereitstellen", "", "Evidence",
             "Für umgesetzte Controls prüfbare Dokumente mit Herkunft und Gültigkeit hinterlegen. Gemeinsame Nachweise bei fachlicher Eignung wiederverwenden.",
             "Für den Einstieg lassen sich Nachweise zusammen mit den ersten umgesetzten Controls erfassen.",

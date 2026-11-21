@@ -1,9 +1,9 @@
-# D3 GRC 0.8.0 – Unternehmensprofil, Umsetzungsplan und Lieferantenregister
+# D3 GRC 0.9.0 – GRC-Arbeitsbereiche, Dokumente und Textvorlagen
 
 **Lieferumfang: vollständige Quellcode-Solution, kein kompilierter oder signierter Installer.**
 **Freigabestatus: Entwicklung / native Abnahme offen.**
 
-Nach der lokalen Registrierung führt der Unternehmensassistent von der verschlüsselten Projektanlage zu einem begründeten Umsetzungsplan. Das Lieferantenregister ergänzt den bestehenden Arbeitsbereich aus Anforderungen, Risiken, Controls, Quellen, Nachweisen und Audits. Prüftermine, Bewertungen und Berichte übernehmen den ausgewählten Projektkontext.
+Nach der lokalen Registrierung führt der Unternehmensassistent von der verschlüsselten Projektanlage zu einem begründeten Umsetzungsplan. Der Arbeitsbereich verbindet Anforderungen, Risiken, Controls, Lieferanten, Quellen, Nachweise und Audits mit einem Dokumentenregister. Textvorlagen lassen sich ansehen, bearbeiten und als Ausgangspunkt für Dokumententwürfe verwenden. Freigaben und veröffentlichte Fassungen bleiben im Projekt nachvollziehbar.
 
 ## Wichtig zur Ausgangsbasis
 Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser Sitzung nicht als Dateien verfügbar. Deshalb ist dies eine konsolidierte neue Solution, kein gegen dein Repository getesteter In-place-Patch. Die bekannte 0.5-Datenbankstruktur und das D3GRC005-Containerformat werden weiter unterstützt; eine additive Migration ist enthalten. Die Migration wurde mit einer kompatiblen SQL-Testdatenbank geprüft, NICHT mit deiner persönlichen Projektdatei oder über die native C#-Laufzeit.
@@ -44,7 +44,7 @@ Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindeste
 ## Vorbefüllung bei einem neuen Projekt
 - 8 Fachthemen plus Zuordnung prüfen.
 - 13 Quellen: 12 externe offizielle Referenzen plus interner D3-Arbeitsstandard.
-- 126 eigene editierbare Arbeitshilfen, keine vollständige Norm-/Gesetzesbibliothek.
+- 157 eigene editierbare Vorlagen, darunter 27 ausführliche Arbeitshilfen und vier vollständige Richtlinienentwürfe aus 0.9.0.
 - 36 vorbereitete Datensätze: 18 Anforderungen und 18 Controls, alle Entwurf.
 - 12 nicht automatisch aktive Mapping-Vorschläge.
 - 48 Glossarbegriffe.
@@ -53,7 +53,7 @@ Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindeste
 Die Zahlen gelten für ein neues Projekt aus dem mitgelieferten Starterkatalog. Bei Migration vorhandener 0.5-Projekte werden vorhandene Inhalte erhalten und neue V06-Inhalte ergänzt; die Gesamtzahlen können deshalb abweichen.
 
 ## Prüfstatus
-Die Abnahme des Lieferantenregisters ist im [Prüfbericht 0.8.0](docs/PRUEFBERICHT-0.8.0.md) dokumentiert. Der [Prüfbericht 0.7.0](docs/PRUEFBERICHT-0.7.0.md) enthält den bisherigen Funktionsabgleich und die Abnahme des Unternehmensassistenten.
+Die aktuelle Funktionsabdeckung und Abnahme sind im [Prüfbericht 0.9.0](docs/PRUEFBERICHT-0.9.0.md) dokumentiert. Der [Prüfbericht 0.8.0](docs/PRUEFBERICHT-0.8.0.md) dokumentiert die Einführung des Lieferantenregisters.
 
 ### Historischer Prüfstand der Version 0.6
 

@@ -1,3 +1,11 @@
+# 0.9.0
+
+- Dokumentenregister mit Vorschau, Entwurf, Prüfung, Freigabe und lesbaren historischen Fassungen.
+- Verbindung von Dokumenten mit Anforderungen und Controls sowie Einstiege über den Unternehmensplan.
+- Neu gestaltete Navigation, Übersicht und Vorlagenbibliothek mit Icons, Suche und Vorschau.
+- Ausführliche themenbezogene Arbeitstexte mit Zuständigkeiten, Abläufen, Nachweisbeispielen und Prüffragen.
+- Native Vorschau für ausgewählte Nachweisdateien und additive Migration bisheriger Projekte.
+
 # 0.8.0
 
 - Lieferantenregister mit Leistungen, Kritikalität, Vertragsreferenz, Verantwortung und fälligen Prüfungen.

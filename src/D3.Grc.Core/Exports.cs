@@ -12,8 +12,10 @@ public static class ExcelExport
     private static readonly XNamespace R="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private static readonly XNamespace P="http://schemas.openxmlformats.org/package/2006/relationships";
     private static readonly XNamespace C="http://schemas.openxmlformats.org/package/2006/content-types";
+    private static readonly HashSet<string> NumberHeaders = new(StringComparer.Ordinal)
+        { "Anzahl", "Aktuelle Version", "Zuletzt veröffentlichte Version" };
     private static readonly HashSet<string> DateHeaders = new(StringComparer.Ordinal)
-        { "Termin", "Gültig bis", "Erhoben", "Prüfdatum", "Nächste Prüfung" };
+        { "Termin", "Gültig bis", "Erhoben", "Prüfdatum", "Nächste Prüfung", "Geändert am (UTC)" };
     private static string Clean(string value)=>new(value.Where(ch=>ch=='\t'||ch=='\n'||ch=='\r'||ch>=32).Take(32767).ToArray());
     private static string Column(int n){var text="";do{text=(char)('A'+n%26)+text;n=n/26-1;}while(n>=0);return text;}
     public static byte[] Build(IReadOnlyList<ExportSheet> sheets)
@@ -34,7 +36,7 @@ public static class ExcelExport
                     var line=new XElement(S+"row",new XAttribute("r",row+1));
                     for(int col=0;col<sheet.Headers.Length;col++){
                         var value=col<rows[row].Length?rows[row][col]:"";var cell=new XElement(S+"c",new XAttribute("r",Column(col)+(row+1)),new XAttribute("s",row==0?1:0));
-                        if(row>0&&sheet.Headers[col]=="Anzahl"&&int.TryParse(value,NumberStyles.Integer,CultureInfo.InvariantCulture,out var number))cell.Add(new XElement(S+"v",number));
+                        if(row>0&&NumberHeaders.Contains(sheet.Headers[col])&&int.TryParse(value,NumberStyles.Integer,CultureInfo.InvariantCulture,out var number))cell.Add(new XElement(S+"v",number));
                         else if(row>0&&DateHeaders.Contains(sheet.Headers[col])&&DateTime.TryParse(value,CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind,out var date)&&date.Year>=1900){cell.SetAttributeValue("s",2);cell.Add(new XElement(S+"v",date.ToOADate().ToString(CultureInfo.InvariantCulture)));}
                         else{cell.SetAttributeValue("t","inlineStr");cell.Add(new XElement(S+"is",new XElement(S+"t",new XAttribute(XNamespace.Xml+"space","preserve"),Clean(value))));}line.Add(cell);
                     }data.Add(line);
@@ -97,11 +99,45 @@ public sealed partial class Workspace
         var suppliers = entries.Where(entry => entry.Kind == "Supplier").ToArray();
         if (suppliers.Length > 0)
             AddSupplierExport(c, sheets, metrics, suppliers, today);
+        var documents = ReadDocuments(c, topic, scope, search);
+        if (documents.Count > 0)
+        {
+            AddDocumentExport(c, sheets, metrics, documents);
+            meta.Add(["Dokumente", "Registerdaten mit aktuellem Status, aktueller und zuletzt veröffentlichter Version."]);
+        }
         foreach(var kind in new[]{"Control","Requirement","Finding"})sheets.Add(new(kind+"Status",["Status","Anzahl"],Entry.Statuses(kind).Select(status=>new[]{status,entries.Count(e=>e.Kind==kind&&e.Status==status).ToString()}).ToList()));
         sheets.Add(new("Glossar",["Begriff","Langform","Definition"],Query(c,null,"SELECT Term,Expanded,CASE WHEN CustomDefinition='' THEN Definition ELSE CustomDefinition END FROM Glossary ORDER BY Term",r=>new[]{r.GetString(0),r.GetString(1),r.GetString(2)})));
         sheets.Add(new("Quellen",["ID","Titel","URL","Referenz","Status","Letzter Erfolg"],Query(c,null,"SELECT Id,Title,Url,Reference,CheckState,LastSuccess FROM Sources s WHERE $p0='' OR EXISTS(SELECT 1 FROM TopicSources t WHERE t.SourceId=s.Id AND t.TopicId=$p0)",r=>Enumerable.Range(0,6).Select(r.GetString).ToArray(),topic)));
         sheets.Add(new("Definitionen",["Begriff","Definition"],new(){new[]{"Entwurf","Vorlage oder noch nicht bestätigte Umsetzung"},new[]{"Geprüft","Vom Anwender bewerteter Status, kein Zertifikat"},new[]{"Evidence","Metadaten tatsächlicher Dateien; Inhalte nicht eingebettet"},new[]{"Externe IDs","Mappings können auf außerhalb des Filters liegende Objekte verweisen"},new[]{"Excel","Texte als Inline-Strings, keine Benutzerformeln, keine externen Verknüpfungen"}}));return sheets;
     });
+
+    private static void AddDocumentExport(SqliteConnection connection, List<ExportSheet> sheets, List<string[]> metrics,
+        IReadOnlyList<DocumentRecord> documents)
+    {
+        var topicLabels = Query(connection, null, "SELECT Id,Title FROM Topics", r => (Id: r.GetString(0), Title: r.GetString(1)))
+            .ToDictionary(topic => topic.Id, topic => topic.Title, StringComparer.Ordinal);
+        var rows = documents.Select(document => new[]
+        {
+            document.Id,
+            document.Draft.Title,
+            DocumentRegister.CategoryLabels[document.Draft.Category],
+            topicLabels[document.Draft.TopicId],
+            document.Draft.Scope,
+            document.Draft.Owner,
+            DocumentRegister.StatusLabels[document.Status],
+            document.Version.ToString(CultureInfo.InvariantCulture),
+            document.PublishedVersion?.ToString(CultureInfo.InvariantCulture) ?? "",
+            DateTimeOffset.TryParse(document.UpdatedUtc, CultureInfo.InvariantCulture, DateTimeStyles.None, out var updated)
+                ? updated.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                : ""
+        }).ToList();
+        sheets.Add(new("Dokumente",
+            ["Dokument-ID", "Titel", "Dokumentart", "Thema", "Geltungsbereich", "Verantwortung", "Status",
+                "Aktuelle Version", "Zuletzt veröffentlichte Version", "Geändert am (UTC)"], rows));
+        metrics.Add(["Dokumente im Register", documents.Count.ToString(CultureInfo.InvariantCulture)]);
+        metrics.Add(["Dokumente in Prüfung", documents.Count(document => document.Status == DocumentStatus.InReview)
+            .ToString(CultureInfo.InvariantCulture)]);
+    }
 
     private static void AddSupplierExport(SqliteConnection connection, List<ExportSheet> sheets, List<string[]> metrics,
         IReadOnlyList<Entry> suppliers, DateOnly today)

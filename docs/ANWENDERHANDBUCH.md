@@ -1,4 +1,4 @@
-# Anwenderhandbuch 0.8.0
+# Anwenderhandbuch 0.9.0
 
 In Version 0.6.1 bieten zentrale Felder und Aktionen kurze Bedienhinweise. Den Mauszeiger auf dem Element stehen lassen oder das Element mit der Tastatur fokussieren und F1 drücken. Escape schließt einen geöffneten Hinweis.
 
@@ -105,4 +105,14 @@ Eine dokumentierte Prüfung hält Datum, Ergebnis und Begründung fest. Der zule
 
 Ein relevanter externer Dienstleister, ein gewählter Drittparteien-Risikofokus oder andere passende Unternehmensmerkmale priorisieren das Register im Umsetzungsplan. Im Dashboard sind kritische Lieferanten und Prüfbedarf im aktuellen Filter sichtbar. Berichte enthalten die zugehörigen Lieferantendaten und Prüfungen.
 
-Beim ersten Öffnen eines älteren Projektstands legt 0.8.0 vor der Migration eine verschlüsselte Sicherung an. Für die Rückkehr zur alten Version eine Kopie der Sicherung mit der Dateiendung `.d3grc` in der ursprünglichen App öffnen.
+Beim Öffnen eines älteren Projektstands legt die Anwendung vor der Migration eine verschlüsselte Sicherung an. Für ein Projekt aus 0.8.0 endet der Sicherungsname auf `.pre09-*.bak`. Für die Rückkehr zur alten Version eine Kopie der Sicherung mit der Dateiendung `.d3grc` in der ursprünglichen App öffnen.
+
+## 16. Dokumente und Richtlinien
+
+Im Bereich **Dokumente** einen Entwurf mit Thema, Geltungsbereich, Kategorie und Verantwortung anlegen. Die Vorschau stellt Überschriften, Listen, Tabellen und weitere Markdown-Elemente dar. Im Entwurf die Platzhalter einer Vorlage durch die tatsächlichen betrieblichen Angaben ersetzen. Anforderungen und Controls lassen sich zum Dokument zuordnen.
+
+Nach Bearbeitung den Entwurf zur Prüfung einreichen. Das Prüfergebnis und die Freigabe werden mit Begründung und lokalem Profil dokumentiert. Die veröffentlichte Fassung bleibt in der Versionsansicht lesbar. Für eine Änderung auf Basis der Freigabe einen neuen Entwurf anlegen. Außer Kraft gesetzte Dokumente bleiben für die Nachverfolgung erhalten.
+
+Unter **Textvorlagen** nach Titel, Kürzel und Inhalt suchen und nach Art filtern. Über **Vorschau** und **Katalogfassung** lassen sich die eigene und ursprüngliche Fassung ansehen. **Als Dokument verwenden** öffnet einen vorausgefüllten Entwurf. Der allgemeine XLSX- und HTML-Bericht enthält den Dokumentenbestand im gewählten Kontext.
+
+Die Nachweisvorschau zeigt UTF-8-Text und PNG direkt im Arbeitsbereich. Für andere Dateiformate steht der separate Dateiexport zur Verfügung.

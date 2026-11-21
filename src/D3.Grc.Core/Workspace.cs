@@ -85,16 +85,19 @@ public sealed partial class Workspace:IDisposable
             var bytes = await Files.ReadAsync(sourcePath, Cipher.Limit + 52);
             _cipher=new Cipher();await _cipher.InitializeAsync(password,Cipher.Salt(bytes));var plain=_cipher.Decrypt(bytes);
             try{await using var output=new FileStream(DbPath,FileMode.Truncate,FileAccess.Write,FileShare.None);await output.WriteAsync(plain);}finally{CryptographicOperations.ZeroMemory(plain);}
-            bool requiresSupplierMigration;
+            string? backupPrefix;
             using(var c=Open(DbPath)){
                 if(Scalar(c,null,"SELECT name FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'")=="")throw new InvalidDataException("Keine bekannte Migrationshistorie.");
                 if(Scalar(c,null,"SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId='20261118120000_BrandWorkspace'")=="")throw new InvalidDataException("Kein unterstützter Datenbankstand.");
                 if(!Verify(c))throw new InvalidDataException("Journal inkonsistent.");
-                requiresSupplierMigration = Scalar(c, null,
-                    "SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId=$p0", SupplierMigrationId) == "";
+                var hasSupplierSchema = Scalar(c, null,
+                    "SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId=$p0", SupplierMigrationId) != "";
+                var hasDocumentSchema = Scalar(c, null,
+                    "SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId=$p0", DocumentMigrationId) != "";
+                backupPrefix = !hasSupplierSchema ? "pre08" : !hasDocumentSchema ? "pre09" : null;
             }
-            if (requiresSupplierMigration)
-                await Files.AtomicAsync(sourcePath + $".pre08-{DateTime.UtcNow:yyyyMMddHHmmssfff}.bak", bytes);
+            if (backupPrefix is not null)
+                await Files.AtomicAsync(sourcePath + $".{backupPrefix}-{DateTime.UtcNow:yyyyMMddHHmmssfff}.bak", bytes);
             await Database.MigrateAsync(DbPath);
             if (!recovery && File.Exists(path + ".recovery"))
                 await PreserveRecoveryAsync(path);
@@ -103,7 +106,7 @@ public sealed partial class Workspace:IDisposable
             {
                 Name = Scalar(c, null, "SELECT Value FROM Metadata WHERE Key='ProjectName'");
                 using var transaction = c.BeginTransaction();
-                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.8.0");
+                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.9.0");
                 transaction.Commit();
             }
             IsDirty = true;
@@ -206,6 +209,8 @@ public sealed partial class Workspace:IDisposable
         if(e.Kind is "Audit" or "Finding")throw new ArgumentException("Audits/Findings bleiben erhalten.");
         if (e.Kind == "Supplier" && LatestSupplierReviewDate(c, t, id) != "")
             throw new ArgumentException("Dienstleister mit Prüfungen bleiben im Register. Setzen Sie den Status bei Bedarf auf „Beendet“.");
+        if ((e.Kind is "Requirement" or "Control") && Scalar(c, t, "SELECT Id FROM DocumentLinks WHERE RecordId=$p0 LIMIT 1", id) != "")
+            throw new ArgumentException("Der Datensatz bleibt erhalten, solange ein Dokument darauf verweist.");
         Log(c,t,"EntryBefore",id,JsonSerializer.Serialize(e));
         Exec(c,t,"DELETE FROM Records WHERE Id=$p0",id);
         return true;

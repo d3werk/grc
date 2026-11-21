@@ -9,16 +9,24 @@ namespace D3.Grc.Desktop;
 internal static class Ui
 {
     public const string KeyboardHelp = "F1 zeigt Hinweise zum fokussierten Element.";
-    public const string AccentColor = "#21624D";
+    public const string AccentColor = "#08726D";
     public static readonly IBrush Green = Brush.Parse(AccentColor);
-    public static readonly IBrush Blue = Brush.Parse("#225D80");
-    public static readonly IBrush Ink = Brush.Parse("#172924");
-    public static readonly IBrush Muted = Brush.Parse("#4E645B");
-    public static readonly IBrush Canvas = Brush.Parse("#F1F5F3");
+    public static readonly IBrush Blue = Brush.Parse("#245B8A");
+    public static readonly IBrush Ink = Brush.Parse("#172D42");
+    public static readonly IBrush Muted = Brush.Parse("#506477");
+    public static readonly IBrush Canvas = Brush.Parse("#F1F5F9");
     public static readonly IBrush Surface = Brushes.White;
-    public static readonly IBrush Line = Brush.Parse("#D6E2DC");
-    public static readonly IBrush SoftGreen = Brush.Parse("#E6F2EC");
-    private static readonly IBrush SoftBlue = Brush.Parse("#E9F2F7");
+    public static readonly IBrush Line = Brush.Parse("#D8E3EC");
+    public static readonly IBrush SoftGreen = Brush.Parse("#DDF3EE");
+    public static readonly IBrush SoftBlue = Brush.Parse("#E5F0F9");
+    public static readonly IBrush SoftAmber = Brush.Parse("#FFF0D9");
+    public static readonly IBrush Amber = Brush.Parse("#804918");
+    public static readonly IBrush Navy = Brush.Parse("#11283D");
+    public static readonly IBrush NavyHover = Brush.Parse("#1A374E");
+    public static readonly IBrush NavySelected = Brush.Parse("#21495A");
+    public static readonly IBrush NavText = Brush.Parse("#E3EEF7");
+    public static readonly IBrush NavMuted = Brush.Parse("#A5BCCD");
+    public static readonly IBrush Mint = Brush.Parse("#8CE4D3");
 
     public static TextBlock Text(string text,int size=14,bool bold=false)=>new(){Text=text,FontSize=size,FontWeight=bold?FontWeight.SemiBold:FontWeight.Normal,Foreground=Ink,TextWrapping=TextWrapping.Wrap};
     public static TextBlock Secondary(string text, int size = 13)
@@ -34,6 +42,34 @@ internal static class Ui
         AutomationProperties.SetHeadingLevel(heading, level);
         return heading;
     }
+
+    public static StackPanel IconLabel(Glyph glyph, string label, IBrush? color = null, int size = 13)
+    {
+        var tone = color ?? Ink;
+        var text = new TextBlock
+        {
+            Text = label,
+            FontSize = size,
+            Foreground = tone,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextWrapping = TextWrapping.Wrap
+        };
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Children = { Icons.Draw(glyph, size + 2, tone), text }
+        };
+    }
+
+    public static Border IconBadge(Glyph glyph, IBrush? background = null, IBrush? color = null, int size = 34) => new()
+    {
+        Width = size,
+        Height = size,
+        CornerRadius = new CornerRadius(8),
+        Background = background ?? SoftGreen,
+        Child = Icons.Draw(glyph, size / 2.0, color ?? Green)
+    };
 
     public static StackPanel Stack(params Control[] controls){var p=new StackPanel{Spacing=12};foreach(var c in controls)p.Children.Add(c);return p;}
     public static WrapPanel Row(params Control[] controls)
@@ -138,9 +174,14 @@ internal static class Ui
         return grid;
     }
     public static Grid Fill(Control top,Control body,Control? bottom=null){var g=new Grid{RowDefinitions=new RowDefinitions(bottom is null?"Auto,*":"Auto,*,Auto")};top.Margin=new Thickness(0,0,0,12);g.Children.Add(top);Grid.SetRow(body,1);g.Children.Add(body);if(bottom is not null){Grid.SetRow(bottom,2);bottom.Margin=new Thickness(0,12,0,0);g.Children.Add(bottom);}return g;}
-    public static TabItem Tab(string title, Control body, string? help = null)
+    public static TabItem Tab(string title, Control body, string? help = null, Glyph? glyph = null)
     {
-        var tab = new TabItem { Header = title, Content = body };
+        var tab = new TabItem
+        {
+            Header = glyph is { } symbol ? IconLabel(symbol, title, size: 14) : new TextBlock { Text = title, FontSize = 14 },
+            Content = body
+        };
+        AutomationProperties.SetName(tab, title);
         return help is null ? tab : Help(tab, help);
     }
     public static async Task<string?> Prompt(Window owner,string title,bool secret=false)

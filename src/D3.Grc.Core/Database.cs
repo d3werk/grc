@@ -6,6 +6,7 @@ namespace D3.Grc.Core;
 public static class Database
 {
     internal const string SupplierMigrationId = "20261119090000_SupplierRegister";
+    internal const string DocumentMigrationId = "20261120090000_DocumentRegister";
 
     private static readonly Lazy<bool> Init=new(()=>{SQLitePCL.Batteries_V2.Init();return true;});
     public static SqliteConnection Open(string path)
@@ -54,6 +55,17 @@ public sealed class TopicsMigration:Migration
 public sealed class SupplierRegisterMigration : Migration
 {
     protected override void Up(MigrationBuilder m) => m.Sql(Database.Resource("007"));
+    protected override void Down(MigrationBuilder m) => throw new NotSupportedException("Kein destruktiver Downgrade.");
+}
+[DbContext(typeof(SchemaDb))][Migration(Database.DocumentMigrationId)]
+public sealed class DocumentRegisterMigration : Migration
+{
+    protected override void Up(MigrationBuilder m)
+    {
+        m.Sql(Database.Resource("008"));
+        m.Sql(Database.Resource("008-templates"));
+    }
+
     protected override void Down(MigrationBuilder m) => throw new NotSupportedException("Kein destruktiver Downgrade.");
 }
 [DbContext(typeof(SchemaDb))]
