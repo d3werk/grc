@@ -1,3 +1,12 @@
+# 0.11.0 · Web-Plattform
+
+- Gemeinsamer Mandantenbestand in PostgreSQL für Organisationseinheiten, Geschäftsprozesse, Assets, IT-Dienste, Risiken, Controls, Maßnahmen, Regelwerksfassungen, Anforderungen, Verarbeitungen, Lieferanten und DSFA-Grunddaten.
+- Lokale Mandanteneinrichtung mit Anmeldung, Rollen und befristeten Beratungsmandaten. Fachliche Personen und Verantwortlichkeiten lassen sich unabhängig vom Benutzerkonto zuordnen. Datenbank und API prüfen Mandant und Geltungsbereich.
+- Typisierte Beziehungen mit Begründung und Versionsprüfung. Risiko, Control und konkrete Maßnahme lassen sich getrennt pflegen und über dieselben Asset- und Control-Referenzen im Datenschutz nutzen.
+- Nachvollziehbare 5×5-Risikobewertung, Bewertungsverlauf, Risikomatrix und gefilterte Kennzahlen. Ein Nachweis lässt sich mehreren Controls und Maßnahmen zuordnen. Unterstützte Text- und PNG-Dateien haben eine Vorschau.
+- JSON- und CSV-Berichte für Management und Datenschutz, CSV-Katalogimport mit Vorprüfung und Wiederholschutz sowie ein Audit-Log für Fachänderungen und Exporte.
+- Responsive deutsche Oberfläche, lokaler Compose-Start, OpenAPI-Vertrag, Plattformarchitektur und priorisierter Ausbauplan. Desktop-Projekte bleiben in ihrem eigenen Dateiformat.
+
 # 0.10.0
 
 - Risikobewertung auf einer transparenten 5×5-Skala mit Eintrittswahrscheinlichkeit und Auswirkung.
