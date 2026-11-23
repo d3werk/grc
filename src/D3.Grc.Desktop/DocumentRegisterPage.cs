@@ -59,12 +59,10 @@ public sealed partial class MainWindow
         topic.ItemsSource = availableTopics;
         var scope = Ui.Input("z. B. Produktentwicklung");
         var owner = Ui.Input("Name oder Rolle");
-        var sourceText = Ui.Input("Markdown-Text eingeben, zum Beispiel ## Zweck", true);
+        var sourceText = new RichTextEditor("Dokumenttext", "Dokumenttext eingeben", editorHeight: 310, maximumLength: 100000);
         title.MaxLength = 500;
         scope.MaxLength = 1000;
         owner.MaxLength = 240;
-        sourceText.MaxLength = 100000;
-        sourceText.Height = 310;
         var editorFields = Ui.Stack(
             Ui.Field("Dokumenttitel *", title),
             CompanyColumns(Ui.Field("Dokumentart *", category, "Ordnet den Entwurf als Richtlinie, Verfahren oder anderen Dokumenttyp ein."),
@@ -72,7 +70,7 @@ public sealed partial class MainWindow
             CompanyColumns(Ui.Field("Verantwortung *", owner, "Wählen Sie die fachlich verantwortliche Person oder Rolle."),
                 Ui.Field("Geltungsbereich", scope, "Für einen konkreten Bereich denselben Text wie im globalen Filter verwenden.")),
             Ui.Field("Dokumenttext", sourceText,
-                "Markdown unterstützt Überschriften, Absätze, Listen und Codeblöcke. Die Vorschau zeigt den aktuell sichtbaren Text."));
+                "Text direkt gestalten. Die Vorschau zeigt die aktuelle Fassung auch vor dem Speichern."));
 
         var heading = Ui.Heading("Dokument auswählen");
         var lifecycle = Ui.Secondary("");
@@ -100,7 +98,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(linkList, "Zugeordnete Anforderungen und Controls");
         var linkArea = new ContentControl();
         var tabControl = new TabControl();
-        var editorTab = Ui.Tab("Text", editorArea, "Stammdaten und Markdown-Text des Dokuments anzeigen oder im Entwurf bearbeiten.");
+        var editorTab = Ui.Tab("Text", editorArea, "Stammdaten und Dokumenttext anzeigen oder im Entwurf bearbeiten.");
         var previewTab = Ui.Tab("Vorschau", Ui.Scroll(Ui.Stack(previewTitle, preview)),
             "Zeigt die aktuell angezeigte Fassung einschließlich noch ungespeicherter Entwurfsänderungen.");
         var versionsTab = Ui.Tab("Versionen", versionArea, "Gespeicherte Veröffentlichungen auswählen und mit ihren Freigabeangaben ansehen.");
@@ -191,7 +189,7 @@ public sealed partial class MainWindow
             topic.SelectedItem = availableTopics.FirstOrDefault(choice => choice.Id == (draft?.TopicId ?? _topicId));
             scope.Text = draft?.Scope ?? (editingNew ? _scopeValue : "");
             owner.Text = draft?.Owner ?? "";
-            sourceText.Text = draft?.Content ?? starter?.Effective ?? "";
+            sourceText.Content = draft?.Content ?? starter?.Effective ?? "";
             title.IsReadOnly = scope.IsReadOnly = owner.IsReadOnly = sourceText.IsReadOnly = !isEditable;
             category.IsEnabled = topic.IsEnabled = isEditable;
             save.IsVisible = isEditable;
@@ -221,9 +219,9 @@ public sealed partial class MainWindow
                 DocumentStatus.InReview => $"Fassung in Prüfung · Version {selected.Version}",
                 _ => HasFormChanges ? "Vorschau · Ungespeicherter Entwurf" : "Entwurfsvorschau"
             };
-            preview.Content = string.IsNullOrWhiteSpace(sourceText.Text)
+            preview.Content = string.IsNullOrWhiteSpace(sourceText.PlainText)
                 ? Ui.Notice("Für diese Fassung ist noch kein Dokumenttext vorhanden.")
-                : DocumentPreview.Create(sourceText.Text);
+                : DocumentPreview.Create(sourceText.Content);
         }
 
         void ShowVersion(DocumentVersion? version)
@@ -328,7 +326,7 @@ public sealed partial class MainWindow
                 throw new ArgumentException("Dokumentart und Fachthema auswählen.");
             var selectedCategory = DocumentRegister.CategoryLabels.Single(option => option.Value == categoryLabel).Key;
             var draft = new DocumentDraft(title.Text ?? "", selectedTopic.Id, scope.Text ?? "", selectedCategory,
-                owner.Text ?? "", sourceText.Text ?? "");
+                owner.Text ?? "", sourceText.Content);
             var reason = await Ui.Prompt(this, selected is null ? "Anlass für das neue Dokument" : "Grund für die Änderungen am Entwurf");
             if (reason is null)
                 return false;
@@ -444,7 +442,7 @@ public sealed partial class MainWindow
 
         SafeSelection(documentList, () => selected, LoadDocumentAsync);
         TrackForm(() => (title.Text ?? "", category.SelectedItem, (topic.SelectedItem as Choice)?.Id,
-                scope.Text ?? "", owner.Text ?? "", sourceText.Text ?? ""), SaveDraftAsync, null,
+                scope.Text ?? "", owner.Text ?? "", sourceText.Content), SaveDraftAsync, null,
             title, category, topic, scope, owner, sourceText);
         stateFilter.SelectionChanged += async (_, _) =>
         {

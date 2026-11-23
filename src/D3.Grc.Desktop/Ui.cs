@@ -9,24 +9,35 @@ namespace D3.Grc.Desktop;
 internal static class Ui
 {
     public const string KeyboardHelp = "F1 zeigt Hinweise zum fokussierten Element.";
-    public const string AccentColor = "#08726D";
+    public const string AccentColor = "#486E31";
     public static readonly IBrush Green = Brush.Parse(AccentColor);
-    public static readonly IBrush Blue = Brush.Parse("#245B8A");
-    public static readonly IBrush Ink = Brush.Parse("#172D42");
-    public static readonly IBrush Muted = Brush.Parse("#506477");
-    public static readonly IBrush Canvas = Brush.Parse("#F1F5F9");
+    public static readonly IBrush Blue = Brush.Parse("#216780");
+    public static readonly IBrush Ink = Brush.Parse("#252D26");
+    public static readonly IBrush Muted = Brush.Parse("#555E53");
+    public static readonly IBrush Canvas = Brush.Parse("#F3F5F0");
     public static readonly IBrush Surface = Brushes.White;
-    public static readonly IBrush Line = Brush.Parse("#D8E3EC");
-    public static readonly IBrush SoftGreen = Brush.Parse("#DDF3EE");
-    public static readonly IBrush SoftBlue = Brush.Parse("#E5F0F9");
+    public static readonly IBrush Line = Brush.Parse("#D9DED4");
+    public static readonly IBrush SoftGreen = Brush.Parse("#E8F0E3");
+    public static readonly IBrush SoftBlue = Brush.Parse("#E7F3F6");
     public static readonly IBrush SoftAmber = Brush.Parse("#FFF0D9");
     public static readonly IBrush Amber = Brush.Parse("#804918");
-    public static readonly IBrush Navy = Brush.Parse("#11283D");
-    public static readonly IBrush NavyHover = Brush.Parse("#1A374E");
-    public static readonly IBrush NavySelected = Brush.Parse("#21495A");
-    public static readonly IBrush NavText = Brush.Parse("#E3EEF7");
-    public static readonly IBrush NavMuted = Brush.Parse("#A5BCCD");
-    public static readonly IBrush Mint = Brush.Parse("#8CE4D3");
+    public static readonly IBrush NavSurface = Brush.Parse("#FAFBF7");
+    public static readonly IBrush NavHover = Brush.Parse("#EFF3EB");
+    public static readonly IBrush NavSelected = SoftGreen;
+    public static readonly IBrush NavSelectedText = Brush.Parse("#345423");
+    public static readonly IBrush NavText = Brush.Parse("#343D34");
+    public static readonly IBrush NavMuted = Brush.Parse("#584E44");
+    public static readonly IBrush BrandWash = new LinearGradientBrush
+    {
+        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+        EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+        GradientStops =
+        {
+            new GradientStop(Color.Parse("#F1F5ED"), 0),
+            new GradientStop(Color.Parse("#FAFAF7"), 0.52),
+            new GradientStop(Color.Parse("#E7F3F6"), 1)
+        }
+    };
 
     public static TextBlock Text(string text,int size=14,bool bold=false)=>new(){Text=text,FontSize=size,FontWeight=bold?FontWeight.SemiBold:FontWeight.Normal,Foreground=Ink,TextWrapping=TextWrapping.Wrap};
     public static TextBlock Secondary(string text, int size = 13)

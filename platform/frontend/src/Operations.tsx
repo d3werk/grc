@@ -3,6 +3,8 @@ import type { FormEvent } from 'react';
 import { ClipboardCheck, Download, Eye, Grid2X2, Link2, Plus, UploadCloud } from 'lucide-react';
 import type { Assessment, AssessmentInput, CatalogRecord, Client, Evidence, MatrixData } from './api';
 import { download, errorMessage, query } from './api';
+import { RichTextEditor, RichTextPreview } from './RichText';
+import type { RichTextDocument } from './RichText';
 import { dateLabel, Empty, Field, Loading, Notice, todayIso, useData } from './ui';
 
 const responseLabels = {
@@ -24,11 +26,25 @@ export function RiskAssessments({ api, record, write, read }: { api: Client; rec
   const result = useData(signal => read ? api.json<Assessment[]>(path, { signal }) : Promise.resolve(null), [api, path, read]);
   const [form, setForm] = useState(false);
   const [residual, setResidual] = useState(false);
+  const [rationale, setRationale] = useState<{ text: string; document?: RichTextDocument }>({ text: '' });
   const [requestError, setRequestError] = useState('');
   const [pending, setPending] = useState(false);
 
+  function closeForm() {
+    setForm(false);
+    setResidual(false);
+    setRationale({ text: '' });
+    setRequestError('');
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
+    const reason = rationale.text.trim();
+    if (!reason) {
+      setRequestError('Geben Sie eine Begründung ein.');
+      return;
+    }
     const values = new FormData(event.currentTarget);
     const payload: AssessmentInput = {
       risk_version: record.version,
@@ -38,14 +54,14 @@ export function RiskAssessments({ api, record, write, read }: { api: Client; rec
       residual_likelihood: residual ? Number(values.get('residual_likelihood')) : null,
       residual_impact: residual ? Number(values.get('residual_impact')) : null,
       response: String(values.get('response')),
-      rationale: String(values.get('rationale')).trim()
+      rationale: reason,
+      rationale_rich_text: rationale.document
     };
     setPending(true);
     setRequestError('');
     try {
       await api.json<Assessment>(path, { method: 'POST', body: JSON.stringify(payload) });
-      setForm(false);
-      setResidual(false);
+      closeForm();
       result.refresh();
     } catch (reason) {
       setRequestError(errorMessage(reason));
@@ -73,7 +89,9 @@ export function RiskAssessments({ api, record, write, read }: { api: Client; rec
         <dl className="record-meta">
           <div><dt>Ausgangsrisiko</dt><dd>{row.inherent_likelihood} × {row.inherent_impact} · {row.inherent_score} · {riskBand(row.inherent_score)[0]}</dd></div>
           <div><dt>Restrisiko</dt><dd>{row.residual_score === null ? 'Offen' : `${row.residual_likelihood} × ${row.residual_impact} · ${row.residual_score} · ${riskBand(row.residual_score)[0]}`}</dd></div>
-        </dl><p>{responseLabels[row.response as keyof typeof responseLabels] ?? row.response} · {row.rationale}</p>
+        </dl>
+        <p>{responseLabels[row.response as keyof typeof responseLabels] ?? row.response}</p>
+        <RichTextPreview text={row.rationale} document={row.rationale_rich_text} />
       </li>)}
     </ul>}
     {form && <form className="inline-form" onSubmit={submit}>
@@ -87,9 +105,10 @@ export function RiskAssessments({ api, record, write, read }: { api: Client; rec
         {scale('Verbleibende Auswirkung', 'residual_impact', impact)}</div>}
       <Field label="Risikobehandlung"><select name="response">{Object.entries(responseLabels).map(([key, label]) =>
         <option key={key} value={key}>{label}</option>)}</select></Field>
-      <Field label="Begründung"><textarea name="rationale" rows={3} required maxLength={5000} /></Field>
+      <RichTextEditor label="Begründung" value={rationale.text} document={rationale.document}
+        onChange={(text, document) => setRationale({ text, document })} disabled={pending} compact />
       <div className="actions"><button className="primary" type="submit" disabled={pending}>Bewertung speichern</button>
-        <button type="button" disabled={pending} onClick={() => setForm(false)}>Abbrechen</button></div>
+        <button type="button" disabled={pending} onClick={closeForm}>Abbrechen</button></div>
     </form>}
   </section>;
 }

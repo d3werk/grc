@@ -145,9 +145,7 @@ public sealed partial class MainWindow
 
         var effectivePreview = new ContentControl();
         var originalPreview = new ContentControl();
-        var edit = Ui.Input("Eigene Fassung", true);
-        edit.MinHeight = 315;
-        edit.MaxLength = 30000;
+        var edit = new RichTextEditor("Eigene Fassung", "Vorlagentext bearbeiten", editorHeight: 315);
         var save = Button("Vorlage speichern", SaveEditorButtonAsync, true, glyph: Glyph.Save);
         var createDocument = Button("Als Dokument verwenden", async () =>
         {
@@ -163,7 +161,7 @@ public sealed partial class MainWindow
                 Ui.Tab("Vorschau", Ui.Scroll(effectivePreview), glyph: Glyph.Documents),
                 Ui.Tab("Bearbeiten", Ui.Scroll(Ui.Stack(
                     Ui.Notice("Eigene Fassung und Katalogtext bleiben getrennt. Bereits angelegte Dokumente und Einträge behalten ihren Inhalt."),
-                    Ui.Field("Eigene Fassung", edit, "Überschriften, Listen und Markdown-Tabellen werden in der Vorschau formatiert."),
+                    Ui.Field("Eigene Fassung", edit, "Text markieren und formatieren. Die Vorschau zeigt Schriftstile und Textaufbau."),
                     save)), glyph: Glyph.Templates),
                 Ui.Tab("Katalogfassung", Ui.Scroll(originalPreview), glyph: Glyph.Sources)
             },
@@ -174,7 +172,7 @@ public sealed partial class MainWindow
         {
             effectivePreview.Content = selected is null
                 ? Ui.Notice("Wählen Sie links eine Vorlage. Hier sehen Sie Inhalt und Aufbau.")
-                : DocumentPreview.Create(edit.Text ?? "");
+                : DocumentPreview.Create(edit.Content);
         }
 
         void Load(TextTemplate? template)
@@ -185,7 +183,7 @@ public sealed partial class MainWindow
                 $"{TemplateKindLabel(selected.Kind)} · {selected.Id} · "
                 + (_allSources.FirstOrDefault(source => source.Id == selected.SourceId)?.Title ?? selected.SourceId);
             meta.IsVisible = selected is not null;
-            edit.Text = selected?.Effective ?? "";
+            edit.Content = selected?.Effective ?? "";
             edit.IsEnabled = save.IsEnabled = createDocument.IsEnabled = selected is not null;
             originalPreview.Content = selected is null ? Ui.Notice("Wählen Sie eine Vorlage.") :
                 DocumentPreview.Create(selected.Body);
@@ -197,7 +195,7 @@ public sealed partial class MainWindow
         void FillList()
         {
             var matches = templates.Where(template => (appliedType == "" || template.Kind == appliedType) &&
-                (appliedText == "" || new[] { template.Title, template.Id, template.Effective }.Any(
+                (appliedText == "" || new[] { template.Title, template.Id, RichTextContent.Plain(template.Effective) }.Any(
                     text => text.Contains(appliedText, StringComparison.CurrentCultureIgnoreCase))))
                 .OrderBy(template => template.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
             list.ItemsSource = matches;
@@ -241,7 +239,7 @@ public sealed partial class MainWindow
         Task<bool> SaveTemplate()
         {
             var template = selected ?? throw new ArgumentException("Vorlage auswählen.");
-            var text = edit.Text ?? "";
+            var text = edit.Content;
             return CommitFormChangeAsync(() => _workspace.SaveTemplateAsync(template.Id, text), () =>
             {
                 selected = template with { CustomBody = text };
@@ -251,7 +249,7 @@ public sealed partial class MainWindow
             });
         }
 
-        TrackForm(() => edit.Text ?? "", SaveTemplate, null, edit);
+        TrackForm(() => edit.Content, SaveTemplate, null, edit);
         var filter = Ui.Stack(Ui.Heading("Textvorlagen", 20), Ui.Field("Vorlagen suchen", search),
             Ui.Field("Vorlagenart", types), Button("Filter anwenden", ApplySearch, glyph: Glyph.Filter), total);
         return Ui.Split(Ui.Card(Ui.Fill(filter, list)), Ui.Card(Ui.Fill(Ui.Stack(title, meta), tabs, Ui.Row(createDocument))));

@@ -6,6 +6,8 @@ import type { AttributeField, CatalogRecord, Client, Kind, LinkKind, RecordLink,
 import { errorMessage, query } from './api';
 import { dateLabel, Empty, Field, Loading, Notice, useData } from './ui';
 import { RiskAssessments } from './Operations';
+import { formattingKey, RichTextEditor, RichTextPreview } from './RichText';
+import type { RichTextDocument } from './RichText';
 
 export const kindInfo = {
   org_unit: { title: 'Organisation', singular: 'Organisationseinheit', icon: Building2, description: 'Einheiten und ihre Zugehörigkeit im Mandanten pflegen.' },
@@ -30,7 +32,7 @@ export function recordTitle(record: CatalogRecord) {
   return record.code ? `${record.code} · ${record.title}` : record.title;
 }
 
-type Draft = Pick<CatalogRecord, 'title' | 'code' | 'description' | 'status' | 'scope' | 'owner' | 'org_unit_id' | 'attributes'>;
+type Draft = Pick<CatalogRecord, 'title' | 'code' | 'description' | 'status' | 'scope' | 'owner' | 'org_unit_id' | 'attributes' | 'rich_text'>;
 export type CatalogLeaveGuard = (leave: () => void) => void;
 export type OpenRecord = (kind: Kind, id?: string, create?: boolean) => void;
 
@@ -63,8 +65,10 @@ export function Catalog({ api, kind, title, description, scope, rows, relations,
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | undefined>(selectedId);
   const [form, setForm] = useState<'new' | 'edit' | null>(create && write ? 'new' : null);
+  const searchTerm = search.toLocaleLowerCase('de').trim();
   const visible = rows.filter(record => record.kind === kind &&
-    [record.code, record.title, record.owner].some(text => text.toLocaleLowerCase('de').includes(search.toLocaleLowerCase('de').trim())));
+    [record.code, record.title, record.owner, record.description, ...Object.values(record.attributes)]
+      .some(text => text.toLocaleLowerCase('de').includes(searchTerm)));
   const active = rows.find(record => record.kind === kind && record.id === activeId);
   const org = rows.find(record => record.id === active?.org_unit_id);
 
@@ -83,7 +87,7 @@ export function Catalog({ api, kind, title, description, scope, rows, relations,
       <section className="panel register-list" aria-labelledby="record-list-title">
         <div className="panel-title"><h2 id="record-list-title">Einträge</h2><span>{visible.length}</span></div>
         <label className="searchbox"><Search size={17} aria-hidden="true" />
-          <input aria-label="Register durchsuchen" value={search} onChange={event => setSearch(event.target.value)} placeholder="Titel, Kürzel oder Verantwortung" /></label>
+          <input aria-label="Register durchsuchen" value={search} onChange={event => setSearch(event.target.value)} placeholder="Titel, Kürzel oder Text" /></label>
         {visible.length ? <div className="table-scroll"><table>
           <thead><tr><th scope="col">Eintrag</th><th scope="col">Status</th></tr></thead>
           <tbody>{visible.map(record => <tr key={record.id} className={record.id === activeId ? 'selected' : ''}>
@@ -105,10 +109,11 @@ export function Catalog({ api, kind, title, description, scope, rows, relations,
           <div><dt>Verantwortung</dt><dd>{active.owner || '–'}</dd></div>
           <div><dt>Bearbeitungsstand</dt><dd>{statusLabels[active.status]} · Fassung {active.version}</dd></div>
         </dl>
-        {active.description && <p className="record-text">{active.description}</p>}
+        {active.description && <div className="record-text"><RichTextPreview text={active.description} document={active.rich_text?.description} /></div>}
         {Object.keys(active.attributes).length > 0 && <dl className="record-meta facts">
           {Object.entries(active.attributes).filter(([, value]) => value !== '').map(([key, value]) =>
-            <div key={key}><dt>{attributeFields.find(field => field.key === key)?.label ?? key}</dt><dd>{value}</dd></div>)}</dl>}
+            <div key={key}><dt>{attributeFields.find(field => field.key === key)?.label ?? key}</dt>
+              <dd><RichTextPreview text={value} document={active.rich_text?.[key]} /></dd></div>)}</dl>}
         {kind === 'risk' && (assess || reviewRead) &&
           <RiskAssessments key={active.id} api={api} record={active} write={assess} read={reviewRead} />}
         <RecordRelations key={active.id} api={api} record={active} rows={rows} relations={relations}
@@ -129,8 +134,9 @@ function CatalogForm({ api, kind, initial, scope, orgs, attributeFields, onSaved
 }) {
   const [start] = useState<Draft>(() => initial ? {
     title: initial.title, code: initial.code, description: initial.description, status: initial.status,
-    scope: initial.scope, owner: initial.owner, org_unit_id: initial.org_unit_id, attributes: initial.attributes
-  } : { title: '', code: '', description: '', status: 'draft', scope, owner: '', org_unit_id: null, attributes: {} });
+    scope: initial.scope, owner: initial.owner, org_unit_id: initial.org_unit_id, attributes: initial.attributes,
+    rich_text: initial.rich_text ?? {}
+  } : { title: '', code: '', description: '', status: 'draft', scope, owner: '', org_unit_id: null, attributes: {}, rich_text: {} });
   const [draft, setDraft] = useState(start);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
@@ -141,7 +147,7 @@ function CatalogForm({ api, kind, initial, scope, orgs, attributeFields, onSaved
   const [createKey] = useState(() => Array.from(crypto.getRandomValues(new Uint8Array(16)),
     value => value.toString(16).padStart(2, '0')).join(''));
   const changed = draftFields.some(key => draft[key] !== start[key]) || attributeFields.some(({ key }) =>
-    (draft.attributes[key] ?? '') !== (start.attributes[key] ?? ''));
+    (draft.attributes[key] ?? '') !== (start.attributes[key] ?? '')) || formattingKey(draft.rich_text) !== formattingKey(start.rich_text);
 
   const requestLeave: CatalogLeaveGuard = useCallback(leave => {
     if (pending) return;
@@ -163,6 +169,16 @@ function CatalogForm({ api, kind, initial, scope, orgs, attributeFields, onSaved
 
   function field<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft(current => ({ ...current, [key]: value }));
+  }
+
+  function longText(key: string, text: string, document?: RichTextDocument) {
+    setDraft(current => {
+      const rich_text = { ...current.rich_text };
+      if (document) rich_text[key] = document;
+      else delete rich_text[key];
+      return key === 'description' ? { ...current, description: text, rich_text }
+        : { ...current, attributes: { ...current.attributes, [key]: text }, rich_text };
+    });
   }
 
   async function save(leave?: () => void) {
@@ -221,19 +237,15 @@ function CatalogForm({ api, kind, initial, scope, orgs, attributeFields, onSaved
       <Field label="Status"><select value={draft.status} onChange={event => field('status', event.target.value as Status)}>
         {Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></Field>
     </div>
-    <Field label="Beschreibung"><textarea rows={4} maxLength={30000} value={draft.description}
-      onChange={event => field('description', event.target.value)} /></Field>
-    {attributeFields.map(item => {
-      const value = draft.attributes[item.key] ?? '';
-      function change(raw: string) {
-        field('attributes', { ...draft.attributes, [item.key]: raw });
-      }
-      return <Field label={item.label} key={item.key}>
-        {item.type === 'textarea'
-          ? <textarea rows={3} maxLength={5000} value={value} onChange={event => change(event.target.value)} />
-          : <input type={item.type} value={value} onChange={event => change(event.target.value)} />}
-      </Field>;
-    })}
+    <RichTextEditor label="Beschreibung" value={draft.description} document={draft.rich_text.description}
+      onChange={(text, document) => longText('description', text, document)} disabled={pending} />
+    {attributeFields.map(item => item.type === 'textarea'
+      ? <RichTextEditor key={item.key} label={item.label} value={draft.attributes[item.key] ?? ''} document={draft.rich_text[item.key]}
+        onChange={(text, document) => longText(item.key, text, document)} disabled={pending} compact />
+      : <Field label={item.label} key={item.key}>
+        <input type={item.type} value={draft.attributes[item.key] ?? ''}
+          onChange={event => field('attributes', { ...draft.attributes, [item.key]: event.target.value })} />
+      </Field>)}
     <div className="actions"><button type="submit" className="primary" disabled={pending}>{pending ? 'Wird gespeichert …' : 'Speichern'}</button>
       <button type="button" onClick={() => requestLeave(onCancel)} disabled={pending}>Abbrechen</button></div>
     {destination && <dialog ref={dialog} className="panel" style={{ maxWidth: 'min(32rem, calc(100% - 2rem))' }}
@@ -259,6 +271,7 @@ function RecordRelations({ api, record, rows, relations, openRecord, write }: {
   const [linkType, setLinkType] = useState('');
   const [relatedId, setRelatedId] = useState('');
   const [reason, setReason] = useState('');
+  const [richReason, setRichReason] = useState<RichTextDocument>();
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
   const type = types.find(relation => relation.kind === linkType);
@@ -269,14 +282,17 @@ function RecordRelations({ api, record, rows, relations, openRecord, write }: {
 
   async function addLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!reason.trim()) { setError('Geben Sie eine Begründung ein.'); return; }
     setPending(true);
     setError('');
     try {
       await api.json('/links', { method: 'POST', body: JSON.stringify({
-        kind: linkType, from_id: direction ? record.id : relatedId, to_id: direction ? relatedId : record.id, rationale: reason.trim()
+        kind: linkType, from_id: direction ? record.id : relatedId, to_id: direction ? relatedId : record.id,
+        rationale: reason.trim(), rationale_rich_text: richReason
       }) });
       setForm(false);
       setReason('');
+      setRichReason(undefined);
       links.refresh();
     } catch (failure) {
       setError(errorMessage(failure));
@@ -295,7 +311,7 @@ function RecordRelations({ api, record, rows, relations, openRecord, write }: {
       return <li key={link.id}><div><span>{relations.find(relation => relation.kind === link.kind)?.label ?? link.kind}</span>
         {related ? <button type="button" className="link-button" onClick={() => openRecord(related.kind, related.id)}>
           {recordTitle(related)} <ArrowRight size={15} aria-hidden="true" /></button> : <strong>Eintrag außerhalb des aktuellen Filters</strong>}
-        <small>{link.rationale}</small></div></li>;
+        <RichTextPreview text={link.rationale} document={link.rationale_rich_text} /></div></li>;
     })}</ul> : !links.loading && !links.error && <p className="muted">Noch keine fachlichen Bezüge.</p>}
     {form && <form className="inline-form" onSubmit={addLink}>
       {error && <Notice message={error} />}
@@ -304,7 +320,10 @@ function RecordRelations({ api, record, rows, relations, openRecord, write }: {
       <Field label="Bestehender Eintrag"><select required value={relatedId} disabled={!type} onChange={event => setRelatedId(event.target.value)}>
         <option value="">Eintrag auswählen</option>{options.map(item => <option key={item.id} value={item.id}>{recordTitle(item)}</option>)}</select></Field>
       {targetKind && !options.length && <p className="muted">Im aktuellen Filter ist kein passender Eintrag vorhanden.</p>}
-      <Field label="Begründung"><textarea required rows={2} maxLength={5000} value={reason} onChange={event => setReason(event.target.value)} /></Field>
+      <RichTextEditor label="Begründung" value={reason} document={richReason} onChange={(text, document) => {
+        setReason(text);
+        setRichReason(document);
+      }} disabled={pending} compact />
       <div className="actions"><button type="submit" className="primary" disabled={pending || !relatedId}>Bezug speichern</button>
         <button type="button" disabled={pending} onClick={() => setForm(false)}>Abbrechen</button></div>
     </form>}

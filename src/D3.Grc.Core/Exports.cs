@@ -63,7 +63,7 @@ public static class ExcelExport
 public sealed partial class Workspace
 {
     public Task<List<ExportSheet>> ExportSnapshotAsync(string topic,string scope,string search)=>Read(c=>{
-        var entries=Query(c,null,"SELECT * FROM Records r WHERE ($p0='' OR EXISTS(SELECT 1 FROM RecordTopics t WHERE t.RecordId=r.Id AND t.TopicId=$p0)) AND ($p1='' OR Scope=$p1)",ReadEntry,topic,scope).Where(e=>search==""||new[]{e.Title,e.Code,e.Body,e.Owner}.Any(s=>s.Contains(search,StringComparison.CurrentCultureIgnoreCase))).ToList();var ids=entries.Select(e=>e.Id).ToHashSet();
+        var entries=Query(c,null,"SELECT * FROM Records r WHERE ($p0='' OR EXISTS(SELECT 1 FROM RecordTopics t WHERE t.RecordId=r.Id AND t.TopicId=$p0)) AND ($p1='' OR Scope=$p1)",ReadEntry,topic,scope).Where(e=>search==""||new[]{e.Title,e.Code,RichTextContent.Plain(e.Body),e.Owner}.Any(s=>s.Contains(search,StringComparison.CurrentCultureIgnoreCase))).ToList();var ids=entries.Select(e=>e.Id).ToHashSet();
         var sheets=new List<ExportSheet>();var meta=new List<string[]>{new[]{"Projekt",Name},new[]{"Thema",topic==""?"Alle Themen":topic},new[]{"Scope",scope==""?"Alle Scopes":scope},new[]{"Suche",search},new[]{"Stichtag UTC",DateTimeOffset.UtcNow.ToString("O")},new[]{"Profil",identity.User!},new[]{"Methode","Aktueller Bestand; keine historische Zeitreihe; keine Konformitätsquote"}};sheets.Add(new("Exportkontext",["Feld","Wert"],meta));
         if (ReadCompanyProfile(c) is { } company)
         {
@@ -87,7 +87,7 @@ public sealed partial class Workspace
             sheets.Add(new("Umsetzungsplan", ["Priorität", "Modul", "Fachthema", "Begründung", "Nächster Schritt"], planRows));
         }
         sheets.Add(new("Kennzahlen",["Kennzahl","Anzahl"],new(){new[]{"Anforderungen",entries.Count(e=>e.Kind=="Requirement").ToString()},new[]{"Controls",entries.Count(e=>e.Kind=="Control").ToString()},new[]{"Controls als Entwurf",entries.Count(e=>e.Kind=="Control"&&e.Status=="Entwurf").ToString()},new[]{"Offene Findings",entries.Count(e=>e.Kind=="Finding"&&e.Status!="Geschlossen").ToString()},new[]{"Ohne Verantwortung",entries.Count(e=>e.Owner=="").ToString()}}));
-        foreach(var kind in Entry.Kinds.Where(kind => kind != "Supplier"))sheets.Add(new(kind,["ID","Code","Titel","Quelle","Fundstelle","Status","Verantwortung","Termin","Scope","Version","Beschreibung"],entries.Where(e=>e.Kind==kind).Select(e=>new[]{e.Id,e.Code,e.Title,e.SourceId,e.Locator,e.Status,e.Owner,e.DueDate,e.Scope,e.Version.ToString(),e.Body}).ToList()));
+        foreach(var kind in Entry.Kinds.Where(kind => kind != "Supplier"))sheets.Add(new(kind,["ID","Code","Titel","Quelle","Fundstelle","Status","Verantwortung","Termin","Scope","Version","Beschreibung"],entries.Where(e=>e.Kind==kind).Select(e=>new[]{e.Id,e.Code,e.Title,e.SourceId,e.Locator,e.Status,e.Owner,e.DueDate,e.Scope,e.Version.ToString(),RichTextContent.Plain(e.Body)}).ToList()));
         AddRiskAssessmentExport(c, sheets, meta, entries.Where(entry => entry.Kind == "Risk"));
         var links=Query(c,null,"SELECT l.Id,l.SourceRecordId,l.TargetRecordId,l.Type,l.Reason,l.SourceId,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,'') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>Enumerable.Range(0,8).Select(r.GetString).ToArray()).Where(x=>ids.Contains(x[1])||ids.Contains(x[2])).ToList();sheets.Add(new("Mappings",["ID","Ausgangs-ID","Ziel-ID","Typ","Begründung","Quelle","Abdeckung","Scope"],links));
         var proofIds=Query(c,null,"SELECT EvidenceId,ControlId FROM EvidenceLinks",r=>(Evidence:r.GetString(0),Control:r.GetString(1))).Where(x=>ids.Contains(x.Control)).Select(x=>x.Evidence).ToHashSet();
@@ -199,7 +199,7 @@ public sealed partial class Workspace
                     supplier.Id, supplier.Code, supplier.Title, detail?.Service ?? "",
                     detail is null ? "" : SupplierRegister.CriticalityLabels[detail.Criticality],
                     supplier.Status, supplier.Owner, supplier.DueDate, supplier.Scope, detail?.AgreementReference ?? "",
-                    detail?.RiskRationale ?? "", supplier.SourceId, supplier.Locator, supplier.Body
+                    detail?.RiskRationale ?? "", supplier.SourceId, supplier.Locator, RichTextContent.Plain(supplier.Body)
                 };
             }).ToList();
         sheets.Add(new("Lieferanten",

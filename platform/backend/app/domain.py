@@ -27,6 +27,7 @@ from .domain_models import (
     CatalogUpdate,
     validate_attributes,
 )
+from .rich_text import RichTextFields, plain_projection
 from .tenancy import RequestContext, context
 
 router = APIRouter(prefix="/api/v1", tags=["Arbeitsobjekte"])
@@ -42,11 +43,30 @@ _RECORD_SELECT = """
                'safeguards', nullif(d.safeguards, ''),
                'review_result', nullif(d.review_result, '')
            )) ELSE r.attributes END AS attributes,
-           r.version, r.created_at, r.updated_at
+           r.rich_text, r.version, r.created_at, r.updated_at
     FROM catalog_records r
     LEFT JOIN catalog_dpias d ON d.tenant_id = r.tenant_id AND d.record_id = r.id
 """
-_LINK_COLUMNS = "id, kind, from_id, from_kind, to_id, to_kind, rationale, version, created_at, updated_at"
+_LINK_COLUMNS = "id, kind, from_id, from_kind, to_id, to_kind, rationale, rationale_rich_text, version, created_at, updated_at"
+
+
+def _project_catalog_text(kind: str, documents: RichTextFields, description: str, attributes: dict[str, str]):
+    rich_fields = {key for key, _, field_type in ATTRIBUTE_FIELDS[kind] if field_type == "textarea"}
+    if documents.keys() - (rich_fields | {"description"}):
+        raise HTTPException(422, "Formatierter Text ist nur in den Langtextfeldern dieses Registers verfügbar.")
+    attributes = attributes.copy()
+    rich_text = {}
+    for key, document in documents.items():
+        plain = plain_projection(document, 30000 if key == "description" else 5000)
+        if key == "description":
+            description = plain
+        elif plain:
+            attributes[key] = plain
+        else:
+            attributes.pop(key, None)
+        if plain:
+            rich_text[key] = document.model_dump(mode="json", exclude_none=True)
+    return description, attributes, rich_text
 
 
 @router.get("/catalog/kinds", response_model=list[CatalogKindInfo])
@@ -116,6 +136,9 @@ def create_record(
 ) -> dict[str, Any]:
     ctx.require_scope(payload.scope)
     attributes = validate_attributes(payload.kind, payload.attributes)
+    description, attributes, rich_text = _project_catalog_text(
+        payload.kind, payload.rich_text, payload.description, attributes
+    )
     if idempotency_key is not None and (
         not idempotency_key.strip() or idempotency_key != idempotency_key.strip()
         or len(idempotency_key) > 128 or "\x00" in idempotency_key
@@ -123,8 +146,11 @@ def create_record(
         raise HTTPException(422, "Ungültiger Idempotenzschlüssel.")
     request_hash = None
     if idempotency_key is not None:
-        values = payload.model_dump(mode="json")
+        values = payload.model_dump(mode="json", exclude={"rich_text"})
         values["attributes"] = attributes
+        values["description"] = description
+        if rich_text:
+            values["rich_text"] = rich_text
         request_hash = hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         previous = _idempotent_record(ctx, idempotency_key, request_hash)
         if previous is not None:
@@ -139,13 +165,13 @@ def create_record(
             """
             INSERT INTO catalog_records
                 (tenant_id, kind, code, title, description, status, owner, scope, org_unit_id,
-                 attributes, created_by, create_key, create_hash)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 attributes, rich_text, created_by, create_key, create_hash)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (tenant_id, created_by, create_key) DO NOTHING
             RETURNING id
             """,
-            (ctx.tenant_id, payload.kind, payload.code, payload.title, payload.description, payload.status,
-             payload.owner, payload.scope, payload.org_unit_id, Jsonb(database_attributes), ctx.user_id,
+            (ctx.tenant_id, payload.kind, payload.code, payload.title, description, payload.status,
+             payload.owner, payload.scope, payload.org_unit_id, Jsonb(database_attributes), Jsonb(rich_text), ctx.user_id,
              idempotency_key, request_hash),
         ).fetchone()
     except UniqueViolation as error:
@@ -177,6 +203,18 @@ def update_record(record_id: UUID, payload: CatalogUpdate, ctx: WriteContext):
     _require_version(payload.expected_version, current["version"])
     if "attributes" in changes:
         changes["attributes"] = validate_attributes(current["kind"], changes["attributes"])
+    description = changes.get("description", current["description"])
+    attributes = changes.get("attributes", current["attributes"])
+    if payload.rich_text is not None:
+        changes["description"], changes["attributes"], changes["rich_text"] = _project_catalog_text(
+            current["kind"], payload.rich_text, description, attributes
+        )
+    else:
+        changes["rich_text"] = {
+            key: document for key, document in current["rich_text"].items()
+            if (description == current["description"] if key == "description"
+                else attributes.get(key) == current["attributes"].get(key))
+        }
     changes = {key: value for key, value in changes.items() if value != current[key]}
     if not changes:
         return current
@@ -193,11 +231,11 @@ def update_record(record_id: UUID, payload: CatalogUpdate, ctx: WriteContext):
             """
             UPDATE catalog_records
             SET code = %s, title = %s, description = %s, status = %s, owner = %s, scope = %s,
-                org_unit_id = %s, attributes = %s, version = version + 1, updated_at = clock_timestamp()
+                org_unit_id = %s, attributes = %s, rich_text = %s, version = version + 1, updated_at = clock_timestamp()
             WHERE tenant_id = %s AND id = %s
             """,
             (updated["code"], updated["title"], updated["description"], updated["status"], updated["owner"],
-             updated["scope"], updated["org_unit_id"], Jsonb(database_attributes), ctx.tenant_id, record_id),
+             updated["scope"], updated["org_unit_id"], Jsonb(database_attributes), Jsonb(updated["rich_text"]), ctx.tenant_id, record_id),
         )
     except UniqueViolation as error:
         raise HTTPException(409, "Dieses Kürzel wird für den Typ im gewählten Geltungsbereich bereits verwendet.") from error
@@ -264,16 +302,18 @@ def create_link(payload: CatalogLinkCreate, ctx: WriteContext):
     if relation is None or (relation["from_kind"], relation["to_kind"]) != (source["kind"], target["kind"]):
         raise HTTPException(422, "Diese Verknüpfungsart passt nicht zu Ausgangs- und Zieldatensatz.")
 
+    document = payload.rationale_rich_text
+    rationale = plain_projection(document, 5000, required=True) if document else payload.rationale
     created = ctx.conn.execute(
         f"""
         INSERT INTO catalog_links
-            (tenant_id, kind, from_id, from_kind, from_scope, to_id, to_kind, to_scope, rationale, created_by)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (tenant_id, kind, from_id, from_kind, from_scope, to_id, to_kind, to_scope, rationale, rationale_rich_text, created_by)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (tenant_id, kind, from_id, to_id) DO NOTHING
         RETURNING {_LINK_COLUMNS}
         """,
         (ctx.tenant_id, payload.kind, source["id"], source["kind"], source["scope"], target["id"], target["kind"],
-         target["scope"], payload.rationale, ctx.user_id),
+         target["scope"], rationale, Jsonb(document.model_dump(mode="json", exclude_none=True)) if document else None, ctx.user_id),
     ).fetchone()
     if created is None:
         raise HTTPException(409, "Diese Verknüpfung ist bereits vorhanden.")
@@ -285,14 +325,22 @@ def create_link(payload: CatalogLinkCreate, ctx: WriteContext):
 def update_link(link_id: UUID, payload: CatalogLinkUpdate, ctx: WriteContext):
     current = _read_link_for_update(ctx, link_id)
     _require_version(payload.expected_version, current["version"])
-    if current["rationale"] == payload.rationale:
+    document = payload.rationale_rich_text
+    rationale = plain_projection(document, 5000, required=True) if document else payload.rationale
+    if document:
+        rich_text = document.model_dump(mode="json", exclude_none=True)
+    elif "rationale_rich_text" not in payload.model_fields_set and rationale == current["rationale"]:
+        rich_text = current["rationale_rich_text"]
+    else:
+        rich_text = None
+    if current["rationale"] == rationale and current["rationale_rich_text"] == rich_text:
         return current
     updated = ctx.conn.execute(
         f"""
-        UPDATE catalog_links SET rationale = %s, version = version + 1, updated_at = clock_timestamp()
+        UPDATE catalog_links SET rationale = %s, rationale_rich_text = %s, version = version + 1, updated_at = clock_timestamp()
         WHERE tenant_id = %s AND id = %s RETURNING {_LINK_COLUMNS}
         """,
-        (payload.rationale, ctx.tenant_id, link_id),
+        (rationale, Jsonb(rich_text) if rich_text else None, ctx.tenant_id, link_id),
     ).fetchone()
     audit_event(
         ctx, "catalog.link_updated", "catalog_link", link_id,

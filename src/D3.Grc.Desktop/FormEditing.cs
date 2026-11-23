@@ -32,7 +32,7 @@ public sealed partial class MainWindow
             {
                 if (_loading || !ReferenceEquals(form, _form))
                     return;
-                if (e.Property == TextBox.TextProperty ||
+                if (e.Property == TextBox.TextProperty || e.Property == RichTextEditor.ContentProperty ||
                     e.Property == SelectingItemsControl.SelectedItemProperty ||
                     e.Property == ToggleButton.IsCheckedProperty ||
                     e.Property == NumericUpDown.ValueProperty)

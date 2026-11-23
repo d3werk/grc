@@ -1,4 +1,4 @@
-# Anwenderhandbuch 0.10.0
+# Anwenderhandbuch 0.12.0
 
 In Version 0.6.1 bieten zentrale Felder und Aktionen kurze Bedienhinweise. Den Mauszeiger auf dem Element stehen lassen oder das Element mit der Tastatur fokussieren und F1 drücken. Escape schließt einen geöffneten Hinweis.
 
@@ -12,6 +12,8 @@ Das lokale Profil kennzeichnet Aktivitäten, ist aber keine verifizierte Organis
 
 **Unternehmensprofil.** Größe, Branche, Merkmale und Risikoschwerpunkt bestimmen, welche Aufgaben als wesentlich empfohlen werden. Für optionale Aufgaben steht der vollständige Arbeitsbereich weiterhin zur Verfügung. Über „Unternehmen konfigurieren“ lässt sich das Profil für bestehende Projekte ergänzen oder ändern. Fachliche Anwendbarkeit wird je Anforderung bewertet.
 **Öffnen.** Verschlüsselte `.d3grc`-Datei auswählen und Projektpasswort eingeben. Ist ein Wiederherstellungsstand vorhanden, im Auswahlfenster den gewünschten Stand wählen oder den Vorgang abbrechen.
+
+**Mandant wechseln.** Oben im Arbeitsbereich die gewünschte Projektdatei auswählen und ihr eigenes Passwort eingeben. Die Anwendung hält das bisherige Projekt verfügbar, während die neue Datei geprüft wird. Eine abgebrochene Dateiauswahl führt zurück zur bisherigen Arbeit.
 
 Die mitgelieferten `.db`-Dateien sind öffentliche Starter-/Referenzdatenbanken ohne Kundendaten. Sie sind keine verschlüsselten Projektdateien und werden nicht direkt über Öffnen geladen.
 
@@ -31,6 +33,8 @@ Eintrag links auswählen. Rechts stehen Tabs bereit:
 - Historie: protokollierte Änderungen des Objekts.
 
 Vorlage übernehmen kopiert den Text ins Formular. Eigene Ergänzungen sind erwünscht. Erst Änderungen speichern legt den konkreten Datensatz an beziehungsweise aktualisiert ihn und schreibt die verschlüsselte Hauptdatei. Ein Vorlagentext ist kein Nachweis einer Umsetzung.
+
+In **Beschreibung / Umsetzung** lassen sich Textstellen markieren und über die Werkzeugleiste formatieren. Die Bearbeitung und Vorschau erfolgen im Textfeld. Bestehende Beschreibungen bleiben als Ausgangspunkt erhalten.
 
 ## 5. Speichern
 Die globale Schaltfläche Speichern und Strg/Cmd+S speichern ein bearbeitetes Formular über dessen Speicherfunktion. Ohne Formularänderungen wird die Hauptdatei gespeichert.

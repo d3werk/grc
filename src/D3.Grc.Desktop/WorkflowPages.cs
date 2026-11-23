@@ -145,7 +145,7 @@ public sealed partial class MainWindow
         }
         TrackForm(() => ((control.SelectedItem as Entry)?.Id, (source.SelectedItem as Source)?.Id,
             title.Text ?? "", origin.Text ?? "", days.Value), Import, RefreshEvidence, control, source, title, origin, days);
-        var apply=Button("Nachweisanforderung übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(origin.Text)&&!await Ui.Confirm(this,"Text ersetzen?","Übernehmen"))return;title.Text=t.Title;origin.Text=t.Effective;},
+        var apply=Button("Nachweisanforderung übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(origin.Text)&&!await Ui.Confirm(this,"Text ersetzen?","Übernehmen"))return;title.Text=t.Title;origin.Text=RichTextContent.Plain(t.Effective);},
             help: "Füllt Titel und Herkunft mit Vorlagentext. Vor dem Dateiimport die tatsächliche Herkunft ergänzen.");
         var reuse = Button("Auswahl für Control wiederverwenden", async () =>
         {
@@ -240,11 +240,11 @@ public sealed partial class MainWindow
             Ui.Field("Prüfquelle", source, "Wählt den Quellenbezug des Controls aus, der für diese Prüfung maßgeblich ist."),
             Ui.Field("Passende gültige Evidence", evidence, "Für das Ergebnis Bestanden ist ein am Prüfzeitpunkt gültiger Nachweis erforderlich."),
             Ui.Field("Prüfvorlage", template, "Zeigt Prüftexte für die ausgewählte Quelle."),
-            Button("Prüftext übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)return;if(!string.IsNullOrWhiteSpace(notes.Text)&&!await Ui.Confirm(this,"Prüftext ersetzen?","Ersetzen"))return;notes.Text=t.Effective;},
+            Button("Prüftext übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)return;if(!string.IsNullOrWhiteSpace(notes.Text)&&!await Ui.Confirm(this,"Prüftext ersetzen?","Ersetzen"))return;notes.Text=RichTextContent.Plain(t.Effective);},
                 help: "Kopiert den Vorlagentext in die Prüfnotiz. Die tatsächliche Beobachtung anschließend ergänzen."),
             Ui.Field("Ergebnis", outcome, "Tatsächliches Ergebnis auswählen. Bei Nicht anwendbar die Gründe in der Prüfnotiz festhalten."),
             Ui.Field("Prüfnotiz *", notes, "Prüfhandlung, Stichprobe und beobachtetes Ergebnis so festhalten, dass andere die Entscheidung nachvollziehen können."),
             Button("Prüfergebnis speichern", SaveEditorButtonAsync, true), complete);
-        return Ui.Split(Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text(audit.Title,22,true),Ui.Text(audit.Body),Ui.Notice(ids.Count+" Controls im Scope. Scope unter Mappings pflegen. Bestanden benötigt gültige Evidence; Abweichung benötigt vor Abschluss ein verknüpftes Finding. Auditabschluss lässt offene Findings ausdrücklich bestehen."),results,Button("Zurück zu Audits",async()=>{if(!await CanLeaveFormAsync())return;await Render();})))),Ui.Card(Ui.Scroll(editor)));
+        return Ui.Split(Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text(audit.Title,22,true),DocumentPreview.Create(audit.Body),Ui.Notice(ids.Count+" Controls im Scope. Scope unter Mappings pflegen. Bestanden benötigt gültige Evidence; Abweichung benötigt vor Abschluss ein verknüpftes Finding. Auditabschluss lässt offene Findings ausdrücklich bestehen."),results,Button("Zurück zu Audits",async()=>{if(!await CanLeaveFormAsync())return;await Render();})))),Ui.Card(Ui.Scroll(editor)));
     }
 }

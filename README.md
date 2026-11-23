@@ -1,14 +1,14 @@
 # D3 GRC
 
-## Web-Plattform 0.11.0
+## Web-Plattform 0.12.0
 
 Der neue Web-Arbeitsbereich führt Organisation, Assets und IT-Dienste, Risiken, Controls, Maßnahmen und Nachweise in einem gemeinsamen Bestand. Das Datenschutzregister kann denselben Dienst und Control verwenden. Anmeldung, Rollen und befristete Beratungsmandate grenzen den Zugriff ein. Management- und Datenschutzberichte lassen sich gefiltert abrufen und als CSV exportieren.
 
-Docker Compose startet die Entwicklungsumgebung lokal mit Browserportal, FastAPI und PostgreSQL. Für den Produktbetrieb gelten die dokumentierten Betriebs- und Fachabnahmen. [Start und erste Arbeitsstrecke](platform/README.md) · [Architektur und Berechtigungen](docs/PLATTFORM-ARCHITEKTUR.md) · [Backlog und Abnahme](docs/PLATTFORM-BACKLOG.md) · [Prüfbericht 0.11.0](docs/PRUEFBERICHT-0.11.0.md)
+Längere Fachtexte lassen sich mit dem Rich-Text-Editor bearbeiten. Über die Mandantenauswahl kann ein weiteres Konto verbunden und anschließend innerhalb der laufenden Browsersitzung gewechselt werden. Docker Compose startet Browserportal, FastAPI und PostgreSQL für die lokale Erprobung. [Start und erste Arbeitsstrecke](platform/README.md) · [Architektur und Berechtigungen](docs/PLATTFORM-ARCHITEKTUR.md) · [Prüfbericht 0.12.0](docs/PRUEFBERICHT-0.12.0.md)
 
-## Desktop 0.10.0
+## Desktop 0.12.0
 
-Der Desktop-Lieferumfang umfasst die .NET-Quellcode-Solution. Der Prüfbericht dokumentiert die Linux-Abnahme für Dokumente und Risikobewertung. [Prüfbericht 0.10.0](docs/PRUEFBERICHT-0.10.0.md)
+Der Desktop-Lieferumfang umfasst die .NET-Quellcode-Solution. **Mandant wechseln** öffnet die Auswahl verschlüsselter Projektdateien. Längere Texte wie **Beschreibung / Umsetzung** eines Controls lassen sich direkt formatieren. [Anwenderhandbuch](docs/ANWENDERHANDBUCH.md) · [Prüfbericht 0.12.0](docs/PRUEFBERICHT-0.12.0.md)
 
 Nach der lokalen Registrierung führt der Unternehmensassistent von der verschlüsselten Projektanlage zu einem begründeten Umsetzungsplan. Der Arbeitsbereich verbindet Anforderungen, Risiken, Controls, Lieferanten, Quellen, Nachweise und Audits mit einem Dokumentenregister. Textvorlagen lassen sich ansehen, bearbeiten und als Ausgangspunkt für Dokumententwürfe verwenden. Die Risikomatrix macht Behandlungsbedarf im gewählten Geltungsbereich sichtbar.
 

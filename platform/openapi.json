@@ -115,6 +115,31 @@
         "title": "BootstrapInput",
         "type": "object"
       },
+      "BulletList": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/ListItem"
+            },
+            "maxItems": 512,
+            "minItems": 1,
+            "title": "Content",
+            "type": "array"
+          },
+          "type": {
+            "const": "bulletList",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "content"
+        ],
+        "title": "BulletList",
+        "type": "object"
+      },
       "CatalogCreate": {
         "additionalProperties": false,
         "properties": {
@@ -177,6 +202,14 @@
             "pattern": "^[^\\x00]*$",
             "title": "Owner",
             "type": "string"
+          },
+          "rich_text": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RichTextDocument"
+            },
+            "maxProperties": 16,
+            "title": "Rich Text",
+            "type": "object"
           },
           "scope": {
             "default": "",
@@ -362,6 +395,16 @@
             "title": "Rationale",
             "type": "string"
           },
+          "rationale_rich_text": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RichTextDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "to_id": {
             "format": "uuid",
             "title": "To Id",
@@ -432,6 +475,16 @@
             "pattern": "^[^\\x00]*$",
             "title": "Rationale",
             "type": "string"
+          },
+          "rationale_rich_text": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RichTextDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "to_id": {
             "format": "uuid",
@@ -541,6 +594,16 @@
             "pattern": "^[^\\x00]*$",
             "title": "Rationale",
             "type": "string"
+          },
+          "rationale_rich_text": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RichTextDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -613,6 +676,14 @@
             "title": "Owner",
             "type": "string"
           },
+          "rich_text": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RichTextDocument"
+            },
+            "maxProperties": 16,
+            "title": "Rich Text",
+            "type": "object"
+          },
           "scope": {
             "title": "Scope",
             "type": "string"
@@ -654,6 +725,7 @@
           "scope",
           "org_unit_id",
           "attributes",
+          "rich_text",
           "version",
           "created_at",
           "updated_at"
@@ -760,6 +832,21 @@
               }
             ],
             "title": "Owner"
+          },
+          "rich_text": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/RichTextDocument"
+                },
+                "maxProperties": 16,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rich Text"
           },
           "scope": {
             "anyOf": [
@@ -1181,6 +1268,87 @@
         "title": "ExternalEvidenceInput",
         "type": "object"
       },
+      "HardBreak": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "hardBreak",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "HardBreak",
+        "type": "object"
+      },
+      "Heading": {
+        "additionalProperties": false,
+        "properties": {
+          "attrs": {
+            "$ref": "#/components/schemas/HeadingAttributes"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "items": {
+                  "discriminator": {
+                    "mapping": {
+                      "hardBreak": "#/components/schemas/HardBreak",
+                      "text": "#/components/schemas/Text"
+                    },
+                    "propertyName": "type"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Text"
+                    },
+                    {
+                      "$ref": "#/components/schemas/HardBreak"
+                    }
+                  ]
+                },
+                "maxItems": 4096,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "type": {
+            "const": "heading",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "attrs"
+        ],
+        "title": "Heading",
+        "type": "object"
+      },
+      "HeadingAttributes": {
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "enum": [
+              2,
+              3
+            ],
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "title": "HeadingAttributes",
+        "type": "object"
+      },
       "InvalidRequest": {
         "properties": {
           "detail": {
@@ -1206,6 +1374,31 @@
           "detail"
         ],
         "title": "InvalidRequest",
+        "type": "object"
+      },
+      "ListItem": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/Paragraph"
+            },
+            "maxItems": 128,
+            "minItems": 1,
+            "title": "Content",
+            "type": "array"
+          },
+          "type": {
+            "const": "listItem",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "content"
+        ],
+        "title": "ListItem",
         "type": "object"
       },
       "LoginInput": {
@@ -1271,6 +1464,24 @@
           "expires_at"
         ],
         "title": "MandateInput",
+        "type": "object"
+      },
+      "Mark": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "bold",
+              "italic"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Mark",
         "type": "object"
       },
       "MemberInput": {
@@ -1380,6 +1591,103 @@
           "display_name"
         ],
         "title": "NamedResponsibilityView",
+        "type": "object"
+      },
+      "OrderedList": {
+        "additionalProperties": false,
+        "properties": {
+          "attrs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrderedListAttributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/ListItem"
+            },
+            "maxItems": 512,
+            "minItems": 1,
+            "title": "Content",
+            "type": "array"
+          },
+          "type": {
+            "const": "orderedList",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "content"
+        ],
+        "title": "OrderedList",
+        "type": "object"
+      },
+      "OrderedListAttributes": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "default": 1,
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "null"
+          }
+        },
+        "title": "OrderedListAttributes",
+        "type": "object"
+      },
+      "Paragraph": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "items": {
+                  "discriminator": {
+                    "mapping": {
+                      "hardBreak": "#/components/schemas/HardBreak",
+                      "text": "#/components/schemas/Text"
+                    },
+                    "propertyName": "type"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Text"
+                    },
+                    {
+                      "$ref": "#/components/schemas/HardBreak"
+                    }
+                  ]
+                },
+                "maxItems": 4096,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "type": {
+            "const": "paragraph",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Paragraph",
         "type": "object"
       },
       "PersonCreate": {
@@ -1800,6 +2108,53 @@
         "title": "RevocationView",
         "type": "object"
       },
+      "RichTextDocument": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "bulletList": "#/components/schemas/BulletList",
+                  "heading": "#/components/schemas/Heading",
+                  "orderedList": "#/components/schemas/OrderedList",
+                  "paragraph": "#/components/schemas/Paragraph"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Paragraph"
+                },
+                {
+                  "$ref": "#/components/schemas/Heading"
+                },
+                {
+                  "$ref": "#/components/schemas/BulletList"
+                },
+                {
+                  "$ref": "#/components/schemas/OrderedList"
+                }
+              ]
+            },
+            "maxItems": 1024,
+            "minItems": 1,
+            "title": "Content",
+            "type": "array"
+          },
+          "type": {
+            "const": "doc",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "content"
+        ],
+        "title": "RichTextDocument",
+        "type": "object"
+      },
       "RiskAssessment": {
         "additionalProperties": false,
         "properties": {
@@ -1845,6 +2200,16 @@
             "pattern": "^[^\\x00]*$",
             "title": "Rationale",
             "type": "string"
+          },
+          "rationale_rich_text": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RichTextDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "residual_impact": {
             "anyOf": [
@@ -1949,6 +2314,16 @@
             "pattern": "^[^\\x00]*$",
             "title": "Rationale",
             "type": "string"
+          },
+          "rationale_rich_text": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RichTextDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "residual_impact": {
             "anyOf": [
@@ -2112,6 +2487,44 @@
         "title": "RiskMatrixCell",
         "type": "object"
       },
+      "Text": {
+        "additionalProperties": false,
+        "properties": {
+          "marks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Mark"
+                },
+                "maxItems": 2,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marks"
+          },
+          "text": {
+            "maxLength": 30000,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "text",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ],
+        "title": "Text",
+        "type": "object"
+      },
       "ValidationIssue": {
         "properties": {
           "code": {
@@ -2151,7 +2564,7 @@
   "info": {
     "description": "Mandantengebundene Arbeitsbereiche für Organisation, Assets, Risiken, Controls, Maßnahmen, Nachweise und Datenschutz.",
     "title": "D3 GRC Platform",
-    "version": "0.11.0"
+    "version": "0.12.0"
   },
   "openapi": "3.1.0",
   "paths": {

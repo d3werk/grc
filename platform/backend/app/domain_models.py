@@ -5,6 +5,8 @@ from uuid import UUID
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from .rich_text import RichTextDocument, RichTextFields
+
 CatalogKind = Literal[
     "org_unit", "asset", "it_service", "business_process", "risk", "control", "measure",
     "framework_version", "requirement", "processing_activity", "supplier", "dpia",
@@ -145,6 +147,7 @@ class CatalogCreate(RequestModel):
     scope: Scope = ""
     org_unit_id: UUID | None = None
     attributes: Attributes = Field(default_factory=dict)
+    rich_text: RichTextFields = Field(default_factory=dict)
 
 
 class CatalogUpdate(RequestModel):
@@ -157,6 +160,7 @@ class CatalogUpdate(RequestModel):
     scope: Scope | None = None
     org_unit_id: UUID | None = None
     attributes: Attributes | None = None
+    rich_text: RichTextFields | None = None
 
 
 class CatalogRecord(BaseModel):
@@ -170,6 +174,7 @@ class CatalogRecord(BaseModel):
     scope: str
     org_unit_id: UUID | None
     attributes: Attributes
+    rich_text: RichTextFields
     version: Version
     created_at: datetime
     updated_at: datetime
@@ -187,11 +192,13 @@ class CatalogLinkCreate(RequestModel):
     from_id: UUID
     to_id: UUID
     rationale: Rationale
+    rationale_rich_text: RichTextDocument | None = None
 
 
 class CatalogLinkUpdate(RequestModel):
     expected_version: Version
     rationale: Rationale
+    rationale_rich_text: RichTextDocument | None = None
 
 
 class CatalogLinkRemoval(RequestModel):
@@ -207,6 +214,7 @@ class CatalogLink(BaseModel):
     to_id: UUID
     to_kind: CatalogKind
     rationale: str
+    rationale_rich_text: RichTextDocument | None = None
     version: Version
     created_at: datetime
     updated_at: datetime

@@ -70,15 +70,17 @@ public sealed class App : Application
         {
             Setters =
             {
-                new Setter(TemplatedControl.BackgroundProperty, Ui.NavySelected),
-                new Setter(TemplatedControl.ForegroundProperty, Ui.Mint),
+                new Setter(TemplatedControl.BackgroundProperty, Ui.NavSelected),
+                new Setter(TemplatedControl.ForegroundProperty, Ui.NavSelectedText),
+                new Setter(TemplatedControl.BorderBrushProperty, Ui.Green),
+                new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(2, 0, 0, 0)),
                 new Setter(TemplatedControl.FontWeightProperty, FontWeight.SemiBold)
             }
         });
         SetButtonState("grc-action", ":pointerover", Ui.SoftBlue, Ui.Line);
         SetButtonState("grc-action", ":pressed", Ui.Line, Ui.Line);
-        SetButtonState("grc-nav", ":pointerover", Ui.NavyHover, Brushes.Transparent);
-        SetButtonState("grc-nav", ":pressed", Ui.NavySelected, Brushes.Transparent);
+        SetButtonState("grc-nav", ":pointerover", Ui.NavHover, Ui.NavHover);
+        SetButtonState("grc-nav", ":pressed", Ui.NavSelected, Ui.NavSelected);
         SetButtonState("grc-nav", ":disabled", Brushes.Transparent, Brushes.Transparent);
     }
 

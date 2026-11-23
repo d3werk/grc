@@ -138,6 +138,49 @@ def test_shared_catalog_links_and_optimistic_versions(client):
     assert removed_link.status_code == 204
 
 
+def test_formatted_catalog_fields_preserve_legacy_plain_text_updates(client):
+    http, bootstrap_token = client
+    _, admin = _tenant(http, bootstrap_token)
+    description = {"type": "doc", "content": [
+        {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Zugangsprüfung"}]},
+        {"type": "paragraph", "content": [{"type": "text", "text": "Anmeldungen überprüfen"}]},
+    ]}
+    objective = {"type": "doc", "content": [{"type": "paragraph", "content": [
+        {"type": "text", "text": "Kontrollziel", "marks": [{"type": "bold"}]},
+    ]}]}
+    record = _record(http, admin, "control", "Berechtigungsprüfung", rich_text={
+        "description": description, "control_objective": objective,
+    })
+    assert record["description"] == "Zugangsprüfung\nAnmeldungen überprüfen"
+    assert record["attributes"]["control_objective"] == "Kontrollziel"
+    assert record["rich_text"]["control_objective"] == objective
+    retrieved = http.get("/api/v1/catalog", headers=admin, params={"q": "Anmeldungen überprüfen"})
+    assert retrieved.status_code == 200, retrieved.text
+    assert [result["id"] for result in retrieved.json()] == [record["id"]]
+
+    address = f"/api/v1/catalog/{record['id']}"
+    renamed = http.put(address, headers=admin, json={"expected_version": record["version"], "title": "Neuer Titel"})
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["rich_text"] == record["rich_text"]
+    plain_edit = http.put(address, headers=admin, json={
+        "expected_version": renamed.json()["version"], "description": "Neue unformatierte Beschreibung",
+    })
+    assert plain_edit.status_code == 200, plain_edit.text
+    current = plain_edit.json()
+    assert current["description"] == "Neue unformatierte Beschreibung"
+    assert current["rich_text"] == {"control_objective": objective}
+
+    for unsupported in (
+        {"description": {"type": "doc", "content": [{"type": "rawHtml", "content": "<img>"}]}},
+        {"control_frequency": objective},
+    ):
+        invalid = http.put(address, headers=admin, json={"expected_version": current["version"], "rich_text": unsupported})
+        assert invalid.status_code == 422, invalid.text
+    retrieved = http.get(address, headers=admin)
+    assert retrieved.status_code == 200, retrieved.text
+    assert retrieved.json() == current
+
+
 def test_tenant_and_scope_isolation_for_shared_links(client):
     http, bootstrap_token = client
     slug, admin = _tenant(http, bootstrap_token)

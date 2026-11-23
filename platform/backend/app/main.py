@@ -43,7 +43,7 @@ class AuditEvent(BaseModel):
 
 app = FastAPI(
     title="D3 GRC Platform",
-    version="0.11.0",
+    version="0.12.0",
     description=(
         "Mandantengebundene Arbeitsbereiche für Organisation, Assets, Risiken, "
         "Controls, Maßnahmen, Nachweise und Datenschutz."
@@ -92,7 +92,9 @@ def readiness() -> JSONResponse:
                     "SELECT to_regclass('public.organization_responsibilities') IS NOT NULL "
                     "AND EXISTS (SELECT FROM catalog_link_types WHERE kind='processing_it_service') "
                     "AND EXISTS (SELECT FROM pg_attribute WHERE attrelid=to_regclass('public.evidence_links') "
-                    "AND attname='record_kind' AND attnotnull AND attgenerated='' AND NOT attisdropped) AS ready"
+                    "AND attname='record_kind' AND attnotnull AND attgenerated='' AND NOT attisdropped) "
+                    "AND EXISTS (SELECT FROM pg_attribute WHERE attrelid=to_regclass('public.catalog_records') "
+                    "AND attname='rich_text' AND atttypid='jsonb'::regtype AND NOT attisdropped) AS ready"
                 ).fetchone()
             if schema and schema["ready"]:
                 return JSONResponse({"status": "ready"})

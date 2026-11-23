@@ -11,14 +11,12 @@ public sealed partial class MainWindow
 {
     private async Task CreateProjectFromSetupAsync()
     {
-        if (_workspace.IsOpen)
-            throw new InvalidOperationException("Das aktuelle Projekt zuerst schließen.");
-
-        if (!await ShowCompanySetupAsync(createProject: true, CompanyProfile.Default))
+        if (!await CanLeaveFormAsync())
             return;
 
-        ResetProjectContext();
-        await Render();
+        var result = await ShowCompanySetupAsync(createProject: true, CompanyProfile.Default);
+        if (result.Completed)
+            await CompleteProjectSwitchAsync(result.CleanupPending);
     }
 
     private async Task OpenCompanyConfigurationAsync()
@@ -27,11 +25,11 @@ public sealed partial class MainWindow
             return;
 
         var profile = await _workspace.GetCompanyProfileAsync() ?? CompanyProfile.Default;
-        if (await ShowCompanySetupAsync(createProject: false, profile))
+        if ((await ShowCompanySetupAsync(createProject: false, profile)).Completed)
             await Render();
     }
 
-    private async Task<bool> ShowCompanySetupAsync(bool createProject, CompanyProfile profile)
+    private async Task<(bool Completed, bool CleanupPending)> ShowCompanySetupAsync(bool createProject, CompanyProfile profile)
     {
         var title = createProject ? "Unternehmen und Projekt einrichten" : "Unternehmensprofil konfigurieren";
         var window = new Window
@@ -115,6 +113,7 @@ public sealed partial class MainWindow
         var step = 0;
         var running = false;
         var pendingFileSave = false;
+        var cleanupPending = false;
 
         void SetError(string message)
         {
@@ -221,7 +220,7 @@ public sealed partial class MainWindow
                             return;
                         var path = file.TryGetLocalPath()
                             ?? throw new IOException("Bitte einen lokalen Speicherort für das Projekt wählen.");
-                        await _workspace.CreateAsync(path, name.Text!, password.Text!, companyProfile: ReadProfile());
+                        cleanupPending = await _workspace.CreateAndSwitchAsync(path, name.Text!, password.Text!, ReadProfile());
                     }
                     else
                     {
@@ -251,7 +250,7 @@ public sealed partial class MainWindow
         };
 
         SetStep(0);
-        try { return await window.ShowDialog<bool>(this) || pendingFileSave; }
+        try { return (await window.ShowDialog<bool>(this) || pendingFileSave, cleanupPending); }
         finally
         {
             password.Text = "";
