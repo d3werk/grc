@@ -149,12 +149,17 @@ public sealed partial class MainWindow
         return filters;
     }
 
-    private static Image CreateLogo(double height) => new()
+    private static Image CreateLogo(double height, bool markOnly = false)
     {
-        Source = new Bitmap(Path.Combine(AppContext.BaseDirectory, "content", "logo.png")),
-        Height = height,
-        Stretch = Stretch.Uniform
-    };
+        var logo = new Bitmap(Path.Combine(AppContext.BaseDirectory, "content", "logo.png"));
+        return new Image
+        {
+            Source = markOnly ? new CroppedBitmap { Source = logo, SourceRect = new PixelRect(2, 3, 212, 142) } : logo,
+            Height = height,
+            Stretch = Stretch.Uniform,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+    }
 
     private void AddShellHeader()
     {
@@ -172,7 +177,9 @@ public sealed partial class MainWindow
             Child = profile
         };
         ToolTip.SetTip(profileBadge, _identity.User);
-        var user = Ui.Row(profileBadge, Button("Abmelden", Logout,
+        var user = Ui.Row(Button("Mandant wechseln", ChooseProjectAsync,
+                help: "Öffnet eine andere verschlüsselte Projektdatei oder legt einen weiteren Mandanten an.", glyph: Glyph.Open),
+            profileBadge, Button("Abmelden", Logout,
             help: "Speichert das Projekt und kehrt zur Anmeldung zurück.", glyph: Glyph.Logout));
         user.VerticalAlignment = VerticalAlignment.Center;
         var headerContent = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 16 };
@@ -225,14 +232,20 @@ public sealed partial class MainWindow
         }, help: "Entfernt unverschlüsselte Kopien aus beendeten Sitzungen.", glyph: Glyph.Cleanup);
         StyleNavButton(cleanup);
 
-        var name = Ui.Heading("D3 GRC", 21, 2);
-        name.Foreground = Brushes.White;
+        var name = Ui.Heading("D3 GRC", 20, 2);
         name.VerticalAlignment = VerticalAlignment.Center;
-        var brand = Ui.Row(Ui.IconBadge(Glyph.Shield, Ui.NavySelected, Ui.Mint, 37), name);
-        brand.Margin = new Thickness(8, 2, 0, 0);
+        var brand = new Border
+        {
+            Padding = new Thickness(8, 4, 8, 12),
+            BorderBrush = Ui.Line,
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Child = Ui.Row(CreateLogo(26, markOnly: true), name)
+        };
         var sidebar = new Border
         {
-            Background = Ui.Navy,
+            Background = Ui.NavSurface,
+            BorderBrush = Ui.Line,
+            BorderThickness = new Thickness(0, 0, 1, 0),
             Padding = new Thickness(10, 11),
             Child = Ui.Fill(brand, Ui.Scroll(nav), cleanup)
         };
@@ -251,7 +264,7 @@ public sealed partial class MainWindow
         TintNavButton(button, Ui.NavText);
         button.FocusAdorner = new FuncTemplate<Control>(() => new Border
         {
-            BorderBrush = Ui.Mint,
+            BorderBrush = Ui.Blue,
             BorderThickness = new Thickness(2),
             CornerRadius = new CornerRadius(7)
         });
@@ -298,7 +311,7 @@ public sealed partial class MainWindow
             var active = _workspace.IsOpen && page == _page;
             item.IsEnabled = _workspace.IsOpen;
             item.Classes.Set("grc-current", active);
-            TintNavButton(item, active ? Ui.Mint : _workspace.IsOpen ? Ui.NavText : Ui.NavMuted);
+            TintNavButton(item, active ? Ui.NavSelectedText : _workspace.IsOpen ? Ui.NavText : Ui.NavMuted);
         }
     }
 }

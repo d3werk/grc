@@ -1,11 +1,13 @@
 import { cloneElement, useEffect, useId, useState } from 'react';
 import type { DependencyList, ReactElement, ReactNode } from 'react';
-import { AlertCircle, CircleHelp, FolderOpen, LoaderCircle, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CircleHelp, FolderOpen, LoaderCircle } from 'lucide-react';
 import { errorMessage } from './api';
 
 export function Brand() {
-  return <div className="brand"><span className="brand-icon"><ShieldCheck size={23} aria-hidden="true" /></span>
-    <span>D3 GRC</span></div>;
+  return <div className="brand">
+    <span className="brand-mark"><img src="/d3-werk-logo.png" width="854" height="151" alt="" /></span>
+    <span>D3 GRC</span>
+  </div>;
 }
 
 export function Field({ label, children, hint }: {

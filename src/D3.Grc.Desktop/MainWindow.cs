@@ -75,6 +75,7 @@ public sealed partial class MainWindow:Window
     }
     private void LoginScreen()
     {
+        _recentProjects.Clear();
         _shell=null;_body.Content=null;_form=null;_refreshAfterPersistence=false;_entries.Clear();_all.Clear();_sources.Clear();_allSources.Clear();_mappings.Clear();
         var name=Ui.Input("Lokaler Profilname");var password=Ui.Input("Profilpasswort");password.PasswordChar='*';
         var login=Button("Anmelden",async()=>{if(!await _identity.LoginAsync(name.Text??"",password.Text??""))throw new UnauthorizedAccessException("Anmeldung fehlgeschlagen.");password.Text="";BuildShell();await Render();},true,glyph:Glyph.Arrow);
@@ -88,7 +89,7 @@ public sealed partial class MainWindow:Window
             await Render();
             await CreateProjectFromSetupAsync();
         }, help: "Legt ein lokales Profil an und startet den Assistenten für die verschlüsselte Projektdatei.", glyph: Glyph.Person);
-        var logo = CreateLogo(58);
+        var logo = CreateLogo(43);
         logo.HorizontalAlignment = HorizontalAlignment.Left;
         var card=Ui.Card(Ui.Stack(logo,Ui.Heading("Bei D3 GRC anmelden",28,1),Ui.Secondary("Anmeldung mit einem lokalen Profil.",14),
             Ui.Field("Profilname", name, "Der Profilname wird im Änderungsjournal als lokale Identität angezeigt."),
@@ -97,17 +98,7 @@ public sealed partial class MainWindow:Window
         card.Width=500;card.Padding=new Thickness(30);card.HorizontalAlignment=HorizontalAlignment.Center;card.VerticalAlignment=VerticalAlignment.Center;card.Margin=new Thickness(24);
         Content = new Border
         {
-            Background = new LinearGradientBrush
-            {
-                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-                GradientStops =
-                {
-                    new GradientStop(Color.Parse("#10283E"), 0),
-                    new GradientStop(Color.Parse("#17364C"), 0.63),
-                    new GradientStop(Color.Parse("#126A68"), 1)
-                }
-            },
+            Background = Ui.BrandWash,
             Child = card
         };
     }
@@ -175,7 +166,7 @@ public sealed partial class MainWindow:Window
         }
         finally { _loading = false; }
     }
-    private bool Matches(Entry e)=>_searchValue==""||new[]{e.Title,e.Code,e.Body,e.Owner}.Any(s=>s.Contains(_searchValue,StringComparison.CurrentCultureIgnoreCase));
+    private bool Matches(Entry e)=>_searchValue==""||new[]{e.Title,e.Code,RichTextContent.Plain(e.Body),e.Owner}.Any(s=>s.Contains(_searchValue,StringComparison.CurrentCultureIgnoreCase));
     private async Task Save()
     {
         if (_refreshAfterPersistence)
@@ -194,31 +185,6 @@ public sealed partial class MainWindow:Window
     private async Task Logout(){if(!await CanLeaveFormAsync())return;await _workspace.LogoutAsync();LoginScreen();}
     private async Task CloseProject(){if(!await CanLeaveFormAsync())return;if(_workspace.IsOpen){if(_workspace.IsDirty)await _workspace.SaveAsync();await _workspace.CloseAsync();}_refreshAfterPersistence=false;await Render();}
     private Task NewProject() => CreateProjectFromSetupAsync();
-    private async Task OpenProject()
-    {
-        if (_workspace.IsOpen)
-            throw new InvalidOperationException("Aktuelles Projekt zuerst schließen.");
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            AllowMultiple = false,
-            FileTypeFilter = [new("D3 GRC") { Patterns = ["*.d3grc"] }]
-        });
-        var path = files.FirstOrDefault()?.TryGetLocalPath();
-        if (path is null)
-            return;
-        bool? recovery = File.Exists(path + ".recovery") ? await ChooseRecoveryAsync() : false;
-        if (recovery is null)
-            return;
-        var password = await Ui.Prompt(this, "Projektpasswort", true);
-        if (password is null)
-            return;
-        await _workspace.OpenAsync(path, password, recovery.Value);
-        ResetProjectContext();
-        await Render();
-        if (_workspace.PreservedRecoveryPath is { } preserved)
-            _status.Text = "Vorheriger Wiederherstellungsstand gesichert · " + preserved;
-    }
-
     private async Task<bool?> ChooseRecoveryAsync()
     {
         var dialog = new Window
@@ -263,6 +229,7 @@ public sealed partial class MainWindow:Window
         if (path is null || !await SaveFormAsync())
             return;
         await _workspace.SaveAsAsync(path);
+        RememberActiveProject();
         _refreshAfterPersistence = false;
         await Render();
         _status.Text = "Neue Projektkopie mit gleichem Passwort gespeichert. Alte Datei bleibt erhalten.";

@@ -66,7 +66,7 @@ public static class DocumentRegister
             throw new ArgumentException("Fachthema und Dokumentkategorie auswählen.", nameof(draft));
         if (owner.Length is < 1 or > 240)
             throw new ArgumentException("Verantwortliche Rolle oder Person mit 1 bis 240 Zeichen angeben.", nameof(draft));
-        if (scope.Length > 1000 || content.Length > 100000)
+        if (scope.Length > 1000 || RichTextContent.Plain(content).Length > 100000)
             throw new ArgumentException("Geltungsbereich auf 1.000 und Dokumenttext auf 100.000 Zeichen begrenzen.", nameof(draft));
 
         return draft with { Title = title, TopicId = topic, Scope = scope, Owner = owner, Content = content };
@@ -137,7 +137,7 @@ public sealed partial class Workspace
         ChangeDocumentAsync(id, expectedRevision, reason, "DocumentSubmitted", (connection, transaction, current, _) =>
         {
             RequireDocumentStatus(current, DocumentStatus.Draft);
-            if (string.IsNullOrWhiteSpace(current.Draft.Content))
+            if (string.IsNullOrWhiteSpace(RichTextContent.Plain(current.Draft.Content)))
                 throw new ArgumentException("Für die Prüfung den Dokumenttext ausarbeiten.");
 
             SetDocumentStatus(connection, transaction, id, DocumentStatus.InReview);
@@ -259,7 +259,7 @@ public sealed partial class Workspace
 
         return documents.Where(document => document.Draft.Title.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
             document.Draft.Owner.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-            document.Draft.Content.Contains(search, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            RichTextContent.Plain(document.Draft.Content).Contains(search, StringComparison.CurrentCultureIgnoreCase)).ToList();
     }
 
     private static List<DocumentLink> ReadDocumentLinks(SqliteConnection connection, string documentId) =>

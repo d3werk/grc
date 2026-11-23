@@ -39,6 +39,11 @@ async function run() {
   const button = (name, parent = page) => parent.getByRole("button", { name, exact: true });
   const heading = name => page.getByRole("heading", { name, exact: true });
   const field = (name, parent = page) => parent.getByLabel(name, { exact: true });
+  const editorField = (name, parent = page) => parent.getByRole("textbox", { name, exact: true });
+  const formatText = async (label, action, parent = page) => {
+    await editorField(label, parent).press("ControlOrMeta+a");
+    await button(action, parent.getByRole("group", { name: `Formatierung für ${label}`, exact: true })).click();
+  };
   const screenshot = async name => output && page.screenshot({ path: path.join(output, name + ".png"), fullPage: true,
     style: ".user-actions > span { visibility: hidden !important; }" });
   const navigate = async (label, title = label) => {
@@ -70,17 +75,23 @@ async function run() {
     return data.id;
   }
 
-  async function addLink(type, target, rationale) {
+  async function addLink(type, target, rationale, italic = false) {
     stage = "typed link " + type;
     await button("Bezug anlegen").click();
     await field("Beziehung").selectOption(type);
     await field("Bestehender Eintrag").selectOption(target);
     await field("Begründung").fill(rationale);
+    if (italic) await formatText("Begründung", "Kursiv");
     const [response] = await Promise.all([
       page.waitForResponse(response => new URL(response.url()).pathname === "/api/v1/links" && response.request().method() === "POST"),
       button("Bezug speichern").click()
     ]);
     assert.equal(response.status(), 201);
+    if (italic) {
+      const result = await response.json();
+      assert.equal(result.rationale, rationale);
+      assert.equal(result.rationale_rich_text.content[0].content[0].marks[0].type, "italic");
+    }
     await page.getByText(rationale, { exact: true }).waitFor();
   }
 
@@ -129,6 +140,7 @@ async function run() {
     await field("Verbleibende Auswirkung").selectOption("3");
     await field("Risikobehandlung").selectOption("mitigate");
     await field("Begründung").fill("Die Wiederanlaufprobe senkt Eintritt und Auswirkung.");
+    await formatText("Begründung", "Fett");
     await button("Bewertung speichern").click();
     await page.getByText("5 × 4 · 20 · Kritisch", { exact: true }).waitFor();
     await page.getByText("2 × 3 · 6 · Mittel", { exact: true }).waitFor();
@@ -136,7 +148,7 @@ async function run() {
 
     const control = await create("Controls", "Control", "SMK-CTRL", "SMK Control Wiederanlauf",
       { "Kontrollziel": "Wiederanlauf prüfen" }, unit);
-    await addLink("risk_control", risk, "Der Wiederanlauf adressiert dieses Risiko.");
+    await addLink("risk_control", risk, "Der Wiederanlauf adressiert dieses Risiko.", true);
     await addLink("control_it_service", service, "Das Control schützt den gemeinsamen IT-Dienst.");
     const measure = await create("Maßnahmen", "Maßnahme", "SMK-MEAS", "SMK Maßnahme Wiederanlaufprobe",
       { "Erfolgskriterium": "Der Dienst ist im Testbetrieb verfügbar." }, unit);
@@ -272,14 +284,22 @@ async function run() {
     await navigate("IT-Dienste");
     assert.equal(await dirtyDialog.count(), 0);
     let editor = await editRisk();
-    await field("Beschreibung", editor).fill("Ungespeicherte Änderung im Browsertest.");
+    const baselineDescription = "Synthetischer Nachweis des realen Browserablaufs.";
+    await formatText("Beschreibung", "Fett", editor);
+    assert.equal(await editorField("Beschreibung", editor).innerText(), baselineDescription);
+    await editorField("Beschreibung", editor).locator("strong").getByText(baselineDescription, { exact: true }).waitFor();
     await button("IT-Dienste", nav).click();
     await dirtyDialog.waitFor();
     await button("Verwerfen", dirtyDialog).click();
     await heading("IT-Dienste").waitFor();
     editor = await editRisk();
-    assert.equal(await field("Beschreibung", editor).inputValue(), "Synthetischer Nachweis des realen Browserablaufs.");
+    assert.equal(await editorField("Beschreibung", editor).innerText(), baselineDescription);
+    assert.equal(await editorField("Beschreibung", editor).locator("strong").count(), 0);
     await field("Beschreibung", editor).fill("Im Browsertest gespeicherte Änderung.");
+    await formatText("Beschreibung", "Fett", editor);
+    await formatText("Beschreibung", "Aufzählung", editor);
+    await editorField("Beschreibung", editor).locator("ul strong").getByText("Im Browsertest gespeicherte Änderung.", { exact: true }).waitFor();
+    await screenshot("rich-text-editor");
     await button("IT-Dienste", nav).click();
     await dirtyDialog.waitFor();
     await button("Speichern", dirtyDialog).click();
@@ -293,9 +313,9 @@ async function run() {
     await navigate("Risiken");
     await page.getByRole("button", { name: /SMK Risiko Testdienstausfall/ }).click();
     await page.getByText("5 × 4 · 20 · Kritisch", { exact: true }).waitFor();
-    await page.getByText("Die Wiederanlaufprobe senkt Eintritt und Auswirkung.", { exact: false }).waitFor();
-    await page.getByText("Der Wiederanlauf adressiert dieses Risiko.", { exact: true }).waitFor();
-    await page.getByText("Im Browsertest gespeicherte Änderung.", { exact: true }).waitFor();
+    await page.locator(".rich-text-preview strong").getByText("Die Wiederanlaufprobe senkt Eintritt und Auswirkung.", { exact: true }).waitFor();
+    await page.locator(".rich-text-preview em").getByText("Der Wiederanlauf adressiert dieses Risiko.", { exact: true }).waitFor();
+    await page.locator(".rich-text-preview ul strong").getByText("Im Browsertest gespeicherte Änderung.", { exact: true }).waitFor();
     assert.deepEqual(browserErrors, []);
     assert.deepEqual(apiFailures, []);
     console.log("390px workspace navigation, logout/login and persisted records passed.");

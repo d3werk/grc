@@ -16,7 +16,15 @@ public sealed class Entry
     public override string ToString()=>$"{Code} · {Title} | {Status}";
     public static readonly string[] Kinds=["Requirement","Control","Risk","Audit","Finding","Measure","AiSystem","OssComponent","Supplier"];
     public static string[] Statuses(string kind)=>kind switch{"Audit"=>["Entwurf","Geplant","In Prüfung","Abgeschlossen"],"Finding"=>["Entwurf","Offen","In Bearbeitung","Wirksamkeitsprüfung","Geschlossen"],"Control"=>["Entwurf","Geplant","Umgesetzt","Geprüft"],"Requirement"=>["Entwurf","Anwendbar","Nicht anwendbar"],"Supplier"=>["Entwurf","In Prüfung","Freigegeben","Maßnahmen offen","Abgelehnt","Beendet"],_=>["Entwurf","Offen","In Bearbeitung","Erledigt"]};
-    public void Validate(){if(!Kinds.Contains(Kind)||string.IsNullOrWhiteSpace(Title)||Title.Length>500||Body.Length>30000||Code.Length>100||Owner.Length>240||Scope.Length>1000||Locator.Length>1000||!Statuses(Kind).Contains(Status))throw new ArgumentException("Datensatz ungültig oder Feldlänge überschritten.");if(DueDate!=""&&!DateOnly.TryParseExact(DueDate,"yyyy-MM-dd",out _))throw new ArgumentException("Termin: JJJJ-MM-TT.");}
+    public void Validate()
+    {
+        if (!Kinds.Contains(Kind) || string.IsNullOrWhiteSpace(Title) || Title.Length > 500 ||
+            RichTextContent.Plain(Body).Length > 30000 || Code.Length > 100 || Owner.Length > 240 ||
+            Scope.Length > 1000 || Locator.Length > 1000 || !Statuses(Kind).Contains(Status))
+            throw new ArgumentException("Datensatz ungültig oder Feldlänge überschritten.");
+        if (DueDate != "" && !DateOnly.TryParseExact(DueDate, "yyyy-MM-dd", out _))
+            throw new ArgumentException("Termin: JJJJ-MM-TT.");
+    }
 }
 public sealed record Mapping(string Id,string From,string To,string Type,string Reason,string SourceId,string Coverage,string Scope,string Approval){public override string ToString()=>$"{Type} | {Coverage} | {Approval} | {Reason}";}
 public sealed record Proof(string Id,string Title,string ControlId,string SourceId,string FileName,string Hash,string Collected,string ValidUntil,string Origin){public override string ToString()=>$"{Title} | {FileName} | {ValidUntil[..Math.Min(10,ValidUntil.Length)]}";}

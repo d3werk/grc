@@ -114,13 +114,78 @@ public sealed partial class Workspace:IDisposable
             {
                 Name = Scalar(c, null, "SELECT Value FROM Metadata WHERE Key='ProjectName'");
                 using var transaction = c.BeginTransaction();
-                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", "0.10.0");
+                var version = typeof(Workspace).Assembly.GetName().Version?.ToString(3) ?? "";
+                Log(c, transaction, recovery ? "RecoveryOpened" : "ProjectOpened", "", version);
                 transaction.Commit();
             }
             IsDirty = true;
             await Snapshot(path + ".recovery");
         }catch{if(!wasOpen)Cleanup();throw;}finally{_gate.Release();}
     }
+
+    public bool IsCurrentProject(string path) => ProjectPath is { } current &&
+        string.Equals(Path.GetFullPath(path), current,
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    /// <summary>Opens a project before replacing the current working context.</summary>
+    /// <returns>Whether the retired working copy needs to be cleaned up separately.</returns>
+    public Task<bool> SwitchAsync(string path, string password, bool recovery = false) =>
+        TransitionAsync(path, candidate => candidate.OpenAsync(path, password, recovery), create: false);
+
+    /// <summary>Creates the encrypted project and makes it active when creation succeeds.</summary>
+    /// <returns>Whether the retired working copy needs to be cleaned up separately.</returns>
+    public Task<bool> CreateAndSwitchAsync(string path, string name, string password, CompanyProfile companyProfile) =>
+        TransitionAsync(path, candidate => candidate.CreateAsync(path, name, password, companyProfile: companyProfile), create: true);
+
+    private async Task<bool> TransitionAsync(string path, Func<Workspace, Task> initialize, bool create)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            identity.Demand();
+            if (IsCurrentProject(path))
+            {
+                if (create)
+                    throw new IOException("Bitte einen neuen Dateinamen wählen.");
+                return false;
+            }
+
+            // Commit the former project's adopted changes before doing anything to the destination.
+            if (IsOpen && IsDirty)
+            {
+                try { await WriteProjectAsync(); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    throw new IOException("Das bisherige Projekt konnte nicht gespeichert werden. Prüfen Sie den Speicherort und versuchen Sie den Mandantenwechsel erneut.", ex);
+                }
+            }
+
+            using var candidate = new Workspace(identity);
+            await initialize(candidate);
+
+            (_cipher, candidate._cipher) = (candidate._cipher, _cipher);
+            (_lock, candidate._lock) = (candidate._lock, _lock);
+            (_lease, candidate._lease) = (candidate._lease, _lease);
+            (_dir, candidate._dir) = (candidate._dir, _dir);
+            ProjectPath = candidate.ProjectPath;
+            PreservedRecoveryPath = candidate.PreservedRecoveryPath;
+            Name = candidate.Name;
+            IsDirty = candidate.IsDirty;
+
+            try
+            {
+                candidate.Cleanup();
+                return false;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Cleanup drops the retired lock and key in its finally block.
+                return true;
+            }
+        }
+        finally { _gate.Release(); }
+    }
+
     private async Task Snapshot(string path)
     {
         var temp=Path.Combine(_dir!,"snapshot.db");if(File.Exists(temp))File.Delete(temp);
@@ -225,7 +290,16 @@ public sealed partial class Workspace:IDisposable
         Exec(c,t,"DELETE FROM Records WHERE Id=$p0",id);
         return true;
     });
-    public async Task SaveTemplateAsync(string id,string body)=>await Change("TemplateCustomized",id,body,(c,t)=>{Reason(body);Exec(c,t,"UPDATE Templates SET CustomBody=$p0 WHERE Id=$p1",body,id);return true;});
+    public async Task SaveTemplateAsync(string id, string body)
+    {
+        var plain = RichTextContent.Plain(body);
+        await Change("TemplateCustomized", id, plain, (c, t) =>
+        {
+            Reason(plain);
+            Exec(c, t, "UPDATE Templates SET CustomBody=$p0 WHERE Id=$p1", body, id);
+            return true;
+        });
+    }
     public Task<List<Choice>> GlossaryAsync()=>Read(c=>Query(c,null,"SELECT Id,Term||' – '||Expanded||char(10)||CASE WHEN CustomDefinition='' THEN Definition ELSE CustomDefinition END FROM Glossary ORDER BY Term",r=>new Choice(r.GetString(0),r.GetString(1))));
     public async Task SaveGlossaryAsync(string id,string text)=>await Change("GlossaryCustomized",id,text,(c,t)=>{Reason(text);Exec(c,t,"UPDATE Glossary SET CustomDefinition=$p0 WHERE Id=$p1",text,id);return true;});
 }

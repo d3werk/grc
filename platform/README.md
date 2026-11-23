@@ -1,6 +1,6 @@
-# D3 GRC Plattform 0.11.0
+# D3 GRC Plattform 0.12.0
 
-Der Web-Arbeitsbereich verbindet Organisation, Informationswerte, IT-Dienste, Risiken, Controls, Maßnahmen und Nachweise. Das Verzeichnis der Verarbeitungstätigkeiten (VVT) verwendet dieselben Dienste und Controls für den Datenschutz. Der Stand ist für Entwicklung und lokale Erprobung vorgesehen. D3 GRC Desktop 0.10.0 arbeitet mit verschlüsselten Projektdateien. Die Plattform verwendet einen eigenen PostgreSQL-Datenbestand. Die Übernahme verschlüsselter Desktop-Projekte ist im Backlog beschrieben. [Plattformarchitektur](../docs/PLATTFORM-ARCHITEKTUR.md) · [Ausbau und Abnahmekriterien](../docs/PLATTFORM-BACKLOG.md)
+Der Web-Arbeitsbereich verbindet Organisation, Informationswerte, IT-Dienste, Risiken, Controls, Maßnahmen und Nachweise. Das Verzeichnis der Verarbeitungstätigkeiten (VVT) verwendet dieselben Dienste und Controls für den Datenschutz. Der Stand ist für Entwicklung und lokale Erprobung vorgesehen. D3 GRC Desktop arbeitet mit verschlüsselten Projektdateien. Die Plattform verwendet einen eigenen PostgreSQL-Datenbestand. Die Übernahme verschlüsselter Desktop-Projekte ist im Backlog beschrieben. [Plattformarchitektur](../docs/PLATTFORM-ARCHITEKTUR.md) · [Ausbau und Abnahmekriterien](../docs/PLATTFORM-BACKLOG.md)
 
 ## Lokal mit Docker starten
 
@@ -45,11 +45,15 @@ Kennzahlen beschreiben den erfassten Datenstand. Eine fachliche Prüfung der Wir
 
 Die Administration kann Mitglieder und befristete Beratungsmandate im eigenen Mandanten anlegen. Lesende Mitglieder sehen ihre zulässigen Register, Prüfstände und Berichte. Bearbeitende Mitglieder pflegen auch Fachobjekte, Bewertungen und Nachweise. Berater erhalten pro Mandat ausgewählte Aktionen in genau einem Geltungsbereich. Ablauf und Widerruf werden bei jeder Anfrage geprüft. Mehrere Mandate können verschiedene Bereiche freigeben. [Berechtigungsmatrix](../docs/PLATTFORM-ARCHITEKTUR.md#rbac-und-abac-im-plattformkern)
 
+Die Mandantenauswahl zeigt die Arbeitsbereiche, die in diesem Browser-Tab angemeldet wurden. Für einen weiteren Arbeitsbereich sind dessen Mandantenkürzel und gültige Zugangsdaten nötig. Bei einem Wechsel prüft der Server die ausgewählte Sitzung erneut. Der Browser baut den Arbeitsbereich mit seinen eigenen Berechtigungen und Filtern neu auf. Beim Abmelden leert der Browser die Auswahl und fordert den Server auf, die verbundenen Sitzungen zu beenden.
+
 Die Sitzung läuft standardmäßig acht Stunden. Beim vollständigen Neuladen des Portals ist eine neue Anmeldung erforderlich.
 
 Unter **Basisregister → Verantwortlichkeiten** lässt sich dieselbe Person als IT-Leitung einer Einheit, als Asset Owner eines Dienstes und als Risk Owner eines Risikos zuordnen. Beendete Zuordnungen lassen sich in der Historie einblenden. Zugriffsrechte folgen aus den Mitgliedschaften und Mandaten. Unter **Administration → Audit-Protokoll** sehen berechtigte Nutzer die protokollierten Änderungen und Exporte mit handelndem Mitglied und Zeitpunkt in UTC. [API-Vertrag](openapi.json)
 
 ## CSV-Import und Schnittstellen
+
+Die Beschreibungs- und längeren Fachfelder im Register haben eine Formatierungsleiste. Die API speichert Absätze, Überschriften, Listen, Fett- und Kursivformatierung strukturiert. Suche, CSV und bestehende API-Clients verwenden weiterhin die Klartextfelder. `rich_text` ergänzt die Darstellung der Formatierungen. Wer über die API nur ein Klartextfeld ändert, erhält die Formatierung der übrigen unveränderten Felder. [OpenAPI](openapi.json)
 
 `POST /api/v1/imports/catalog` erwartet eine Objektart `kind` und den CSV-Inhalt als `content`. `title` ist Pflicht. Optional sind `code`, `description`, `owner`, `scope`, `status`, `org_unit_id` und `attributes` als JSON innerhalb einer CSV-Zelle möglich. Der Standardtrenner ist `;`. Pro Aufruf sind bis zu 100 Datensätze erlaubt.
 
@@ -120,4 +124,4 @@ Mit `GRC_BROWSER_EXECUTABLE` kann der Test einen vorhandenen Chromium-Browser ve
 
 ## Betriebsreife und Ausbau
 
-Die lokale Compose-Umgebung bietet PostgreSQL-Zugriffsgrenzen, HTTP am Loopback-Port, Sitzungsanmeldung und nachvollziehbare Fachänderungen. Nachweise liegen in PostgreSQL. Produktionsfreigabe, OIDC/SSO mit MFA, Objektspeicher mit Malwareprüfung, feinere Zugriffsregeln, Aufbewahrung, Wiederherstellungsziele und vollständige Fachworkflows sind in Architektur und Abnahme einzeln beschrieben. [Prüfbericht 0.11.0](../docs/PRUEFBERICHT-0.11.0.md) · [Produktionsanforderungen und Abnahmekriterien](../docs/PLATTFORM-BACKLOG.md)
+Die lokale Compose-Umgebung bietet PostgreSQL-Zugriffsgrenzen, HTTP am Loopback-Port, Sitzungsanmeldung und nachvollziehbare Fachänderungen. Nachweise liegen in PostgreSQL. Produktionsfreigabe, OIDC/SSO mit MFA, Objektspeicher mit Malwareprüfung, feinere Zugriffsregeln, Aufbewahrung, Wiederherstellungsziele und vollständige Fachworkflows sind in Architektur und Abnahme einzeln beschrieben. [Prüfbericht 0.12.0](../docs/PRUEFBERICHT-0.12.0.md) · [Produktionsanforderungen und Abnahmekriterien](../docs/PLATTFORM-BACKLOG.md)

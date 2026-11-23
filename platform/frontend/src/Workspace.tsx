@@ -2,17 +2,18 @@ import { useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
   BookOpen, ChartNoAxesCombined, ChevronRight, ClipboardCheck, Filter, Grid2X2, History, LayoutDashboard,
-  LogOut, Menu, ShieldCheck, UsersRound, X
+  LogOut, Menu, Repeat2, ShieldCheck, UsersRound, X
 } from 'lucide-react';
-import { client, readCatalog } from './api';
+import { client, errorMessage, readCatalog } from './api';
 import type { Kind, KindMetadata, LinkKind } from './api';
-import type { Session } from './Auth';
+import type { Session } from './sessions';
 import { Catalog, kindInfo } from './Catalog';
 import type { CatalogLeaveGuard } from './Catalog';
 import { EvidenceView, RiskMatrix } from './Operations';
 import { Dashboard, Reports } from './Reporting';
 import { Access } from './Access';
 import { AuditLog, Organization } from './Organization';
+import { TenantSwitcher } from './TenantSwitcher';
 import { Brand, Empty, Loading, Notice, useData } from './ui';
 
 export const roles = {
@@ -49,7 +50,13 @@ const shortNames: Partial<Record<Page, string>> = {
   dpia: 'Folgenabschätzungen', framework_version: 'Regelwerke'
 };
 
-export function Workspace({ session, onLogout }: { session: Session; onLogout: () => void }) {
+export function Workspace({ session, sessions, onConnect, onSwitch, onLogout }: {
+  session: Session;
+  sessions: Session[];
+  onConnect: (session: Session) => void;
+  onSwitch: (session: Session) => Promise<void>;
+  onLogout: () => void;
+}) {
   const api = useMemo(() => client(session.token), [session.token]);
   const permissions = new Set(session.profile.permissions);
   const can = (permission: string) => permissions.has(permission);
@@ -60,7 +67,7 @@ export function Workspace({ session, onLogout }: { session: Session; onLogout: (
   const [scope, setScope] = useState('');
   const [typedScope, setTypedScope] = useState('');
   const [menu, setMenu] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
+  const [switching, setSwitching] = useState<{ checking: boolean; error: string } | null>(null);
   const catalogLeaveGuard = useRef<CatalogLeaveGuard | null>(null);
   const catalog = useData(signal => !can('records.read')
     ? Promise.resolve({ scope, rows: [], metadata: [], links: [] })
@@ -97,13 +104,12 @@ export function Workspace({ session, onLogout }: { session: Session; onLogout: (
     });
   }
 
-  async function logout() {
-    setSigningOut(true);
-    try {
-      await api.json('/auth/logout', { method: 'POST' });
-    } finally {
-      onLogout();
-    }
+  function switchTenant(target: Session) {
+    setSwitching(null);
+    leaveCatalog(() => {
+      setSwitching({ checking: true, error: '' });
+      void onSwitch(target).catch(reason => setSwitching({ checking: false, error: errorMessage(reason) }));
+    });
   }
 
   function pageContent() {
@@ -160,9 +166,15 @@ export function Workspace({ session, onLogout }: { session: Session; onLogout: (
           {menu ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}</button>
         <div className="breadcrumbs"><span>{session.profile.tenant_name}</span><ChevronRight size={15} aria-hidden="true" /><strong>{currentLabel}</strong></div>
         <div className="user-actions"><span title={session.profile.email}>{session.profile.email}</span>
-          <button type="button" disabled={signingOut} onClick={() => leaveCatalog(() => void logout().catch(() => undefined))}>
-            <LogOut size={17} aria-hidden="true" /> <span>Abmelden</span></button></div>
+          <button type="button" className="tenant-switch-trigger" aria-label="Mandant wechseln" aria-haspopup="dialog"
+            title={`Mandant wechseln · ${session.profile.tenant_name}`} onClick={() => setSwitching({ checking: false, error: '' })}>
+            <Repeat2 size={18} aria-hidden="true" /><span className="tenant-switch-label">Mandant wechseln</span>
+            <span className="tenant-switch-mobile-label">Mandant</span></button>
+          <button type="button" aria-label="Abmelden" title="Von allen verbundenen Mandanten abmelden" onClick={() => leaveCatalog(onLogout)}>
+            <LogOut size={17} aria-hidden="true" /> <span className="sign-out-label">Abmelden</span></button></div>
       </header>
+      {switching && <TenantSwitcher active={session} sessions={sessions} {...switching}
+        onSelect={switchTenant} onConnect={onConnect} onClose={() => setSwitching(null)} />}
       <main id="main-content" tabIndex={-1} className="main-content">
         {route.page !== 'access' && route.page !== 'audit' && <form className="context-bar" onSubmit={applyScope}>
           <label><Filter size={17} aria-hidden="true" /><span>Geltungsbereich</span>

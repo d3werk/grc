@@ -14,7 +14,7 @@ services:
       retries: 15
 
   migrate:
-    image: d3-grc-platform:0.11.0
+    image: d3-grc-platform:0.12.0
     build: .
     command: ["migrate"]
     environment:
@@ -25,7 +25,7 @@ services:
         condition: service_healthy
 
   platform:
-    image: d3-grc-platform:0.11.0
+    image: d3-grc-platform:0.12.0
     build: .
     environment:
       GRC_DB_RUNTIME_PASSWORD: ${GRC_DB_RUNTIME_PASSWORD:?Anwendungskennwort in .env setzen}

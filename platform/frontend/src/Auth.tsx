@@ -2,18 +2,18 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowRight, Database, Layers3, LockKeyhole } from 'lucide-react';
 import { client, errorMessage } from './api';
-import type { LoginResponse, SessionProfile } from './api';
+import { signIn } from './sessions';
+import type { Session } from './sessions';
+import { WorkspaceList } from './TenantSwitcher';
 import { Brand, Field, Notice } from './ui';
-
-export interface Session {
-  token: string;
-  expiresAt: string;
-  profile: SessionProfile;
-}
 
 const publicApi = client(null);
 
-export function Auth({ onSession }: { onSession: (session: Session) => void }) {
+export function Auth({ sessions, onSession, onSwitch }: {
+  sessions: Session[];
+  onSession: (session: Session) => void;
+  onSwitch: (session: Session) => Promise<void>;
+}) {
   const [mode, setMode] = useState<'login' | 'setup'>('login');
   const [slug, setSlug] = useState('');
   const [tenant, setTenant] = useState('');
@@ -25,6 +25,7 @@ export function Auth({ onSession }: { onSession: (session: Session) => void }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     setError('');
     try {
@@ -37,18 +38,25 @@ export function Auth({ onSession }: { onSession: (session: Session) => void }) {
         setBootstrap('');
         setMode('login');
       }
-      const token = await publicApi.json<LoginResponse>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ tenant_slug: slug.trim(), email: email.trim(), password })
-      });
-      const profile = await client(token.access_token).json<SessionProfile>('/auth/me');
-      onSession({ token: token.access_token, expiresAt: token.expires_at, profile });
+      onSession(await signIn(slug, email, password));
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
       setPending(false);
       setPassword('');
       setBootstrap('');
+    }
+  }
+
+  async function openSaved(session: Session) {
+    setPending(true);
+    setError('');
+    try {
+      await onSwitch(session);
+    } catch (reason) {
+      setError(errorMessage(reason));
+    } finally {
+      setPending(false);
     }
   }
 
@@ -67,6 +75,7 @@ export function Auth({ onSession }: { onSession: (session: Session) => void }) {
         <h2 id="auth-title">{mode === 'setup' ? 'Mandant einrichten' : 'Anmelden'}</h2>
         <p className="muted">{mode === 'setup' ? 'Der Einrichtungsschlüssel wird von der Plattformadministration bereitgestellt.' : 'Öffnen Sie den Arbeitsbereich Ihrer Organisation.'}</p>
         {error && <Notice message={error} />}
+        {mode === 'login' && sessions.length > 0 && <WorkspaceList sessions={sessions} disabled={pending} onSelect={session => void openSaved(session)} />}
         {mode === 'setup' && <Field label="Name des Mandanten">
           <input required value={tenant} onChange={event => setTenant(event.target.value)} autoComplete="organization" />
         </Field>}

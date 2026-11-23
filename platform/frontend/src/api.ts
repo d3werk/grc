@@ -1,3 +1,5 @@
+import type { RichTextDocument } from './RichText';
+
 export type Role = 'admin' | 'member' | 'viewer' | 'advisor';
 
 export interface SessionProfile {
@@ -42,6 +44,7 @@ export interface CatalogRecord {
   scope: string;
   version: number;
   attributes: Record<string, string>;
+  rich_text: Record<string, RichTextDocument>;
   created_at: string;
   updated_at: string;
 }
@@ -59,6 +62,7 @@ export interface RecordLink {
   from_id: string;
   to_id: string;
   rationale: string;
+  rationale_rich_text?: RichTextDocument | null;
 }
 
 export interface AssessmentInput {
@@ -70,6 +74,7 @@ export interface AssessmentInput {
   residual_impact: number | null;
   response: string;
   rationale: string;
+  rationale_rich_text?: RichTextDocument | null;
 }
 
 export interface Assessment extends AssessmentInput {

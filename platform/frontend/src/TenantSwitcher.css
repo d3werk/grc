@@ -1,0 +1,36 @@
+.tenant-switcher {
+  width: min(35rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+}
+.tenant-switcher[open], .tenant-switch-form { display: grid; gap: .85rem; }
+.tenant-switch-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.tenant-switch-list { display: grid; gap: .45rem; padding: 0; margin: 0; list-style: none; }
+.tenant-switch-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .6rem;
+  width: 100%;
+  text-align: start;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: .55rem .75rem;
+}
+.tenant-switch-row[aria-current] { background: var(--accent-soft); color: var(--accent-dark); }
+.tenant-switch-row strong, .tenant-switch-row small { display: block; overflow-wrap: anywhere; }
+.tenant-switch-row small { margin-top: .2rem; color: var(--muted); }
+.tenant-switch-row .tenant-current { font-weight: 650; color: var(--accent-dark); }
+.tenant-switcher > button { justify-self: start; }
+.tenant-switch-trigger { white-space: nowrap; }
+.tenant-switch-mobile-label { display: none; }
+
+@media (max-width: 460px) {
+  .tenant-switch-trigger { padding-inline: .48rem; }
+  .tenant-switch-label, .user-actions .sign-out-label { display: none; }
+  .tenant-switch-mobile-label { display: inline; }
+}
+
+@media (max-width: 340px) {
+  .tenant-switch-trigger > span { display: none; }
+}

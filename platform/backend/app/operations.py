@@ -19,9 +19,11 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 
 from psycopg.errors import ForeignKeyViolation
+from psycopg.types.json import Jsonb
 
 from .db import audit_event
 from .domain_models import ATTRIBUTE_FIELDS, CatalogKind, CatalogStatus
+from .rich_text import RichTextDocument, plain_projection
 from .tenancy import RequestContext, context
 
 router = APIRouter(prefix="/api/v1", tags=["Risiken, Nachweise und Berichte"])
@@ -75,6 +77,7 @@ class RiskAssessmentInput(BaseModel):
     rationale: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=8000, pattern=_DATABASE_TEXT)
     ]
+    rationale_rich_text: RichTextDocument | None = None
 
     @model_validator(mode="after")
     def validate_assessment(self) -> RiskAssessmentInput:
@@ -233,7 +236,7 @@ class PrivacyReport(BaseModel):
 
 _ASSESSMENT_FIELDS = """
     id, risk_id, risk_version, assessed_on, inherent_likelihood, inherent_impact,
-    residual_likelihood, residual_impact, response, rationale, actor_id, created_at,
+    residual_likelihood, residual_impact, response, rationale, rationale_rich_text, actor_id, created_at,
     inherent_score, residual_score
 """
 
@@ -276,16 +279,20 @@ def record_risk_assessment(
     risk = _catalog_item(ctx, risk_id, "risk")
     if data.risk_version != risk["version"]:
         raise HTTPException(409, "Das Risiko wurde geändert. Vor der Bewertung den aktuellen Stand öffnen.")
+    document = data.rationale_rich_text
+    rationale = plain_projection(document, 8000, required=True) if document else data.rationale
     # The source predicate also protects against an edit between reading and inserting.
     row = ctx.conn.execute(
         f"""INSERT INTO risk_assessments(tenant_id,id,risk_id,risk_version,assessed_on,
-            inherent_likelihood,inherent_impact,residual_likelihood,residual_impact,response,rationale,actor_id)
-        SELECT r.tenant_id,%s,r.id,r.version,%s,%s,%s,%s,%s,%s,%s,%s FROM catalog_records r
+            inherent_likelihood,inherent_impact,residual_likelihood,residual_impact,response,rationale,rationale_rich_text,actor_id)
+        SELECT r.tenant_id,%s,r.id,r.version,%s,%s,%s,%s,%s,%s,%s,%s,%s FROM catalog_records r
         WHERE r.tenant_id=%s AND r.id=%s AND r.kind='risk' AND r.version=%s
         RETURNING {_ASSESSMENT_FIELDS}""",
         (
             uuid4(), data.assessed_on, data.inherent_likelihood, data.inherent_impact, data.residual_likelihood,
-            data.residual_impact, data.response, data.rationale, ctx.user_id, ctx.tenant_id, risk_id, data.risk_version,
+            data.residual_impact, data.response, rationale,
+            Jsonb(document.model_dump(mode="json", exclude_none=True)) if document else None,
+            ctx.user_id, ctx.tenant_id, risk_id, data.risk_version,
         ),
     ).fetchone()
     if row is None:

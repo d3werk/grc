@@ -1,0 +1,16 @@
+.rich-text-field { min-width: 0; }
+.rich-text-box { border: 1px solid var(--line, #ccd7df); border-radius: .55rem; overflow: hidden; background: var(--surface, #fff); }
+.rich-text-box:focus-within { border-color: var(--accent, #347a85); }
+.rich-text-toolbar { display: flex; flex-wrap: wrap; gap: .2rem; padding: .35rem; border-bottom: 1px solid var(--line, #ccd7df); }
+.rich-text-toolbar button { padding: 0; inline-size: 2.15rem; block-size: 2.15rem; min-height: 0; justify-content: center; }
+.rich-text-toolbar button[aria-pressed=true] { color: var(--accent, #176777); background: var(--accent-soft, #e5f3f5); }
+.rich-text-input { padding: .7rem .8rem; min-height: 8rem; color: inherit; font-weight: normal; line-height: 1.55; }
+.rich-text-input:focus-visible { outline-offset: -3px; }
+.rich-text-field.compact .rich-text-input { min-height: 5rem; }
+.rich-text-input, .rich-text-preview { overflow-wrap: anywhere; white-space: pre-wrap; }
+.rich-text-input p, .rich-text-preview p { margin: 0 0 .6em; }
+.rich-text-input p:last-child, .rich-text-preview p:last-child { margin-bottom: 0; }
+.rich-text-input h2, .rich-text-preview h2 { font-size: 1.25em; margin: .6em 0 .35em; }
+.rich-text-input h3, .rich-text-preview h3 { font-size: 1.1em; margin: .6em 0 .35em; }
+.rich-text-input ol, .rich-text-preview ol, .rich-text-input ul, .rich-text-preview ul { padding-inline-start: 1.6em; margin: .3em 0 .6em; }
+.rich-text-preview { min-width: 0; font-size: inherit; font-weight: normal; }

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
+using D3.Grc.Core;
 using System.Text.RegularExpressions;
 
 namespace D3.Grc.Desktop;
@@ -14,15 +15,23 @@ internal static partial class DocumentPreview
 
     public static Control Create(string markdown)
     {
-        if (string.IsNullOrWhiteSpace(markdown))
+        var rich = RichTextContent.TryRead(markdown);
+        var text = rich?.Text ?? markdown.ReplaceLineEndings("\n");
+        if (string.IsNullOrWhiteSpace(text))
             return Ui.Notice("Die Vorschau erscheint, sobald das Dokument Inhalt hat.");
 
-        var lines = markdown.ReplaceLineEndings("\n").Split('\n');
+        var lines = text.Split('\n');
         var count = Math.Min(lines.Length, MaximumLines);
         var content = new StackPanel { Spacing = 11 };
+        var starts = new int[count];
+        for (var line = 1; line < count; line++)
+            starts[line] = starts[line - 1] + lines[line - 1].Length + 1;
+        var spanIndex = 0;
         for (var index = 0; index < count; index++)
         {
-            var line = lines[index].Trim();
+            var untrimmed = lines[index];
+            var line = untrimmed.Trim();
+            var position = starts[index] + untrimmed.Length - untrimmed.TrimStart().Length;
             if (line.Length == 0)
                 continue;
 
@@ -49,7 +58,7 @@ internal static partial class DocumentPreview
             }
 
             var heading = line.TakeWhile(character => character == '#').Count();
-            if (heading is >= 1 and <= 4 && line.Length > heading + 1 && line[heading] == ' ')
+            if (rich is null && heading is >= 1 and <= 4 && line.Length > heading + 1 && line[heading] == ' ')
             {
                 var fontSize = heading switch { 1 => 25, 2 => 19, _ => 16 };
                 var block = Ui.Heading(line[(heading + 1)..], fontSize, heading);
@@ -66,7 +75,7 @@ internal static partial class DocumentPreview
                     BorderBrush = Ui.Green,
                     BorderThickness = new Thickness(3, 0, 0, 0),
                     Padding = new Thickness(12, 8),
-                    Child = Paragraph(line[2..])
+                    Child = ReadParagraph(line[2..], 2)
                 });
                 continue;
             }
@@ -80,7 +89,7 @@ internal static partial class DocumentPreview
             var marker = ListMarker().Match(line);
             if (marker.Success)
             {
-                var item = Paragraph(line[marker.Length..]);
+                var item = ReadParagraph(line[marker.Length..], marker.Length);
                 var label = Ui.Secondary(marker.Groups["number"].Success ? marker.Groups["number"].Value : "•");
                 label.Margin = new Thickness(0, 0, 8, 0);
                 var row = new DockPanel();
@@ -91,7 +100,10 @@ internal static partial class DocumentPreview
                 continue;
             }
 
-            content.Children.Add(Paragraph(line));
+            content.Children.Add(ReadParagraph(line));
+
+            TextBlock ReadParagraph(string value, int offset = 0) => rich is null ? Paragraph(value) :
+                StyledParagraph(value, position + offset, rich.Spans, ref spanIndex);
         }
 
         if (lines.Length > count)
@@ -166,6 +178,44 @@ internal static partial class DocumentPreview
         return block;
     }
 
+    private static TextBlock StyledParagraph(string value, int start, IReadOnlyList<RichTextSpan> spans, ref int spanIndex)
+    {
+        var end = start + value.Length;
+        var block = Ui.Text("");
+        var runs = block.Inlines ??= new InlineCollection();
+        var cursor = start;
+        while (spanIndex < spans.Count && spans[spanIndex].Start < end)
+        {
+            var span = spans[spanIndex];
+            var spanEnd = span.Start + span.Length;
+            if (spanEnd <= cursor)
+            {
+                spanIndex++;
+                continue;
+            }
+            if (cursor < span.Start)
+                runs.Add(new Run(value[(cursor - start)..(span.Start - start)]));
+            var from = Math.Max(cursor, span.Start);
+            var to = Math.Min(end, spanEnd);
+            var style = RichTextEditor.TypefaceFor(span.Style, block.FontFamily, block.FontStretch);
+            runs.Add(new Run(value[(from - start)..(to - start)])
+            {
+                FontFamily = style.FontFamily,
+                FontWeight = style.Weight,
+                FontStyle = style.Style,
+                FontSize = RichTextEditor.FontSizeFor(span.Style, block.FontSize),
+                TextDecorations = span.Style.HasFlag(RichTextStyle.Underline) ? TextDecorations.Underline : null
+            });
+            cursor = to;
+            if (spanEnd > end)
+                break;
+            spanIndex++;
+        }
+        if (cursor < end)
+            runs.Add(new Run(value[(cursor - start)..]));
+        return block;
+    }
+
     private static string[]? ReadTableRow(string value)
     {
         var trimmed = value.Trim();
@@ -208,7 +258,7 @@ internal static partial class DocumentPreview
         return table;
     }
 
-    [GeneratedRegex(@"^(?:(?<number>[0-9]+[.)])|[-*])\s+")]
+    [GeneratedRegex(@"^(?:(?<number>[0-9]+[.)])|[-*•])\s+")]
     private static partial Regex ListMarker();
 
     [GeneratedRegex(@"\*\*(?<strong>[^*]+)\*\*|`(?<code>[^`]+)`")]

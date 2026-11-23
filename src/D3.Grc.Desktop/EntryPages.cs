@@ -21,7 +21,7 @@ public sealed partial class MainWindow
         var appliedSort = sort.SelectedIndex;
         void Filter(){var rows=_entries.Where(e=>e.Kind==kind&&(statusFilter.SelectedIndex==0||e.Status==(string?)statusFilter.SelectedItem));rows=sort.SelectedIndex switch{1=>rows.OrderBy(e=>e.Title),2=>rows.OrderBy(e=>e.DueDate==""?"9999":e.DueDate),_=>rows.OrderBy(e=>e.Code)};list.ItemsSource=rows.ToList();}
         Filter();
-        Entry? selected=null;string? templateId=null;var code=Ui.Input("Code");var title=Ui.Input("Titel");var owner=Ui.Input("Verantwortliche Rolle / Person");var due=Ui.Input("JJJJ-MM-TT");var scope=Ui.Input("Scope");var locator=Ui.Input("Artikel / Abschnitt / konkrete Fundstelle");var body=Ui.Input("Eigene Beschreibung und Ergänzungen",true);var reason=Ui.Input("Begründung der Änderung / Anwendbarkeitsentscheidung",true);
+        Entry? selected=null;string? templateId=null;var code=Ui.Input("Code");var title=Ui.Input("Titel");var owner=Ui.Input("Verantwortliche Rolle / Person");var due=Ui.Input("JJJJ-MM-TT");var scope=Ui.Input("Scope");var locator=Ui.Input("Artikel / Abschnitt / konkrete Fundstelle");var body=new RichTextEditor(isSupplier ? "Interne Notizen" : "Beschreibung / Umsetzung", "Eigene Beschreibung und Ergänzungen");var reason=Ui.Input("Begründung der Änderung / Anwendbarkeitsentscheidung",true);
         var source=SourceCombo();var status=Ui.Combo();status.ItemsSource=Entry.Statuses(kind);status.SelectedIndex=0;var template=Ui.Combo();var templates=await _workspace.TemplatesAsync(_topicId,kind);
         var supplier = isSupplier ? new SupplierFields() : null;
         var reviews = isSupplier ? Ui.Stack() : null;
@@ -45,7 +45,7 @@ public sealed partial class MainWindow
                 "Erfasst Eintrittswahrscheinlichkeit, Auswirkung, Behandlung und die Gründe für diese Bewertung.", Glyph.Risk);
         void Clear()
         {
-            selected=null;templateId=null;source.ItemsSource=_sources;source.SelectedIndex=isSupplier ? -1 : 0;code.Text="";title.Text="";owner.Text="";due.Text="";scope.Text=_scopeValue;locator.Text="";body.Text="";reason.Text="";refs.ItemsSource=null;related.ItemsSource=null;proofs.ItemsSource=null;history.ItemsSource=null;topics.Text="";
+            selected=null;templateId=null;source.ItemsSource=_sources;source.SelectedIndex=isSupplier ? -1 : 0;code.Text="";title.Text="";owner.Text="";due.Text="";scope.Text=_scopeValue;locator.Text="";body.Content="";reason.Text="";refs.ItemsSource=null;related.ItemsSource=null;proofs.ItemsSource=null;history.ItemsSource=null;topics.Text="";
             SetStatusChoices(Entry.Statuses(kind)[0]);
             supplier?.Load(null);
             if (reviews is not null && addReview is not null)
@@ -56,7 +56,7 @@ public sealed partial class MainWindow
         Clear();
         async Task LoadEntry(object? obj)
         {
-            if(obj is not Entry e){Clear();return;}selected=e;templateId=e.TemplateId;code.Text=e.Code;title.Text=e.Title;owner.Text=e.Owner;due.Text=e.DueDate;scope.Text=e.Scope;locator.Text=e.Locator;body.Text=e.Body;reason.Text="";SetStatusChoices(e.Status);
+            if(obj is not Entry e){Clear();return;}selected=e;templateId=e.TemplateId;code.Text=e.Code;title.Text=e.Title;owner.Text=e.Owner;due.Text=e.DueDate;scope.Text=e.Scope;locator.Text=e.Locator;body.Content=e.Body;reason.Text="";SetStatusChoices(e.Status);
             // Existing cross-topic records remain readable; edits require a matching concrete topic.
             source.ItemsSource=_sources.Any(s=>s.Id==e.SourceId)?_sources:_sources.Concat(_allSources.Where(s=>s.Id==e.SourceId)).DistinctBy(s=>s.Id).ToList();source.SelectedItem=((IEnumerable<Source>)source.ItemsSource!).First(s=>s.Id==e.SourceId);TemplateChoices();
             refs.ItemsSource=await _workspace.RecordSourcesAsync(e.Id);topics.Text="Themen: "+string.Join(", ",(await _workspace.RecordTopicsAsync(e.Id)).Select(t=>t.Title));
@@ -171,7 +171,7 @@ public sealed partial class MainWindow
                 DueDate = isSupplier ? due.Text?.Trim() ?? "" : due.Text ?? "",
                 Scope = scope.Text ?? "",
                 Locator = locator.Text ?? "",
-                Body = body.Text ?? "",
+                Body = body.Content,
                 SourceId = Sid(source),
                 TemplateId = templateId,
                 Status = (string?)status.SelectedItem ?? "Entwurf",
@@ -197,14 +197,16 @@ public sealed partial class MainWindow
             {
                 if (input is TextBox text)
                     text.IsReadOnly = true;
+                else if (input is RichTextEditor richText)
+                    richText.IsReadOnly = true;
                 else
                     input.IsEnabled = false;
             }
         TrackForm(() => (selected?.Id, code.Text ?? "", title.Text ?? "", owner.Text ?? "", due.Text ?? "", scope.Text ?? "",
-                locator.Text ?? "", body.Text ?? "", reason.Text ?? "", (source.SelectedItem as Source)?.Id, status.SelectedItem, templateId,
+                locator.Text ?? "", body.Content, reason.Text ?? "", (source.SelectedItem as Source)?.Id, status.SelectedItem, templateId,
                 supplier?.State),
             SaveRecord, async () => await LoadEntry(selected), inputs);
-        var apply=Button("Vorlage übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(body.Text)&&!await Ui.Confirm(this,"Vorlage ersetzt den aktuellen Formulartext.","Übernehmen"))return;templateId=t.Id;code.Text=t.Id;title.Text=t.Title;locator.Text=t.Locator;body.Text=t.Effective;},
+        var apply=Button("Vorlage übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(body.PlainText)&&!await Ui.Confirm(this,"Vorlage ersetzt den aktuellen Formulartext.","Übernehmen"))return;templateId=t.Id;code.Text=t.Id;title.Text=t.Title;locator.Text=t.Locator;body.Content=t.Effective;},
             help: "Ersetzt Code, Titel, Fundstelle und Beschreibung im Formular. Danach die Felder prüfen und speichern.");
         var addSource=Button("Weiteren Quellenbezug hinzufügen",async()=>{if(selected is null)throw new ArgumentException("Datensatz zuerst speichern.");if(!await CanLeaveFormAsync())return;var pick=await Ui.Pick(this,"Zusätzliche Quelle (bewusster Cross-Bezug)",_allSources.Cast<object>());if(pick is not Source s)return;var loc=await Ui.Prompt(this,"Konkrete Fundstelle");if(loc is null)return;var why=await Ui.Prompt(this,"Fachliche Begründung des zusätzlichen Quellenbezugs");if(why is null)return;await _workspace.AddSourceAsync(selected.Id,s.Id,loc,why);await Render();},
             help: "Ergänzt eine Quelle am gespeicherten Eintrag. Fundstelle und fachliche Begründung werden abgefragt.");

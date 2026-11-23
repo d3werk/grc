@@ -253,9 +253,7 @@ public sealed partial class MainWindow
         var attention = Ui.Card(attentionContent);
 
         var heroTitle = Ui.Heading("Projektüberblick", 31, 1);
-        heroTitle.Foreground = Brushes.White;
         var heroDate = Ui.Secondary($"Aktueller Filterbestand am {today:dd.MM.yyyy}", 14);
-        heroDate.Foreground = Ui.NavText;
         var heroText = Ui.Stack(heroTitle, heroDate);
         heroText.Spacing = 4;
         var docs = Ui.Help(Button("Dokumente öffnen", () => Drill("Documents"), glyph: Glyph.Documents),
@@ -270,17 +268,9 @@ public sealed partial class MainWindow
         heroContent.Children.Add(heroActions);
         var hero = new Border
         {
-            Background = new LinearGradientBrush
-            {
-                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-                EndPoint = new RelativePoint(1, 0.75, RelativeUnit.Relative),
-                GradientStops =
-                {
-                    new GradientStop(Color.Parse("#132C45"), 0),
-                    new GradientStop(Color.Parse("#184758"), 0.65),
-                    new GradientStop(Color.Parse("#136562"), 1)
-                }
-            },
+            Background = Ui.BrandWash,
+            BorderBrush = Ui.Line,
+            BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
             Padding = new Thickness(23, 19),
             Child = heroContent

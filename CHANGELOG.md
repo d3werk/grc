@@ -1,3 +1,9 @@
+# 0.12.0 · Textbearbeitung, Arbeitsbereich und D3-Werk-Design
+
+- Rich-Text-Bearbeitung für längere Fachtexte in Desktop und Web. Vorhandene Texte lassen sich weiterbearbeiten. Die Web-API stellt den Klartext weiterhin für Suche, Berichte und bestehende Integrationen bereit.
+- Sichtbarer Mandantenwechsel. Desktop wechselt zwischen verschlüsselten Projektdateien. Im Webportal lassen sich getrennt angemeldete Mandanten in derselben Browsersitzung auswählen.
+- Helles Arbeitslayout mit Grün, Cyan und warmen Neutraltönen aus dem D3-Werk-Logo. Das Originalzeichen erscheint zurückhaltend in der Navigation.
+
 # 0.11.0 · Web-Plattform
 
 - Gemeinsamer Mandantenbestand in PostgreSQL für Organisationseinheiten, Geschäftsprozesse, Assets, IT-Dienste, Risiken, Controls, Maßnahmen, Regelwerksfassungen, Anforderungen, Verarbeitungen, Lieferanten und DSFA-Grunddaten.
