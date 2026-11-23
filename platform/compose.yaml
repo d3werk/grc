@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: grc
+      POSTGRES_USER: grc_owner
+      POSTGRES_PASSWORD: ${GRC_DB_ADMIN_PASSWORD:?Admin-Kennwort in .env setzen}
+    volumes:
+      - grc-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grc_owner -d grc"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  migrate:
+    image: d3-grc-platform:0.11.0
+    build: .
+    command: ["migrate"]
+    environment:
+      GRC_DB_ADMIN_PASSWORD: ${GRC_DB_ADMIN_PASSWORD:?Admin-Kennwort in .env setzen}
+      GRC_DB_RUNTIME_PASSWORD: ${GRC_DB_RUNTIME_PASSWORD:?Anwendungskennwort in .env setzen}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  platform:
+    image: d3-grc-platform:0.11.0
+    build: .
+    environment:
+      GRC_DB_RUNTIME_PASSWORD: ${GRC_DB_RUNTIME_PASSWORD:?Anwendungskennwort in .env setzen}
+      GRC_BOOTSTRAP_TOKEN: ${GRC_BOOTSTRAP_TOKEN:-}
+    ports:
+      - "127.0.0.1:${GRC_HTTP_PORT:-8080}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/opt/grc/backend/.venv/bin/python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/readyz', timeout=4).close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  grc-db:

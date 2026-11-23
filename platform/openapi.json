@@ -1,0 +1,4547 @@
+{
+  "components": {
+    "schemas": {
+      "AttributeField": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "text",
+              "textarea",
+              "date"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "type"
+        ],
+        "title": "AttributeField",
+        "type": "object"
+      },
+      "AuditEvent": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "format": "uuid",
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actor_id",
+          "action",
+          "entity_type",
+          "entity_id",
+          "details",
+          "scope",
+          "created_at"
+        ],
+        "title": "AuditEvent",
+        "type": "object"
+      },
+      "BootstrapInput": {
+        "additionalProperties": false,
+        "properties": {
+          "admin_email": {
+            "maxLength": 254,
+            "title": "Admin Email",
+            "type": "string"
+          },
+          "admin_password": {
+            "format": "password",
+            "title": "Admin Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 63,
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "admin_email",
+          "admin_password"
+        ],
+        "title": "BootstrapInput",
+        "type": "object"
+      },
+      "CatalogCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "maxLength": 5000,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "title": "Attributes",
+            "type": "object"
+          },
+          "code": {
+            "default": "",
+            "maxLength": 80,
+            "pattern": "^[^\\x00]*$",
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 30000,
+            "pattern": "^[^\\x00]*$",
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          },
+          "owner": {
+            "default": "",
+            "maxLength": 240,
+            "pattern": "^[^\\x00]*$",
+            "title": "Owner",
+            "type": "string"
+          },
+          "scope": {
+            "default": "",
+            "maxLength": 240,
+            "pattern": "^[^\\x00]*$",
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "active",
+              "in_review",
+              "completed",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "CatalogCreate",
+        "type": "object"
+      },
+      "CatalogCsvImport": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "delimiter": {
+            "default": ";",
+            "enum": [
+              ";",
+              ","
+            ],
+            "title": "Delimiter",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "kind": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "content"
+        ],
+        "title": "CatalogCsvImport",
+        "type": "object"
+      },
+      "CatalogImportResult": {
+        "properties": {
+          "record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Record Ids",
+            "type": "array"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "validiert",
+              "importiert"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "rows",
+          "record_ids"
+        ],
+        "title": "CatalogImportResult",
+        "type": "object"
+      },
+      "CatalogKindInfo": {
+        "properties": {
+          "attribute_fields": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeField"
+            },
+            "title": "Attribute Fields",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "attribute_fields"
+        ],
+        "title": "CatalogKindInfo",
+        "type": "object"
+      },
+      "CatalogLink": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "from_id": {
+            "format": "uuid",
+            "title": "From Id",
+            "type": "string"
+          },
+          "from_kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "From Kind",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "to_id": {
+            "format": "uuid",
+            "title": "To Id",
+            "type": "string"
+          },
+          "to_kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "To Kind",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "from_id",
+          "from_kind",
+          "to_id",
+          "to_kind",
+          "rationale",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CatalogLink",
+        "type": "object"
+      },
+      "CatalogLinkCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "from_id": {
+            "format": "uuid",
+            "title": "From Id",
+            "type": "string"
+          },
+          "kind": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Rationale",
+            "type": "string"
+          },
+          "to_id": {
+            "format": "uuid",
+            "title": "To Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "from_id",
+          "to_id",
+          "rationale"
+        ],
+        "title": "CatalogLinkCreate",
+        "type": "object"
+      },
+      "CatalogLinkRemoval": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "reason"
+        ],
+        "title": "CatalogLinkRemoval",
+        "type": "object"
+      },
+      "CatalogLinkType": {
+        "properties": {
+          "from_kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "From Kind",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "to_kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "To Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "from_kind",
+          "to_kind",
+          "label"
+        ],
+        "title": "CatalogLinkType",
+        "type": "object"
+      },
+      "CatalogLinkUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "rationale": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "rationale"
+        ],
+        "title": "CatalogLinkUpdate",
+        "type": "object"
+      },
+      "CatalogRecord": {
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "maxLength": 5000,
+              "pattern": "^[^\\x00]*$",
+              "type": "string"
+            },
+            "title": "Attributes",
+            "type": "object"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "in_review",
+              "completed",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "code",
+          "title",
+          "description",
+          "status",
+          "owner",
+          "scope",
+          "org_unit_id",
+          "attributes",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CatalogRecord",
+        "type": "object"
+      },
+      "CatalogStatusInfo": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "in_review",
+              "completed",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "label"
+        ],
+        "title": "CatalogStatusInfo",
+        "type": "object"
+      },
+      "CatalogUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "maxLength": 5000,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 30000,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "active",
+                  "in_review",
+                  "completed",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "pattern": "^[^\\x00]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "CatalogUpdate",
+        "type": "object"
+      },
+      "Dashboard": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "record_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "org_unit",
+                "asset",
+                "it_service",
+                "business_process",
+                "risk",
+                "control",
+                "measure",
+                "framework_version",
+                "requirement",
+                "processing_activity",
+                "supplier",
+                "dpia"
+              ]
+            },
+            "title": "Record Counts",
+            "type": "object"
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "propertyNames": {
+                "enum": [
+                  "draft",
+                  "active",
+                  "in_review",
+                  "completed",
+                  "archived"
+                ]
+              },
+              "type": "object"
+            },
+            "propertyNames": {
+              "enum": [
+                "org_unit",
+                "asset",
+                "it_service",
+                "business_process",
+                "risk",
+                "control",
+                "measure",
+                "framework_version",
+                "requirement",
+                "processing_activity",
+                "supplier",
+                "dpia"
+              ]
+            },
+            "title": "Status Counts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "scope",
+          "as_of",
+          "record_counts",
+          "status_counts",
+          "risk",
+          "evidence"
+        ],
+        "title": "Dashboard",
+        "type": "object"
+      },
+      "Evidence": {
+        "properties": {
+          "collected_on": {
+            "format": "date",
+            "title": "Collected On",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "file",
+              "external"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "linked_record_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Linked Record Ids",
+            "type": "array"
+          },
+          "media_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "text/plain",
+                  "image/png"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Type"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "origin",
+          "scope",
+          "kind",
+          "url",
+          "filename",
+          "media_type",
+          "size_bytes",
+          "sha256",
+          "collected_on",
+          "valid_until",
+          "created_at",
+          "linked_record_ids"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "EvidenceCounts": {
+        "properties": {
+          "controls_without_current": {
+            "title": "Controls Without Current",
+            "type": "integer"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "integer"
+          },
+          "external": {
+            "title": "External",
+            "type": "integer"
+          },
+          "files": {
+            "title": "Files",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "files",
+          "external",
+          "expired",
+          "controls_without_current"
+        ],
+        "title": "EvidenceCounts",
+        "type": "object"
+      },
+      "EvidenceLink": {
+        "properties": {
+          "evidence_id": {
+            "format": "uuid",
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "title": "Record Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "record_id"
+        ],
+        "title": "EvidenceLink",
+        "type": "object"
+      },
+      "EvidenceLinkInput": {
+        "additionalProperties": false,
+        "properties": {
+          "record_id": {
+            "format": "uuid",
+            "title": "Record Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id"
+        ],
+        "title": "EvidenceLinkInput",
+        "type": "object"
+      },
+      "ExternalEvidenceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "collected_on": {
+            "format": "date",
+            "title": "Collected On",
+            "type": "string"
+          },
+          "origin": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Origin",
+            "type": "string"
+          },
+          "scope": {
+            "default": "",
+            "maxLength": 240,
+            "pattern": "^[^\\x00]*$",
+            "title": "Scope",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 240,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "title",
+          "origin",
+          "url"
+        ],
+        "title": "ExternalEvidenceInput",
+        "type": "object"
+      },
+      "InvalidRequest": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ValidationIssue"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "InvalidRequest",
+        "type": "object"
+      },
+      "LoginInput": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "tenant_slug": {
+            "maxLength": 63,
+            "title": "Tenant Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_slug",
+          "email",
+          "password"
+        ],
+        "title": "LoginInput",
+        "type": "object"
+      },
+      "MandateInput": {
+        "additionalProperties": false,
+        "properties": {
+          "advisor_id": {
+            "format": "uuid",
+            "title": "Advisor Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Permissions",
+            "type": "array"
+          },
+          "scope": {
+            "maxLength": 240,
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "advisor_id",
+          "scope",
+          "permissions",
+          "expires_at"
+        ],
+        "title": "MandateInput",
+        "type": "object"
+      },
+      "MemberInput": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "member",
+              "viewer",
+              "advisor"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "role"
+        ],
+        "title": "MemberInput",
+        "type": "object"
+      },
+      "NamedResponsibilityView": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "person_id": {
+            "format": "uuid",
+            "title": "Person Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "role": {
+            "enum": [
+              "management",
+              "it_lead",
+              "privacy_lead",
+              "security_lead",
+              "asset_owner",
+              "risk_owner",
+              "control_owner",
+              "action_owner",
+              "process_owner"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_kind": {
+            "title": "Target Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revoked_at",
+          "person_id",
+          "target_id",
+          "target_kind",
+          "scope",
+          "role",
+          "created_at",
+          "display_name"
+        ],
+        "title": "NamedResponsibilityView",
+        "type": "object"
+      },
+      "PersonCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "maxLength": 240,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "maxLength": 254,
+            "pattern": "^[^\\x00]*$",
+            "title": "Email",
+            "type": "string"
+          },
+          "scope": {
+            "default": "",
+            "maxLength": 240,
+            "pattern": "^[^\\x00]*$",
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name"
+        ],
+        "title": "PersonCreate",
+        "type": "object"
+      },
+      "PersonUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "display_name": {
+            "maxLength": 240,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "maxLength": 254,
+            "pattern": "^[^\\x00]*$",
+            "title": "Email",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "display_name",
+          "expected_version"
+        ],
+        "title": "PersonUpdate",
+        "type": "object"
+      },
+      "PersonView": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "email",
+          "scope",
+          "active",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PersonView",
+        "type": "object"
+      },
+      "PrivacyRelation": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "org_unit",
+              "asset",
+              "it_service",
+              "business_process",
+              "risk",
+              "control",
+              "measure",
+              "framework_version",
+              "requirement",
+              "processing_activity",
+              "supplier",
+              "dpia"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "relation": {
+            "title": "Relation",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "in_review",
+              "completed",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relation",
+          "id",
+          "kind",
+          "code",
+          "title",
+          "scope",
+          "status"
+        ],
+        "title": "PrivacyRelation",
+        "type": "object"
+      },
+      "PrivacyReport": {
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ProcessingActivityReportRow"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          }
+        },
+        "required": [
+          "scope",
+          "as_of",
+          "activities"
+        ],
+        "title": "PrivacyReport",
+        "type": "object"
+      },
+      "ProcessingActivityReportRow": {
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Attributes",
+            "type": "object"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/PrivacyRelation"
+            },
+            "title": "Relations",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "in_review",
+              "completed",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "scope",
+          "status",
+          "owner",
+          "version",
+          "attributes",
+          "relations"
+        ],
+        "title": "ProcessingActivityReportRow",
+        "type": "object"
+      },
+      "ResponsibilityCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "person_id": {
+            "format": "uuid",
+            "title": "Person Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "management",
+              "it_lead",
+              "privacy_lead",
+              "security_lead",
+              "asset_owner",
+              "risk_owner",
+              "control_owner",
+              "action_owner",
+              "process_owner"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person_id",
+          "target_id",
+          "role"
+        ],
+        "title": "ResponsibilityCreate",
+        "type": "object"
+      },
+      "ResponsibilityView": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "person_id": {
+            "format": "uuid",
+            "title": "Person Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "role": {
+            "enum": [
+              "management",
+              "it_lead",
+              "privacy_lead",
+              "security_lead",
+              "asset_owner",
+              "risk_owner",
+              "control_owner",
+              "action_owner",
+              "process_owner"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_kind": {
+            "title": "Target Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revoked_at",
+          "person_id",
+          "target_id",
+          "target_kind",
+          "scope",
+          "role",
+          "created_at"
+        ],
+        "title": "ResponsibilityView",
+        "type": "object"
+      },
+      "RevocationView": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "required": [
+          "id",
+          "revoked_at"
+        ],
+        "title": "RevocationView",
+        "type": "object"
+      },
+      "RiskAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "format": "uuid",
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "assessed_on": {
+            "format": "date",
+            "title": "Assessed On",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "inherent_impact": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Inherent Impact",
+            "type": "integer"
+          },
+          "inherent_likelihood": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Inherent Likelihood",
+            "type": "integer"
+          },
+          "inherent_score": {
+            "title": "Inherent Score",
+            "type": "integer"
+          },
+          "rationale": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Rationale",
+            "type": "string"
+          },
+          "residual_impact": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Impact"
+          },
+          "residual_likelihood": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Likelihood"
+          },
+          "residual_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Score"
+          },
+          "response": {
+            "enum": [
+              "undecided",
+              "mitigate",
+              "avoid",
+              "transfer",
+              "accept"
+            ],
+            "title": "Response",
+            "type": "string"
+          },
+          "risk_id": {
+            "format": "uuid",
+            "title": "Risk Id",
+            "type": "string"
+          },
+          "risk_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Risk Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "risk_version",
+          "assessed_on",
+          "inherent_likelihood",
+          "inherent_impact",
+          "response",
+          "rationale",
+          "id",
+          "risk_id",
+          "actor_id",
+          "created_at",
+          "inherent_score",
+          "residual_score"
+        ],
+        "title": "RiskAssessment",
+        "type": "object"
+      },
+      "RiskAssessmentInput": {
+        "additionalProperties": false,
+        "properties": {
+          "assessed_on": {
+            "format": "date",
+            "title": "Assessed On",
+            "type": "string"
+          },
+          "inherent_impact": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Inherent Impact",
+            "type": "integer"
+          },
+          "inherent_likelihood": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Inherent Likelihood",
+            "type": "integer"
+          },
+          "rationale": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Rationale",
+            "type": "string"
+          },
+          "residual_impact": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Impact"
+          },
+          "residual_likelihood": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Likelihood"
+          },
+          "response": {
+            "enum": [
+              "undecided",
+              "mitigate",
+              "avoid",
+              "transfer",
+              "accept"
+            ],
+            "title": "Response",
+            "type": "string"
+          },
+          "risk_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Risk Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "risk_version",
+          "assessed_on",
+          "inherent_likelihood",
+          "inherent_impact",
+          "response",
+          "rationale"
+        ],
+        "title": "RiskAssessmentInput",
+        "type": "object"
+      },
+      "RiskCounts": {
+        "properties": {
+          "assessed": {
+            "title": "Assessed",
+            "type": "integer"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unassessed": {
+            "title": "Unassessed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "assessed",
+          "unassessed",
+          "stale"
+        ],
+        "title": "RiskCounts",
+        "type": "object"
+      },
+      "RiskMatrix": {
+        "properties": {
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/RiskMatrixCell"
+            },
+            "title": "Cells",
+            "type": "array"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "stage": {
+            "enum": [
+              "inherent",
+              "residual"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unassessed": {
+            "title": "Unassessed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stage",
+          "scope",
+          "total",
+          "unassessed",
+          "stale",
+          "cells"
+        ],
+        "title": "RiskMatrix",
+        "type": "object"
+      },
+      "RiskMatrixCell": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "impact": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Impact",
+            "type": "integer"
+          },
+          "likelihood": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Likelihood",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "likelihood",
+          "impact",
+          "count"
+        ],
+        "title": "RiskMatrixCell",
+        "type": "object"
+      },
+      "ValidationIssue": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "location": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          }
+        },
+        "required": [
+          "location",
+          "code"
+        ],
+        "title": "ValidationIssue",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Mandantengebundene Arbeitsbereiche für Organisation, Assets, Risiken, Controls, Maßnahmen, Nachweise und Datenschutz.",
+    "title": "D3 GRC Platform",
+    "version": "0.11.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/advisor-mandates": {
+      "get": {
+        "operationId": "mandates_api_v1_advisor_mandates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Mandates Api V1 Advisor Mandates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mandates",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      },
+      "post": {
+        "operationId": "create_mandate_api_v1_advisor_mandates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MandateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Mandate Api V1 Advisor Mandates Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Mandate",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/advisor-mandates/{mandate_id}/revoke": {
+      "post": {
+        "operationId": "revoke_mandate_api_v1_advisor_mandates__mandate_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mandate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mandate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Mandate",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/audit-events": {
+      "get": {
+        "operationId": "audit_events_api_v1_audit_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEvent"
+                  },
+                  "title": "Response Audit Events Api V1 Audit Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Audit Events",
+        "tags": [
+          "Audit-Log"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Login Api V1 Auth Login Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Logout",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Api V1 Auth Me Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Me",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/catalog": {
+      "get": {
+        "operationId": "list_catalog_api_v1_catalog_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "org_unit",
+                    "asset",
+                    "it_service",
+                    "business_process",
+                    "risk",
+                    "control",
+                    "measure",
+                    "framework_version",
+                    "requirement",
+                    "processing_activity",
+                    "supplier",
+                    "dpia"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "active",
+                    "in_review",
+                    "completed",
+                    "archived"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 240,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "org_unit_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Unit Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 300,
+              "pattern": "^[^\\x00]*$",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogRecord"
+                  },
+                  "title": "Response List Catalog Api V1 Catalog Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Catalog",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      },
+      "post": {
+        "operationId": "post_record_api_v1_catalog_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Record",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      }
+    },
+    "/api/v1/catalog/kinds": {
+      "get": {
+        "operationId": "catalog_kinds_api_v1_catalog_kinds_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogKindInfo"
+                  },
+                  "title": "Response Catalog Kinds Api V1 Catalog Kinds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Catalog Kinds",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      }
+    },
+    "/api/v1/catalog/statuses": {
+      "get": {
+        "operationId": "catalog_statuses_api_v1_catalog_statuses_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogStatusInfo"
+                  },
+                  "title": "Response Catalog Statuses Api V1 Catalog Statuses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Catalog Statuses",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      }
+    },
+    "/api/v1/catalog/{record_id}": {
+      "get": {
+        "operationId": "get_record_api_v1_catalog__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Record",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      },
+      "put": {
+        "operationId": "update_record_api_v1_catalog__record_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Record",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "operationId": "dashboard_api_v1_dashboard_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 240,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Dashboard",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/evidence": {
+      "get": {
+        "operationId": "list_evidence_api_v1_evidence_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 240,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Evidence"
+                  },
+                  "title": "Response List Evidence Api V1 Evidence Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Evidence",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      },
+      "post": {
+        "operationId": "new_external_evidence_api_v1_evidence_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalEvidenceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evidence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "New External Evidence",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/evidence/upload": {
+      "post": {
+        "operationId": "upload_evidence_api_v1_evidence_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "collected_on": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "file": {
+                    "description": "PNG, UTF-8-TXT oder UTF-8-LOG bis 4 MiB",
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "origin": {
+                    "maxLength": 1000,
+                    "type": "string"
+                  },
+                  "scope": {
+                    "maxLength": 240,
+                    "type": "string"
+                  },
+                  "title": {
+                    "maxLength": 240,
+                    "type": "string"
+                  },
+                  "valid_until": {
+                    "format": "date",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file",
+                  "title",
+                  "origin"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evidence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Evidence",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/evidence/{evidence_id}/file": {
+      "get": {
+        "operationId": "download_evidence_api_v1_evidence__evidence_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidence Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Nachweisdatei zum Download"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download Evidence",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/evidence/{evidence_id}/links": {
+      "post": {
+        "description": "Einen vorhandenen Nachweis einem Control oder einer Maßnahme im selben Geltungsbereich zuordnen.",
+        "operationId": "link_evidence_api_v1_evidence__evidence_id__links_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidence Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceLinkInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link Evidence",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/evidence/{evidence_id}/links/{record_id}": {
+      "delete": {
+        "operationId": "unlink_evidence_api_v1_evidence__evidence_id__links__record_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evidence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Evidence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unlink Evidence",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/imports/catalog": {
+      "post": {
+        "operationId": "import_catalog_api_v1_imports_catalog_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogCsvImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Import Catalog",
+        "tags": [
+          "Importe"
+        ]
+      }
+    },
+    "/api/v1/links": {
+      "get": {
+        "operationId": "list_links_api_v1_links_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "record_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Record Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogLink"
+                  },
+                  "title": "Response List Links Api V1 Links Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Links",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      },
+      "post": {
+        "operationId": "create_link_api_v1_links_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogLinkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Link",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      }
+    },
+    "/api/v1/links/kinds": {
+      "get": {
+        "operationId": "link_kinds_api_v1_links_kinds_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogLinkType"
+                  },
+                  "title": "Response Link Kinds Api V1 Links Kinds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Link Kinds",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      }
+    },
+    "/api/v1/links/{link_id}": {
+      "delete": {
+        "operationId": "delete_link_api_v1_links__link_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogLinkRemoval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Link",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      },
+      "put": {
+        "operationId": "update_link_api_v1_links__link_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogLinkUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Link",
+        "tags": [
+          "Arbeitsobjekte"
+        ]
+      }
+    },
+    "/api/v1/members": {
+      "get": {
+        "operationId": "members_api_v1_members_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Members Api V1 Members Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Members",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      },
+      "post": {
+        "operationId": "create_member_api_v1_members_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Member Api V1 Members Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Member",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      }
+    },
+    "/api/v1/organization/people": {
+      "get": {
+        "operationId": "list_people_api_v1_organization_people_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonView"
+                  },
+                  "title": "Response List People Api V1 Organization People Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List People",
+        "tags": [
+          "Organisation"
+        ]
+      },
+      "post": {
+        "operationId": "create_person_api_v1_organization_people_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Person",
+        "tags": [
+          "Organisation"
+        ]
+      }
+    },
+    "/api/v1/organization/people/{person_id}": {
+      "put": {
+        "operationId": "edit_person_api_v1_organization_people__person_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit Person",
+        "tags": [
+          "Organisation"
+        ]
+      }
+    },
+    "/api/v1/organization/responsibilities": {
+      "get": {
+        "operationId": "list_responsibilities_api_v1_organization_responsibilities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "target_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_revoked",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Revoked",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NamedResponsibilityView"
+                  },
+                  "title": "Response List Responsibilities Api V1 Organization Responsibilities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Responsibilities",
+        "tags": [
+          "Organisation"
+        ]
+      },
+      "post": {
+        "operationId": "create_responsibility_api_v1_organization_responsibilities_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponsibilityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsibilityView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Responsibility",
+        "tags": [
+          "Organisation"
+        ]
+      }
+    },
+    "/api/v1/organization/responsibilities/{assignment_id}/revoke": {
+      "post": {
+        "operationId": "revoke_responsibility_api_v1_organization_responsibilities__assignment_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevocationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Responsibility",
+        "tags": [
+          "Organisation"
+        ]
+      }
+    },
+    "/api/v1/reports/management": {
+      "get": {
+        "operationId": "management_report_api_v1_reports_management_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 240,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "json",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Management Report",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/reports/privacy": {
+      "get": {
+        "operationId": "privacy_report_api_v1_reports_privacy_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 240,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "json",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyReport"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Privacy Report",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/risk-matrix": {
+      "get": {
+        "operationId": "risk_matrix_api_v1_risk_matrix_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 240,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "default": "inherent",
+              "enum": [
+                "inherent",
+                "residual"
+              ],
+              "title": "Stage",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskMatrix"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Risk Matrix",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/risks/{risk_id}/assessments": {
+      "get": {
+        "operationId": "risk_history_api_v1_risks__risk_id__assessments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "risk_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Risk Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RiskAssessment"
+                  },
+                  "title": "Response Risk History Api V1 Risks  Risk Id  Assessments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Risk History",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      },
+      "post": {
+        "operationId": "record_risk_assessment_api_v1_risks__risk_id__assessments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "risk_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Risk Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskAssessmentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskAssessment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Risk Assessment",
+        "tags": [
+          "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/tenants": {
+      "post": {
+        "operationId": "bootstrap_tenant_api_v1_tenants_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Bootstrap-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bootstrap-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Bootstrap Tenant Api V1 Tenants Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "summary": "Bootstrap Tenant",
+        "tags": [
+          "Mandanten und Anmeldung"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "liveness_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Liveness Healthz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "summary": "Liveness",
+        "tags": [
+          "Betrieb"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readiness_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "summary": "Readiness",
+        "tags": [
+          "Betrieb"
+        ]
+      }
+    }
+  }
+}
