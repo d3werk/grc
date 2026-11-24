@@ -10,6 +10,10 @@ public static class Database
     internal const string RiskAssessmentMigrationId = "20261121090000_RiskAssessments";
     internal const string DesktopModulesMigrationId = "20261124120000_DesktopModules";
     internal const string IksMigrationId = "20261124120100_InternalControls";
+    internal const string ProfessionalTemplatesMigrationId = "20261124130000_ProfessionalTemplates";
+    internal const string Nis2PackagesMigrationId = "20261124130100_Nis2Packages";
+    internal const string EvidenceIntegrityMigrationId = "20261124130200_EvidenceIntegrity";
+    internal const string ControlReviewsMigrationId = "20261124130300_ControlReviews";
 
     private static readonly Lazy<bool> Init=new(()=>{SQLitePCL.Batteries_V2.Init();return true;});
     public static SqliteConnection Open(string path)
@@ -87,6 +91,30 @@ public sealed class DesktopModulesMigration : Migration
 public sealed class IksMigration : Migration
 {
     protected override void Up(MigrationBuilder m) => m.Sql(Database.Resource("011-iks"));
+    protected override void Down(MigrationBuilder m) => throw new NotSupportedException("Kein destruktiver Downgrade.");
+}
+[DbContext(typeof(SchemaDb))][Migration(Database.ProfessionalTemplatesMigrationId)]
+public sealed class ProfessionalTemplatesMigration : Migration
+{
+    protected override void Up(MigrationBuilder m) => m.Sql(Database.Resource("012-professional-templates"));
+    protected override void Down(MigrationBuilder m) => throw new NotSupportedException("Kein destruktiver Downgrade.");
+}
+[DbContext(typeof(SchemaDb))][Migration(Database.Nis2PackagesMigrationId)]
+public sealed class Nis2PackagesMigration : Migration
+{
+    protected override void Up(MigrationBuilder m) => m.Sql(Database.Resource("013-nis2-packages"));
+    protected override void Down(MigrationBuilder m) => throw new NotSupportedException("Kein destruktiver Downgrade.");
+}
+[DbContext(typeof(SchemaDb))][Migration(Database.EvidenceIntegrityMigrationId)]
+public sealed class EvidenceIntegrityMigration : Migration
+{
+    protected override void Up(MigrationBuilder m) => m.Sql(Database.Resource("014-evidence-integrity"));
+    protected override void Down(MigrationBuilder m) => throw new NotSupportedException("Kein destruktiver Downgrade.");
+}
+[DbContext(typeof(SchemaDb))][Migration(Database.ControlReviewsMigrationId)]
+public sealed class ControlReviewsMigration : Migration
+{
+    protected override void Up(MigrationBuilder m) => m.Sql(Database.Resource("015-control-reviews"));
     protected override void Down(MigrationBuilder m) => throw new NotSupportedException("Kein destruktiver Downgrade.");
 }
 [DbContext(typeof(SchemaDb))]

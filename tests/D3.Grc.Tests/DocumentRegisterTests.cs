@@ -76,6 +76,33 @@ public sealed class DocumentRegisterTests : IDisposable
     }
 
     [Fact]
+    public async Task Topic_starter_is_editable_and_keeps_published_snapshot_after_revision()
+    {
+        var starter = DocumentRegister.Starter("NIS2", DocumentCategory.Procedure);
+        Assert.Contains("NIS2", starter.Title);
+        Assert.Contains("## Durchführung", starter.Content);
+        Assert.Contains("Meldewege", starter.Content);
+        Assert.NotEqual(DocumentRegister.Starter("BCM", DocumentCategory.Procedure).Content, starter.Content);
+
+        using var workspace = await CreateWorkspaceAsync();
+        Assert.Equal("NIS2", Assert.Single(await workspace.TemplateTopicChoicesAsync("D3-PRO-NIS2-SCOPE")).Id);
+        var legacyTemplate = (await workspace.TemplatesAsync("PRIVACY")).First(template => !template.Id.StartsWith("D3-PRO-", StringComparison.Ordinal));
+        Assert.Contains(await workspace.TemplateTopicChoicesAsync(legacyTemplate.Id), topic => topic.Id == "PRIVACY");
+        var draft = await workspace.CreateDocumentAsync(
+            new DocumentDraft(starter.Title, "NIS2", "IT", DocumentCategory.Procedure, "Informationssicherheit", starter.Content),
+            "Verfahren aus Fachgerüst erstellt");
+        var review = await ReviewAsync(workspace, draft);
+        var published = await workspace.PublishDocumentAsync(review.Id, review.Revision, "Verfahren freigegeben");
+        var revision = await workspace.StartDocumentRevisionAsync(published.Id, published.Revision, "Vorfallkontakt aktualisieren");
+        var personalText = revision.Draft.Content + "\n\nDer Bereitschaftskontakt steht im internen Rufplan.";
+        var edited = await workspace.SaveDocumentDraftAsync(revision.Id, revision.Revision,
+            revision.Draft with { Content = personalText }, "Rufplan ergänzt");
+
+        Assert.Equal(personalText, edited.Draft.Content);
+        Assert.Equal(starter.Content, Assert.Single(await workspace.DocumentVersionsAsync(edited.Id)).Draft.Content);
+    }
+
+    [Fact]
     public async Task Document_links_enforce_target_kinds_and_remain_available_after_retirement()
     {
         using var workspace = await CreateWorkspaceAsync();

@@ -122,6 +122,9 @@ public sealed partial class MainWindow
         UpdateFormStatus();
     }
 
+    private async Task<bool> ConfirmDiscardFormAsync() =>
+        !HasFormChanges || await Ui.Confirm(this, "Möchten Sie die ungespeicherten Änderungen verwerfen?", "Verwerfen");
+
     private async Task<bool> CanLeaveFormAsync()
     {
         if (!HasFormChanges)

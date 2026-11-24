@@ -22,7 +22,7 @@ Das Thema oben gilt für die aktuelle Ansicht. Alle Themen ist eine Gesamtansich
 
 Zuordnung prüfen enthält migrierte Objekte ohne eindeutig ableitbaren Themenbezug. Nicht automatisch alle internen Controls allen Themen zuordnen. Einen passenden Fachkontext auswählen und das Objekt dort über einen begründeten Themenbezug ergänzen.
 
-Das Dropdown **Geltungsbereich** zeigt die in der geöffneten Projektdatei gespeicherten Bereiche. Bereich wählen und **Filter anwenden** drücken. **Alle Geltungsbereiche** zeigt die Einträge aller Bereiche. Die Suche findet Titel, Kürzel, Beschreibung und Verantwortung. Das Glossar bietet eine eigene Begriffssuche. Quellen und Vorlagen folgen dem Thema.
+Das Dropdown **Geltungsbereich** zeigt die in der geöffneten Projektdatei gespeicherten Bereiche. Bereich wählen und **Filter anwenden** drücken. **Alle Bereiche** zeigt die Einträge aller Bereiche. Die Suche findet Titel, Kürzel, Beschreibung und Verantwortung. Das Glossar bietet eine eigene Begriffssuche. Quellen und Vorlagen folgen dem Thema.
 
 Beim Thema **Datenschutz** steht im Bereichsfeld **Projektweit**. Die Datenschutzansichten und -exporte berücksichtigen Einträge und Dokumente aus allen Bereichen des Projekts. Im Detail lässt sich die gespeicherte Zuordnung jedes Eintrags ablesen. Bei einem Wechsel in ein anderes Thema steht der zuvor gewählte Bereich wieder zur Verfügung.
 
@@ -44,6 +44,8 @@ Die globale Schaltfläche Speichern und Strg/Cmd+S speichern ein bearbeitetes Fo
 Mandant exportieren übernimmt ein offenes Formular und erzeugt anschließend ein vollständiges verschlüsseltes Mandantenarchiv mit eigenem Sicherungsschlüssel.
 
 Bei einem Wechsel fragt die Anwendung nur nach tatsächlichen Formularänderungen. „Speichern“ übernimmt die Änderung und setzt den Wechsel fort. „Verwerfen“ setzt den Wechsel ohne Übernahme fort. „Abbrechen“ behält den vorherigen Eintrag und die Bearbeitung bei.
+
+In einem Registereintrag oder Dokumententwurf fragt **Abbrechen** bei ungespeicherten Änderungen nach. **Verwerfen** öffnet die gespeicherte Fassung oder schließt einen noch nicht angelegten Entwurf. **Abbrechen**, Escape und das Schließen der Rückfrage führen zur laufenden Bearbeitung zurück.
 
 Meldet die Anwendung, dass eine Änderung bereits übernommen wurde, aber die Hauptdatei noch nicht gespeichert ist, zuerst den Dateifehler beheben und erneut „Speichern“ wählen. Öffnen der Hauptdatei bei vorhandener Recovery erhält den bisherigen Wiederherstellungsstand als separat öffnbare verschlüsselte Projektdatei.
 
@@ -119,7 +121,11 @@ Im Bereich **Dokumente** einen Entwurf mit Thema, Geltungsbereich, Kategorie und
 
 Nach Bearbeitung den Entwurf zur Prüfung einreichen. Das Prüfergebnis und die Freigabe werden mit Begründung und lokalem Profil dokumentiert. Die veröffentlichte Fassung bleibt in der Versionsansicht lesbar. Für eine Änderung auf Basis der Freigabe einen neuen Entwurf anlegen. Außer Kraft gesetzte Dokumente bleiben für die Nachverfolgung erhalten.
 
-Unter **Textvorlagen** nach Titel, Kürzel und Inhalt suchen und nach Art filtern. Über **Vorschau** und **Katalogfassung** lassen sich die eigene und ursprüngliche Fassung ansehen. **Als Dokument verwenden** öffnet einen vorausgefüllten Entwurf. Der allgemeine XLSX- und HTML-Bericht enthält den Dokumentenbestand im gewählten Kontext.
+Unter **Dokumente → Aus Vorlage** nach Titel, Dokumentart oder Kennung suchen, die Vorschau lesen und **Als Entwurf übernehmen** wählen. Der Entwurf übernimmt den Text, den Titel und die passende Dokumentart. Thema, Geltungsbereich, Verantwortung und betriebliche Angaben im Reiter **Text** prüfen und mit **Entwurf speichern** übernehmen. Die Arbeitshilfen enthalten unter anderem Verfahren für Datenschutzvorfälle und Lieferantenprüfungen, einen NIS-2-Leitungsentwurf, Prüfblätter für interne Revision und IKS sowie Vorlagen für KI-Einsatzfreigabe, Business Impact Analyse und Vertragsprüfung.
+
+Unter **Textvorlagen** nach Titel, Kürzel und Inhalt suchen und nach Art filtern. Im Reiter **Bearbeiten** mit **Vorlage speichern** eine eigene Fassung pflegen. **Katalogfassung** zeigt den ursprünglichen Text. **Als Dokument verwenden** kopiert die gespeicherte Fassung in einen neuen Entwurf. Vorhandene Dokumente führen ihre eigene Fassung.
+
+Im Editor Text markieren und **F**, **K** oder **U** für Fett, Kursiv oder Unterstreichen wählen. **Ü1** und **Ü2** formatieren Überschriften, **¶ Absatz** setzt die Zeile auf normalen Text zurück. **• Liste** und **1. Liste** formatieren die aktuelle Zeile oder den markierten Block. Mit **↶** und **↷** in der Werkzeugleiste lassen sich Bearbeitungsschritte rückgängig machen und wiederholen. Tabellen aus den Vorlagen sind im Reiter **Vorschau** lesbar. Der allgemeine XLSX- und HTML-Bericht enthält den Dokumentenbestand im gewählten Kontext.
 
 Die Nachweisvorschau zeigt UTF-8-Text und PNG direkt im Arbeitsbereich. Für andere Dateiformate steht der separate Dateiexport zur Verfügung.
 
@@ -132,6 +138,35 @@ Das Produkt aus Eintrittswahrscheinlichkeit und Auswirkung ergibt den Punktwert 
 Die Zellzahlen ändern sich, wenn ein Filter andere Risiken erfasst, die Bewertungssicht zwischen Ausgangs- und Restrisiko wechselt oder eine Bewertung die Zuordnung eines Risikos verändert. Je Risiko zählt der neueste Bewertungsstichtag. Bei gleichem Stichtag gilt der zuletzt gespeicherte Eintrag. Die Restrisikoansicht zeigt Risiken mit dokumentierten Restrisikowerten.
 
 Rechts zählt **Alle** den gefilterten Risikobestand. **Ohne Bewertung** zählt Risiken ohne gespeicherte Bewertung. **Ohne Restrisiko** zählt Risiken mit einer Ausgangsbewertung und fehlenden Restrisikowerten in der maßgeblichen Fassung. Nach Auswahl einer Zelle oder einer dieser Listen zeigt der Trefferzähler die Anzahl der angezeigten Risiken im Verhältnis zum gesamten Filterbestand. **Bewertung öffnen** führt beim ausgewählten Risiko zum Reiter **Bewertungen**. Die Verknüpfungen zu Controls und Maßnahmen stehen unter **Bezüge**.
+
+## 18. NIS2-Maßnahmen übernehmen und zuordnen
+
+Unter **Governance und Risiken → NIS2-Maßnahmen** den Geltungsbereich des Pakets auswählen oder mit **Neuen Bereich benennen** eingeben. Der Katalog gliedert die Risikomanagementmaßnahmen nach Artikel 21 Absatz 2 Buchstaben a bis j. Jede Karte beschreibt Vorschläge für Umsetzung, Nachweise, Risiken, Prüfturnus und Abnahmekriterien. [Richtlinie (EU) 2022/2555, Artikel 21](https://eur-lex.europa.eu/eli/dir/2022/2555/oj/deu)
+
+1. **Anforderung übernehmen** legt die passende Anforderung als Entwurf an oder übernimmt die im Bereich bereits gespeicherte Anforderung. Werden für dieselbe Fundstelle mehrere Anforderungen angeboten, wählen Sie die fachlich passende aus. **Anforderung öffnen** führt zum Datensatz.
+2. **Paket übernehmen** bietet je Control-Vorlage einen neuen Entwurf, ein vorhandenes Control im selben Geltungsbereich oder das Auslassen an. Bei Bedarf **Vorbereitete Maßnahmen als Entwürfe hinzufügen** aktivieren. Eine erneute Übernahme verwendet die bereits erfassten Paketobjekte. Die beim Paketimport erzeugten Zuordnungen beginnen als Entwurf.
+3. **Vorhandenes Control zuordnen** zeigt ebenfalls passende Controls aus dem Bereich. Die Auswahl bietet Hinweise anhand gespeicherter Fundstellen zu ISO/IEC 27001:2022, Anhang A, und zum BSI IT-Grundschutz-Kompendium, Edition 2023. Für die Vorfallbehandlung kann etwa ein Control mit der Fundstelle `A.5.24` vorgeschlagen werden. **Unterstützend**, **Teilweise** oder **Vollständig** wählen, die Abdeckung für den konkreten Geltungsbereich begründen und mit **Übernehmen** bestätigen. Bestehende Nachweise und Prüfbezüge bleiben an ihrem Control verfügbar.
+4. Über **Anforderung öffnen → Bezüge → Abdeckung und Nachweise** lassen sich die bestätigte Zuordnung und die zugehörigen Nachweise gemeinsam prüfen. Belege auf Gültigkeit, Prüfumfang und die tatsächliche Umsetzung im Bereich abgleichen.
+
+Artikel 21 Absatz 2 Buchstabe b betrifft die Vorfallbehandlung. Das separate Paket **Meldung erheblicher Sicherheitsvorfälle** beschreibt die Meldepflichten nach Artikel 23. Nach Kenntnis eines erheblichen Vorfalls verlangt die Richtlinie die unverzügliche Frühwarnung binnen 24 Stunden und die unverzügliche Vorfallmeldung grundsätzlich binnen 72 Stunden. Für Anbieter von Vertrauensdiensten gilt bei erheblichen Vorfällen mit Auswirkungen auf die Erbringung ihrer Vertrauensdienste auch für die Vorfallmeldung eine Höchstfrist von 24 Stunden. Der Abschlussbericht folgt grundsätzlich binnen eines Monats nach der Vorfallmeldung. Für die Meldung Zuständigkeit, Erheblichkeit, Kenntniszeitpunkt und anwendbare Vorschriften im konkreten Fall prüfen. Die Arbeitsschritte im Paket dienen der Vorbereitung. Die verantwortliche Stelle übermittelt die Meldung über den zuständigen Kanal. [Richtlinie (EU) 2022/2555, Artikel 21 und 23](https://eur-lex.europa.eu/eli/dir/2022/2555/oj/deu)
+
+## 19. Controls verantworten und erneut prüfen
+
+**Kontrollprüfungen** unter **Prüfung und Nachweise** öffnen und ein Control auswählen. **Prüfplan und Verantwortung** ist auch im Control unter **Bezüge** und am zugeordneten Control in **NIS2-Maßnahmen** erreichbar. Rolle oder Person, Prüfturnus von 1 bis 60 Monaten, nächstes Prüfdatum und Begründung erfassen. Aus NIS2-Paketen ist der empfohlene Turnus zur Übernahme verfügbar.
+
+Mit **IT-Risiko zuordnen** ein gespeichertes Risiko aus demselben Geltungsbereich auswählen und erklären, wie das Control zur Behandlung beiträgt. Die Übersicht zeigt zu verknüpften Risiken vorhandene Ausgangs- und Restrisikowerte. Über den Risikotitel lässt sich der Eintrag öffnen.
+
+Nach Durchführung **Prüfung erfassen** wählen. Datum, Ergebnis sowie Stichprobe und Beobachtung dokumentieren. Für **Wirksam** ist ein dem Control zugeordneter Dateinachweis erforderlich, dessen Integrität und Gültigkeit für das Prüfdatum geprüft werden. Die Ergebnisse **Teilweise wirksam** und **Verbesserungsbedarf** helfen, Abweichungen zu dokumentieren. Die Historie hält verantwortliche Rolle, prüfendes Profil und Control-Fassung fest. Das Prüfdatum plus Prüfturnus ergibt die nächste Fälligkeit.
+
+Die Schaltfläche in der Kopfzeile führt zu den Prüfungen des geöffneten Projekts. Sie meldet überfällige Termine oder Termine von heute bis einschließlich 14 Tage im Voraus. Die Anzeige aktualisiert sich beim Öffnen des Projekts und während der Nutzung der lokalen Desktop-App. Im neu angelegten Nordlicht-Demo-Mandanten ist für die Rezertifizierung von Support-Konten ein Prüfplan mit IT-Risikobezug vorbereitet.
+
+## 20. Nachweisintegrität, Prüfverlauf und Prüfdossier
+
+Unter **Evidence** einen Nachweis auswählen und **Integrität prüfen** öffnen. Die Anwendung vergleicht den frisch berechneten SHA-256-Wert mit dem gespeicherten Dateihash und, soweit vorhanden, mit dem protokollierten Importwert und der lokalen Journalkette. Im Dialog stehen Herkunft, Gültigkeit und Verwendungen in Controls, Audit-Prüfständen, Kontrollprüfungen und abgeschlossenen Feststellungen. Bei älteren Dateien kann der einzeln protokollierte Importwert fehlen.
+
+Im Audit unter **Bezüge → Prüfungen dokumentieren** die Prüfansicht öffnen. Je geprüftem Control zeigt **Prüfverlauf öffnen** die bis zu 100 neuesten gespeicherten Prüfstände mit Ergebnis, Notiz, Control-Fassung, Quelle und gegebenenfalls dem Nachweis-Hash. Ein beim Upgrade übernommener Prüfstand wird als solcher gekennzeichnet. Die Historie reicht bei älteren Projekten bis zu den erhaltenen Prüfständen zurück.
+
+**Prüfdossier exportieren** schreibt ein unverschlüsseltes ZIP für den ausgewählten Prüfauftrag. `audit-manifest.json` enthält die gespeicherten Prüfstände, Kriterien, Quellen und Verweise auf die zugeordneten Originaldateien. Vor dem Schreiben prüft die Anwendung deren SHA-256-Werte gegen den Nachweisbestand und die exportierten Prüfstände. Eine Abweichung stoppt den Export. Die Prüfbarkeit beruht auf den lokal gespeicherten Prüfständen und Hashwerten. Für einen gesetzlichen Aufbewahrungsnachweis oder ein unveränderbares Archiv ist eine dafür betriebene Ablage erforderlich.
 
 ## Fachmodule und Demo-Arbeitsstrecken
 

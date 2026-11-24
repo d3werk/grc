@@ -26,7 +26,25 @@ public sealed partial class MainWindow:Window
         Opened+=(_,_)=>LoginScreen();
         Closing+=async(_,e)=>{if(_allowClose)return;e.Cancel=true;if(_busy)return;await Run(async()=>{if(!await CanLeaveFormAsync())return;await _workspace.LogoutAsync();_allowClose=true;_timer.Stop();Close();});};
         KeyDown+=async(_,e)=>{if(!_workspace.IsOpen)return;var command=e.KeyModifiers.HasFlag(KeyModifiers.Control)||e.KeyModifiers.HasFlag(KeyModifiers.Meta);if(command&&e.Key==Key.S){e.Handled=true;await Run(Save);}else if(command&&e.Key==Key.P){e.Handled=true;await Run(()=>Export(false));}};
-        _timer.Tick+=async(_,_)=>{if(!_busy&&_identity.User is not null&&_workspace.IsOpen&&_workspace.IsDirty)await Run(async()=>{await _workspace.AutosaveAsync();if(!HasFormChanges)_status.Text="Wiederherstellungsstand aktualisiert. Hauptdatei noch nicht gespeichert.";});};_timer.Start();
+        _timer.Tick += async (_, _) =>
+        {
+            if (_busy || _identity.User is null || !_workspace.IsOpen)
+                return;
+            if (_workspace.IsDirty)
+                await Run(async () =>
+                {
+                    await _workspace.AutosaveAsync();
+                    if (!HasFormChanges)
+                        _status.Text = "Wiederherstellungsstand aktualisiert. Hauptdatei noch nicht gespeichert.";
+                });
+            try { await UpdateControlReminderAsync(); }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException)
+            {
+                if (_workspace.IsOpen && !HasFormChanges)
+                    _status.Text = "Kontrolltermine konnten gerade nicht aktualisiert werden.";
+            }
+        };
+        _timer.Start();
     }
     private Button Button(string label, Func<Task> action, bool primary = false, string? help = null, Glyph? glyph = null)
     {
@@ -135,7 +153,7 @@ public sealed partial class MainWindow:Window
         var scopeRemoved = _scopeValue != "" && !scopes.Contains(_scopeValue, StringComparer.Ordinal);
         if (scopeRemoved)
             _scopeValue = "";
-        var options = new[] { new Choice("", "Alle Geltungsbereiche") }.Concat(scopes
+        var options = new[] { new Choice("", "Alle Bereiche") }.Concat(scopes
             .OrderBy(scope => scope, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(scope => scope, StringComparer.Ordinal)
             .Select(scope => new Choice(scope, scope))).ToList();
@@ -182,6 +200,8 @@ public sealed partial class MainWindow:Window
                 "ProcessOverview" => await ProcessOverviewPage(),
                 "InternalAudit" => await InternalAuditOverviewPage(),
                 "InternalControl" => await InternalControlPage(),
+                "ControlReviews" => await ControlReviewsPage(),
+                "Nis2" => await Nis2Page(),
                 "ResilienceOverview" => await ResilienceOverviewPage(),
                 "ContinuityOverview" => await ContinuityOverviewPage(),
                 "AiOverview" => await AiOverviewPage(),
@@ -199,6 +219,7 @@ public sealed partial class MainWindow:Window
             var tenantName = _tenants.FirstOrDefault(tenant => tenant.Id == _activeTenantId)?.Name ?? _workspace.Name;
             _context.Text = $"{tenantName} / {(_topic.SelectedItem as Choice)?.Title} / {Pages[_page]}";
             UpdateShellNavigation();
+            await UpdateControlReminderAsync();
             UpdateFormStatus();
         }
         catch
@@ -275,6 +296,8 @@ public sealed partial class MainWindow:Window
         _searchValue = "";
         _statusFilter = "";
         _showResidualRiskMatrix = false;
+        _nis2PackageKey = "21a";
+        _nis2Scope = "";
         _scope.ItemsSource = null;
         _search.Text = "";
     }

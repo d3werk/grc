@@ -157,8 +157,6 @@ public sealed partial class MainWindow
     {
         if (!all && _activeTenantId is null)
             throw new InvalidOperationException("Bitte zuerst einen Mandanten auswählen.");
-        if (!await SaveFormAsync())
-            return;
         var filename = all ? $"D3-GRC-Gesamtsicherung-{DateTime.Today:yyyy-MM-dd}" : $"D3-GRC-Mandant-{DateTime.Today:yyyy-MM-dd}";
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
@@ -171,6 +169,8 @@ public sealed partial class MainWindow
         if (file is null)
             return;
         var path = file.TryGetLocalPath() ?? throw new IOException("Bitte einen lokalen Speicherort wählen.");
+        if (!await SaveFormAsync())
+            return;
         var key = await TenantStore.ExportAsync(_workspace, path, all ? null : _activeTenantId);
         _status.Text = all ? "Mandantensicherung gespeichert." : "Mandant mit Einstellungen und Dokumenten exportiert.";
         await ShowBackupKeyAsync(key);

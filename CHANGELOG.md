@@ -1,3 +1,10 @@
+# In Entwicklung · NIS2, Kontrollprüfungen und Dokumentvorlagen im Desktop
+
+- NIS2-Maßnahmenkatalog mit bereichsbezogener Paketübernahme, separatem Meldethema und begründeter Wiederverwendung vorhandener Controls anhand ihrer Fundstellen.
+- Kontrollprüfungen mit Verantwortung, Prüfturnus, Fälligkeitsübersicht, IT-Risikobezügen und dokumentiertem Ergebnis.
+- Integritätsprüfung für Nachweise, gespeicherte Audit-Prüfstände und Prüfdossier mit SHA-256-geprüften Originaldateien.
+- Fachliche Dokumentvorlagen mit Vorschau und Entwurfsübernahme, zusätzliche Formatierungsaktionen und einheitliches Abbrechen von Dialogen und Entwurfsbearbeitungen.
+
 # In Entwicklung · Mandanten und Fachmodule im Desktop
 
 - Lokaler Unternehmensassistent mit branchenbezogenen Themenvorschlägen und intern gespeichertem Mandanten. Mandantenwahl über das Dropdown der laufenden Profilanmeldung.

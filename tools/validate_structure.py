@@ -271,6 +271,39 @@ check('Desktop process topic has the internal source',
       db.execute("SELECT SourceId FROM TopicSources WHERE TopicId='PROCESS'").fetchall() == [('INTERNAL',)])
 check('Desktop migration foreign keys', db.execute('PRAGMA foreign_key_check').fetchall() == [])
 
+# Professional templates have explicit topic assignments and preserve local edits.
+previous_templates = db.execute('SELECT * FROM Templates ORDER BY Id').fetchall()
+professional_migration = (R/'src/D3.Grc.Core/Migrations/012-professional-templates.sql').read_text()
+db.executescript(professional_migration)
+check('Professional template migration retains previous templates and edits', db.execute(
+    "SELECT * FROM Templates WHERE Id NOT LIKE 'D3-PRO-%' ORDER BY Id").fetchall() == previous_templates)
+professional_rows = db.execute("""SELECT Id,Kind,SourceId,Title,Locator,Body,Revision,CustomBody
+    FROM Templates WHERE Id LIKE 'D3-PRO-%' ORDER BY Id""").fetchall()
+professional_areas = {'PRIVACY', 'ISMS', 'NIS2', 'AI', 'CLOUD', 'BCM', 'OSS', 'DORA', 'PROCESS', 'AUDIT',
+                      'IKS', 'RESILIENCE', 'CLM', 'SUPPLIER'}
+check('Professional templates cover fourteen areas',
+      len(professional_rows) == 19 and {row[0].split('-')[2] for row in professional_rows} == professional_areas)
+check('Professional templates have distinct titles', len({row[3].casefold() for row in professional_rows}) == 19)
+for template_id, kind, source_id, title, locator, body, revision, custom in professional_rows:
+    check(f'Professional template editable defaults {template_id}',
+          kind in {'Policy', 'Procedure', 'WorkInstruction', 'Guidance', 'Standard'} and revision == 1 and custom == ''
+          and bool(title.strip() and locator.strip()))
+    check(f'Professional template content {template_id}',
+          len(body) >= 1600 and len(re.findall(r'^## \S', body, re.MULTILINE)) >= 4
+          and re.search(r'^1\. \S', body, re.MULTILINE) is not None
+          and re.search(r'^\|(?:\s*-+\s*\|){2,}\s*$', body, re.MULTILINE) is not None)
+    template_topics = {row[0] for row in db.execute('SELECT TopicId FROM DesktopTemplateTopics WHERE TemplateId=?', (template_id,))}
+    source_topics = {row[0] for row in db.execute('SELECT TopicId FROM TopicSources WHERE SourceId=?', (source_id,))}
+    check(f'Professional template topic and source {template_id}', bool(template_topics) and template_topics <= source_topics)
+db.execute("UPDATE Templates SET CustomBody='Edited local workflow' WHERE Id='D3-PRO-PROCESS-PROFILE'")
+db.executescript(professional_migration)
+check('Professional template seed rerun retains local edit', db.execute(
+    "SELECT CustomBody FROM Templates WHERE Id='D3-PRO-PROCESS-PROFILE'").fetchone() == ('Edited local workflow',))
+check('Professional template migration foreign keys', db.execute('PRAGMA foreign_key_check').fetchall() == [])
+
+for version in ('013-nis2-packages', '014-evidence-integrity', '015-control-reviews'):
+    db.executescript((R/f'src/D3.Grc.Core/Migrations/{version}.sql').read_text())
+
 # Compile static parameterized SQL against the migrated schema. No C# execution.
 db.executescript("""CREATE TABLE Profiles(Name TEXT PRIMARY KEY,Salt BLOB,Verifier BLOB,Failures INTEGER,LockedUntil TEXT);
 CREATE TABLE ProfileVaultSalts(Name TEXT PRIMARY KEY REFERENCES Profiles(Name),Salt BLOB NOT NULL);""")

@@ -23,21 +23,29 @@ public sealed partial class MainWindow
         var openRisks = _entries.Where(entry => entry.Kind == "Risk" && entry.Status != "Erledigt").ToArray();
 
         var controlIds = controls.Select(control => control.Id).ToHashSet();
-        var evidence = await _workspace.ControlEvidenceTraceAsync(controlIds, now);
-        var evidenceCount = evidence.SelectMany(group => group.Select(proof => proof.Id)).Distinct().Count();
-        var controlsWithCurrentEvidence = evidence.Where(group => group.Any(proof => proof.Status == TraceEvidenceStatus.Current))
-            .Select(group => group.Key).ToHashSet();
-        var requirementIds = requirements.Select(requirement => requirement.Id).ToHashSet();
+        var requirementScopes = requirements.ToDictionary(requirement => requirement.Id, requirement => requirement.Scope);
+        var projectControlScopes = _all.Where(entry => entry.Kind == "Control").ToDictionary(entry => entry.Id, entry => entry.Scope);
         var requirementMappings = _mappings.Where(mapping =>
             mapping.Type == "Anforderung → Control" && mapping.Approval == "Bestätigt" &&
-            requirementIds.Contains(mapping.From) && controlIds.Contains(mapping.To)).ToArray();
+            requirementScopes.TryGetValue(mapping.From, out var requirementScope) &&
+            (_topicId == Nis2Catalog.Topic
+                ? mapping.Scope == requirementScope && projectControlScopes.TryGetValue(mapping.To, out var controlScope) &&
+                  controlScope == requirementScope
+                : controlIds.Contains(mapping.To))).ToArray();
+        var evidenceControlIds = controlIds.Concat(requirementMappings.Select(mapping => mapping.To)).ToHashSet();
+        var evidence = await _workspace.ControlEvidenceTraceAsync(evidenceControlIds, now);
+        var evidenceCount = evidence.Where(group => controlIds.Contains(group.Key))
+            .SelectMany(group => group.Select(proof => proof.Id)).Distinct().Count();
+        var controlsWithCurrentEvidence = evidence.Where(group => group.Any(proof => proof.Status == TraceEvidenceStatus.Current))
+            .Select(group => group.Key).ToHashSet();
+        var currentEvidenceCount = controlIds.Count(controlsWithCurrentEvidence.Contains);
         var mappedRequirements = requirementMappings.Select(mapping => mapping.From).Distinct().Count();
         var requirementsWithEvidence = requirementMappings
             .Where(mapping => controlsWithCurrentEvidence.Contains(mapping.To))
             .Select(mapping => mapping.From).Distinct().Count();
 
         var openFindingCount = findings.Count(finding => finding.Status != "Geschlossen");
-        var missingEvidenceCount = controls.Length - controlsWithCurrentEvidence.Count;
+        var missingEvidenceCount = controls.Length - currentEvidenceCount;
         var overdueCount = measures.Count(measure =>
             measure.Status != "Erledigt" && DateOnly.TryParse(measure.DueDate, out var due) && due < today);
         var missingOwnerCount = _entries.Count(entry => string.IsNullOrWhiteSpace(entry.Owner));
@@ -213,7 +221,9 @@ public sealed partial class MainWindow
 
         var coverage = Ui.Card(Ui.Stack(
             SectionHeading("Anforderungen, Controls und Nachweise", Glyph.Mapping),
-            Ui.Secondary("Gezählt werden bestätigte Verknüpfungen zwischen Datensätzen im aktuellen Filter."),
+            Ui.Secondary(_topicId == Nis2Catalog.Topic
+                ? "Bestätigte Verknüpfungen im selben Geltungsbereich zählen auch für Controls aus anderen Themen."
+                : "Gezählt werden bestätigte Verknüpfungen zwischen Datensätzen im aktuellen Filter."),
             Ratio("Anforderungen mit verknüpftem Control", mappedRequirements, requirements.Length),
             Ratio("Verknüpfte Anforderungen mit Nachweis", requirementsWithEvidence, mappedRequirements,
                 "Mindestens ein zugeordnetes Control hat einen zeitlich gültigen Nachweis."),
@@ -286,7 +296,7 @@ public sealed partial class MainWindow
             Distribution("Umsetzungsstand der Controls", "Control", controls)));
 
         var proofCoverage = Ui.Card(Ui.Stack(SectionHeading("Nachweisabdeckung", Glyph.Evidence),
-            Ratio("Controls mit zeitlich gültigem Nachweis", controlsWithCurrentEvidence.Count, controls.Length,
+            Ratio("Controls mit zeitlich gültigem Nachweis", currentEvidenceCount, controls.Length,
                 "Für die Verwendung in einer Prüfung wird zusätzlich die Dateiintegrität geprüft."),
             Ui.Text($"{missingEvidenceCount} Controls ohne zeitlich gültigen Nachweis"),
             OpenRegister("Nachweise öffnen", "Evidence")));

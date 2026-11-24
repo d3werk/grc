@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Layout;
@@ -61,8 +62,10 @@ internal static partial class DocumentPreview
             if (rich is null && heading is >= 1 and <= 4 && line.Length > heading + 1 && line[heading] == ' ')
             {
                 var fontSize = heading switch { 1 => 25, 2 => 19, _ => 16 };
-                var block = Ui.Heading(line[(heading + 1)..], fontSize, heading);
-                block.Margin = new Thickness(0, content.Children.Count == 0 ? 0 : 6, 0, 0);
+                var block = Paragraph(line[(heading + 1)..]);
+                block.FontSize = fontSize;
+                block.FontWeight = FontWeight.SemiBold;
+                FormatHeading(block, heading);
                 content.Children.Add(block);
                 continue;
             }
@@ -92,7 +95,7 @@ internal static partial class DocumentPreview
                 var item = ReadParagraph(line[marker.Length..], marker.Length);
                 var label = Ui.Secondary(marker.Groups["number"].Success ? marker.Groups["number"].Value : "•");
                 label.Margin = new Thickness(0, 0, 8, 0);
-                var row = new DockPanel();
+                var row = new DockPanel { Margin = new Thickness(8, 0, 0, 0) };
                 DockPanel.SetDock(label, Dock.Left);
                 row.Children.Add(label);
                 row.Children.Add(item);
@@ -108,7 +111,9 @@ internal static partial class DocumentPreview
 
         if (lines.Length > count)
             content.Children.Add(Ui.Notice($"Die Vorschau zeigt die ersten {MaximumLines} Zeilen. Der gesamte Text steht im Editor."));
-        return Paper(content);
+        var paper = Paper(content);
+        paper.MaxWidth = 1024;
+        return paper;
     }
 
     public static Control CreatePlain(string text)
@@ -169,6 +174,8 @@ internal static partial class DocumentPreview
                 inlines.Add(new Run(value[offset..match.Index]));
             if (match.Groups["strong"].Success)
                 inlines.Add(new Run(match.Groups["strong"].Value) { FontWeight = FontWeight.SemiBold });
+            else if (match.Groups["italic"].Success)
+                inlines.Add(new Run(match.Groups["italic"].Value) { FontStyle = FontStyle.Italic });
             else
                 inlines.Add(new Run(match.Groups["code"].Value) { FontFamily = FontFamily.Parse("monospace") });
             offset = match.Index + match.Length;
@@ -182,6 +189,17 @@ internal static partial class DocumentPreview
     {
         var end = start + value.Length;
         var block = Ui.Text("");
+        block.LineHeight = 21;
+        while (spanIndex < spans.Count && spans[spanIndex].Start + spans[spanIndex].Length <= start)
+            spanIndex++;
+        if (spanIndex < spans.Count && spans[spanIndex].Start <= start)
+        {
+            var style = spans[spanIndex].Style;
+            if (style.HasFlag(RichTextStyle.Heading))
+                FormatHeading(block, 1);
+            else if (style.HasFlag(RichTextStyle.Subheading))
+                FormatHeading(block, 2);
+        }
         var runs = block.Inlines ??= new InlineCollection();
         var cursor = start;
         while (spanIndex < spans.Count && spans[spanIndex].Start < end)
@@ -214,6 +232,14 @@ internal static partial class DocumentPreview
         if (cursor < end)
             runs.Add(new Run(value[(cursor - start)..]));
         return block;
+    }
+
+    private static void FormatHeading(TextBlock block, int level)
+    {
+        block.LineHeight = double.NaN;
+        block.Foreground = Ui.Green;
+        block.Margin = new Thickness(0, level == 1 ? 4 : 7, 0, 0);
+        AutomationProperties.SetHeadingLevel(block, level);
     }
 
     private static string[]? ReadTableRow(string value)
@@ -261,6 +287,6 @@ internal static partial class DocumentPreview
     [GeneratedRegex(@"^(?:(?<number>[0-9]+[.)])|[-*•])\s+")]
     private static partial Regex ListMarker();
 
-    [GeneratedRegex(@"\*\*(?<strong>[^*]+)\*\*|`(?<code>[^`]+)`")]
+    [GeneratedRegex(@"\*\*(?<strong>[^*]+)\*\*|(?<!\*)\*(?<italic>[^*]+)\*(?!\*)|`(?<code>[^`]+)`")]
     private static partial Regex InlineMarkup();
 }

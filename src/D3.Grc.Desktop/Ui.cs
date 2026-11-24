@@ -195,16 +195,83 @@ internal static class Ui
         AutomationProperties.SetName(tab, title);
         return help is null ? tab : Help(tab, help);
     }
-    public static async Task<string?> Prompt(Window owner,string title,bool secret=false)
+    public static async Task<string?> Prompt(Window owner, string title, bool secret = false)
     {
-        var w=new Window{Title="D3 GRC",Width=600,SizeToContent=SizeToContent.Height,WindowStartupLocation=WindowStartupLocation.CenterOwner};var input=Input();if(secret)input.PasswordChar='*';var ok=new Button{Content="Weiter",MinHeight=38};var cancel=new Button{Content="Abbrechen",MinHeight=38};ok.Click+=(_,_)=>{if(!string.IsNullOrWhiteSpace(input.Text))w.Close(input.Text);};cancel.Click+=(_,_)=>w.Close(null);var p=Stack(Field(title,input),Row(cancel,ok));p.Margin=new Thickness(24);w.Content=p;var value=await w.ShowDialog<string?>(owner);input.Text="";return value;
+        var window = new Window
+        {
+            Title = "D3 GRC", Width = 600, SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        var input = Input();
+        if (secret)
+            input.PasswordChar = '*';
+        var ok = new Button { Content = "Weiter", IsDefault = true, IsEnabled = false, MinHeight = 38 };
+        var cancel = new Button { Content = "Abbrechen", IsCancel = true, MinHeight = 38 };
+        input.TextChanged += (_, _) => ok.IsEnabled = !string.IsNullOrWhiteSpace(input.Text);
+        ok.Click += (_, _) =>
+        {
+            if (!string.IsNullOrWhiteSpace(input.Text))
+                window.Close(input.Text);
+        };
+        cancel.Click += (_, _) => window.Close(null);
+        window.Opened += (_, _) => input.Focus();
+        var content = Stack(Field(title, input), Row(cancel, ok));
+        content.Margin = new Thickness(24);
+        window.Content = content;
+        try
+        {
+            return await window.ShowDialog<string?>(owner);
+        }
+        finally
+        {
+            input.Text = "";
+        }
     }
-    public static async Task<bool> Confirm(Window owner,string text,string yes="Bestätigen")
+
+    public static Task<bool> Confirm(Window owner, string text, string yes = "Bestätigen")
     {
-        var w=new Window{Title="D3 GRC",Width=640,SizeToContent=SizeToContent.Height,WindowStartupLocation=WindowStartupLocation.CenterOwner};var ok=new Button{Content=yes,MinHeight=38};var cancel=new Button{Content="Abbrechen",MinHeight=38};ok.Click+=(_,_)=>w.Close(true);cancel.Click+=(_,_)=>w.Close(false);var p=Stack(Text(text),Row(cancel,ok));p.Margin=new Thickness(24);w.Content=p;return await w.ShowDialog<bool>(owner);
+        var window = new Window
+        {
+            Title = "D3 GRC", Width = 640, SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        var ok = new Button { Content = yes, MinHeight = 38 };
+        var cancel = new Button { Content = "Abbrechen", IsCancel = true, MinHeight = 38 };
+        ok.Click += (_, _) => window.Close(true);
+        cancel.Click += (_, _) => window.Close(false);
+        window.Opened += (_, _) => cancel.Focus();
+        var content = Stack(Text(text), Row(cancel, ok));
+        content.Margin = new Thickness(24);
+        window.Content = content;
+        return window.ShowDialog<bool>(owner);
     }
-    public static async Task<object?> Pick(Window owner,string title,IEnumerable<object> choices)
+
+    public static Task<object?> Pick(Window owner, string title, IEnumerable<object> choices)
     {
-        var w=new Window{Title=title,Width=760,Height=500,WindowStartupLocation=WindowStartupLocation.CenterOwner};var list=new ListBox{ItemsSource=choices.ToList()};var ok=new Button{Content="Auswählen"};ok.Click+=(_,_)=>w.Close(list.SelectedItem);var cancel=new Button{Content="Abbrechen"};cancel.Click+=(_,_)=>w.Close(null);var heading=Text(title,18,true);AutomationProperties.SetLabeledBy(list,heading);var p=Fill(heading,list,Row(cancel,ok));p.Margin=new Thickness(20);w.Content=p;return await w.ShowDialog<object?>(owner);
+        var window = new Window
+        {
+            Title = title, Width = 760, Height = 500, WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        var list = new ListBox { ItemsSource = choices.ToList() };
+        var ok = new Button { Content = "Auswählen", IsDefault = true, IsEnabled = false, MinHeight = 38 };
+        var cancel = new Button { Content = "Abbrechen", IsCancel = true, MinHeight = 38 };
+        list.SelectionChanged += (_, _) => ok.IsEnabled = list.SelectedItem is not null;
+        ok.Click += (_, _) =>
+        {
+            if (list.SelectedItem is { } selected)
+                window.Close(selected);
+        };
+        cancel.Click += (_, _) => window.Close(null);
+        window.Opened += (_, _) =>
+        {
+            if (!list.Focus())
+                cancel.Focus();
+        };
+        var heading = Text(title, 18, true);
+        AutomationProperties.SetLabeledBy(list, heading);
+        var content = Fill(heading, list, Row(cancel, ok));
+        content.Margin = new Thickness(20);
+        window.Content = content;
+        return window.ShowDialog<object?>(owner);
     }
 }

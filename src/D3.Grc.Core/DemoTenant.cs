@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Data.Sqlite;
 using static D3.Grc.Core.Database;
 
 namespace D3.Grc.Core;
@@ -90,6 +91,7 @@ public sealed partial class Workspace
             }
 
             SeedDemoAuditIks(connection, transaction);
+            SeedDemoNis2(connection, transaction, today);
             foreach (var (id, probability, impact, remainingProbability, remainingImpact) in new[]
             {
                 ("demo-risk-01", 4, 5, (int?) 2, (int?) 4),
@@ -117,5 +119,31 @@ public sealed partial class Workspace
             Exec(connection, transaction, "INSERT INTO Metadata(Key,Value) VALUES('DemoSeeded','1')");
             return true;
         });
+    }
+
+    private static void SeedDemoNis2(SqliteConnection connection, SqliteTransaction transaction, DateOnly today)
+    {
+        const string controlId = "demo-control-01";
+        const string scope = "Kundenservice";
+        Exec(connection, transaction,
+            "INSERT INTO RecordSources(RecordId,SourceId,Locator,Role) VALUES($p0,'ISO27001','A.5.18','Sekundär')", controlId);
+        var package = Nis2Catalog.Get("21i");
+        var access = package.Controls.Where(control => control.Key == "ACCESS").ToArray();
+        var result = ApplyNis2Package(connection, transaction, package, scope, true,
+            new Dictionary<string, string> { ["ACCESS"] = controlId }, null, access, true);
+        Exec(connection, transaction, """
+            UPDATE Links SET Reason=$p0
+            WHERE SourceRecordId=$p1 AND TargetRecordId=$p2 AND Type=$p3
+            """, "Synthetisches Beispiel: Die Rezertifizierung deckt die regelmäßige Prüfung von Support-Konten ab. " +
+            "Eintritt, Austritt und Inventar sind gesondert zu beurteilen.", result.State.RequirementId, controlId, RequirementControlRelation);
+        Exec(connection, transaction, """
+            UPDATE MappingAssessments SET Coverage='Teilweise',Approval='Bestätigt'
+            WHERE LinkId IN(SELECT Id FROM Links WHERE SourceRecordId=$p0 AND TargetRecordId=$p1 AND Type=$p2)
+            """, result.State.RequirementId, controlId, RequirementControlRelation);
+        Exec(connection, transaction, "INSERT INTO ControlReviewSchedules VALUES($p0,3,$p1,1)",
+            controlId, ReviewDate(today.AddDays(7)));
+
+        var reporting = Nis2Catalog.Get("23");
+        ApplyNis2Package(connection, transaction, reporting, scope, true, new Dictionary<string, string>(), null, reporting.Controls, true);
     }
 }

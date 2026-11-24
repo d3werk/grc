@@ -293,6 +293,14 @@ public sealed partial class MainWindow
         var workflow=Ui.Stack(Ui.Text("Verknüpfungen",18,true),related,Button("Mappings öffnen",async()=>{if(!await CanLeaveFormAsync())return;_page="Mappings";await Render();}));
         if (module is not null)
             workflow.Children.Insert(1, Button("Bezug anlegen", () => AddModuleRelationAsync(selected), glyph: Glyph.Mapping));
+        if (kind == "Control")
+            workflow.Children.Insert(1, Button("Prüfplan und Verantwortung", async () =>
+            {
+                if (selected is null)
+                    throw new ArgumentException("Bitte zuerst ein gespeichertes Control auswählen.");
+                if (await CanLeaveFormAsync())
+                    await OpenControlReviewPlannerAsync(selected.Id);
+            }, glyph: Glyph.Tasks));
         if (isRisk)
             workflow.Children.Add(Ui.Notice("Nachweise sind über zugeordnete Controls erreichbar."));
         if (kind == "Requirement")
@@ -348,11 +356,11 @@ public sealed partial class MainWindow
         save.IsEnabled = !supplierOverview;
         var cancel = Button("Abbrechen", async () =>
         {
-            if (!await CanLeaveFormAsync())
+            if (!await ConfirmDiscardFormAsync())
                 return;
             await LoadEntry(selected);
             AcceptFormState();
-        });
+        }, help: "Kehrt nach Bestätigung zur gespeicherten Fassung zurück.");
         var duplicate=Button("Duplizieren",async()=>{if(selected is null)return;if(!await CanLeaveFormAsync())return;await LoadEntry(selected);selected=null;list.SelectedItem=null;code.Text=(code.Text??"")+"-KOPIE";SetStatusChoices(Entry.Statuses(kind)[0]);
             if (reviews is not null && addReview is not null){due.Text="";PresentSupplierReviews(reviews,addReview,null,[]);}
             if (riskAssessments is not null && assessRisk is not null)

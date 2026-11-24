@@ -110,7 +110,13 @@ public sealed partial class Workspace
             }).ToList()));
         }
         AddRiskAssessmentExport(c, sheets, meta, entries.Where(entry => entry.Kind == "Risk"));
-        var links=Query(c,null,"SELECT l.Id,l.SourceRecordId,l.TargetRecordId,l.Type,l.Reason,l.SourceId,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,'') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>Enumerable.Range(0,8).Select(r.GetString).ToArray()).Where(x=>ids.Contains(x[1])||ids.Contains(x[2])).ToList();sheets.Add(new("Mappings",["ID","Ausgangs-ID","Ziel-ID","Typ","Begründung","Quelle","Abdeckung","Scope"],links));
+        var links = Query(c, null, """
+            SELECT l.Id,l.SourceRecordId,l.TargetRecordId,l.Type,l.Reason,l.SourceId,
+                   COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,''),COALESCE(a.Approval,'Entwurf')
+            FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id
+            """, row => Enumerable.Range(0, 9).Select(row.GetString).ToArray())
+            .Where(row => ids.Contains(row[1]) || ids.Contains(row[2])).ToList();
+        sheets.Add(new("Mappings", ["ID", "Ausgangs-ID", "Ziel-ID", "Typ", "Begründung", "Quelle", "Abdeckung", "Scope", "Freigabestand"], links));
         var proofIds=Query(c,null,"SELECT EvidenceId,ControlId FROM EvidenceLinks",r=>(Evidence:r.GetString(0),Control:r.GetString(1))).Where(x=>ids.Contains(x.Control)).Select(x=>x.Evidence).ToHashSet();
         sheets.Add(new("Evidence",["ID","Titel","Primär-Control-ID","Quelle","Datei","SHA256","Erhoben","Gültig bis","Herkunft"],Proofs(c,null).Where(p=>ids.Contains(p.ControlId)||proofIds.Contains(p.Id)).Select(p=>new[]{p.Id,p.Title,p.ControlId,p.SourceId,p.FileName,p.Hash,p.Collected,p.ValidUntil,p.Origin}).ToList()));
         sheets.Add(new("AuditTests",["ID","Audit-ID","Control-ID","Quelle","Evidence-ID","Ergebnis","Notiz","Prüfzeitpunkt"],Query(c,null,"SELECT * FROM AuditTests",r=>Enumerable.Range(0,8).Select(i=>r.IsDBNull(i)?"":r.GetString(i)).ToArray()).Where(x=>ids.Contains(x[1])).ToList()));

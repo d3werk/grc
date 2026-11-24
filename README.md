@@ -10,6 +10,8 @@ Längere Fachtexte lassen sich mit dem Rich-Text-Editor bearbeiten. Über die Ma
 
 Der Unternehmensassistent öffnet sich nach der ersten lokalen Anmeldung. Er schlägt je nach Unternehmensart passende Merkmale und Themen vor. Im Desktop-Menü stehen ein Mandanten-Dropdown, verschlüsselter Einzelexport, Gesamtsicherung und Wiederherstellung bereit. Die Demo **Nordlicht Service GmbH** enthält synthetische Prozesse, Risiken, Prüfungen, Controls, Resilienztests, BCM-Übungen, KI-Systeme und Verträge. [Anwenderhandbuch](docs/ANWENDERHANDBUCH.md)
 
+Unter **NIS2-Maßnahmen** stehen Pakete für Artikel 21 Absatz 2 und Artikel 23 bereit. Vorhandene ISO- oder BSI-Controls lassen sich mit den Anforderungen verknüpfen und zusammen mit ihren Nachweisen weiterverwenden. **Kontrollprüfungen** zeigt Verantwortung, Prüfintervall, anstehende Termine und zugeordnete IT-Risiken. Audits können einen Prüfverlauf mit überprüften Originaldateien exportieren. In neu angelegten Demo-Mandanten sind ein NIS2-Mapping für die Zugriffssteuerung, ein verknüpftes IT-Risiko und ein separater Meldeprozess vorbereitet. [Anwenderhandbuch](docs/ANWENDERHANDBUCH.md)
+
 ### Ausgangsbasis der Desktop-Migration
 Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser Sitzung nicht als Dateien verfügbar. Deshalb ist dies eine konsolidierte neue Solution, kein gegen dein Repository getesteter In-place-Patch. Die bekannte 0.5-Datenbankstruktur und das D3GRC005-Containerformat werden weiter unterstützt; eine additive Migration ist enthalten. Die Migration wurde mit einer kompatiblen SQL-Testdatenbank geprüft, NICHT mit deiner persönlichen Projektdatei oder über die native C#-Laufzeit.
 
@@ -49,7 +51,7 @@ Die lokale Anmeldung benötigt ein eigenes Profilpasswort mit mindestens zwölf 
 ### Vorbefüllung bei einem neuen Projekt
 - 8 Fachthemen plus Zuordnung prüfen.
 - 13 Quellen: 12 externe offizielle Referenzen plus interner D3-Arbeitsstandard.
-- 157 eigene editierbare Vorlagen, darunter 27 ausführliche Arbeitshilfen und vier vollständige Richtlinienentwürfe aus 0.9.0.
+- 176 eigene editierbare Vorlagen, darunter 19 erweiterte Fachvorlagen für 14 Themenbereiche.
 - 36 vorbereitete Datensätze: 18 Anforderungen und 18 Controls, alle Entwurf.
 - 12 nicht automatisch aktive Mapping-Vorschläge.
 - 48 Glossarbegriffe.
