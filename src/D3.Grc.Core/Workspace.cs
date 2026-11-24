@@ -246,7 +246,13 @@ public sealed partial class Workspace:IDisposable
     public Task<List<Source>> SourcesAsync(string topic="")=>Read(c=>Query(c,null,"SELECT Id,Title,Url,Reference,Summary,CustomSummary,CheckState,LastSuccess FROM Sources s WHERE $p0='' OR EXISTS(SELECT 1 FROM TopicSources t WHERE t.SourceId=s.Id AND t.TopicId=$p0) ORDER BY Title",r=>new Source(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7)),topic));
     public Task<List<Entry>> EntriesAsync(string topic="",string kind="",string scope="")=>Read(c=>Query(c,null,"SELECT * FROM Records r WHERE ($p0='' OR EXISTS(SELECT 1 FROM RecordTopics t WHERE t.RecordId=r.Id AND t.TopicId=$p0)) AND ($p1='' OR Kind=$p1) AND ($p2='' OR Scope=$p2) ORDER BY Code,Title",ReadEntry,topic,kind,scope));
     public Task<List<Choice>> RecordTopicsAsync(string id)=>Read(c=>Query(c,null,"SELECT t.Id,t.Title FROM Topics t JOIN RecordTopics r ON r.TopicId=t.Id WHERE r.RecordId=$p0",r=>new Choice(r.GetString(0),r.GetString(1)),id));
-    public Task<List<TextTemplate>> TemplatesAsync(string topic="",string kind="")=>Read(c=>Query(c,null,"SELECT Id,Kind,Title,SourceId,Locator,Body,CustomBody FROM Templates x WHERE ($p0='' OR EXISTS(SELECT 1 FROM TopicSources s WHERE s.SourceId=x.SourceId AND s.TopicId=$p0)) AND ($p1='' OR Kind=$p1) ORDER BY Title",r=>new TextTemplate(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6)),topic,kind));
+    public Task<List<TextTemplate>> TemplatesAsync(string topic = "", string kind = "") => Read(c => Query(c, null, """
+        SELECT Id,Kind,Title,SourceId,Locator,Body,CustomBody FROM Templates x
+        WHERE ($p0='' OR EXISTS(SELECT 1 FROM DesktopTemplateTopics t WHERE t.TemplateId=x.Id AND t.TopicId=$p0)
+            OR (NOT EXISTS(SELECT 1 FROM DesktopTemplateTopics t WHERE t.TemplateId=x.Id)
+                AND EXISTS(SELECT 1 FROM TopicSources s WHERE s.SourceId=x.SourceId AND s.TopicId=$p0)))
+          AND ($p1='' OR Kind=$p1) ORDER BY Title
+        """, r => new TextTemplate(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6)),topic,kind));
     public Task<List<Choice>> MappingSuggestionsAsync(string topic)=>Read(c=>Query(c,null,"SELECT m.RequirementId||'|'||m.ControlId,a.Title||' → '||b.Title||char(10)||m.Reason FROM MappingSuggestions m JOIN Templates a ON a.Id=m.RequirementId JOIN Templates b ON b.Id=m.ControlId WHERE $p0='' OR EXISTS(SELECT 1 FROM TopicSources s WHERE s.SourceId=a.SourceId AND s.TopicId=$p0)",r=>new Choice(r.GetString(0),r.GetString(1)),topic));
     private static bool SourceFits(SqliteConnection c,SqliteTransaction t,string source,string topic)=>Scalar(c,t,"SELECT SourceId FROM TopicSources WHERE SourceId=$p0 AND TopicId=$p1",source,topic)!="";
     public async Task SaveEntryAsync(Entry e,string topic,string reason,SupplierDetails? supplierDetails=null,
@@ -265,6 +271,7 @@ public sealed partial class Workspace:IDisposable
             if(old is not null && IsWorkflowLocked(old))throw new ArgumentException("Abgeschlossener Datensatz gesperrt.");
             if(IsWorkflowLocked(e))throw new ArgumentException("Abschluss nur über geprüften Workflow.");
             ValidateProcessScopeChange(c, t, e, old);
+            ValidateNis2PackageEdit(c, t, e, old);
             var oldFields = ReadModuleFields(c, t, e.Id);
             if (newFields is null)
                 DesktopModules.ValidateFields(e, oldFields);
@@ -304,6 +311,8 @@ public sealed partial class Workspace:IDisposable
         if ((e.Kind is "Control" or "Measure") &&
             Scalar(c, t, "SELECT Id FROM IksChecks WHERE ControlId=$p0 OR MeasureId=$p0 LIMIT 1", id) != "")
             throw new InvalidOperationException("Der Datensatz gehört zu einer gespeicherten IKS-Prüfung und bleibt für die Historie erhalten.");
+        if (e.Kind == "Control" && Scalar(c, t, "SELECT Id FROM ControlReviews WHERE ControlId=$p0 LIMIT 1", id) != "")
+            throw new InvalidOperationException("Das Control bleibt als Referenz für gespeicherte Prüfungen erhalten.");
         Log(c,t,"EntryBefore",id,JsonSerializer.Serialize(e));
         Exec(c,t,"DELETE FROM Records WHERE Id=$p0",id);
         return true;

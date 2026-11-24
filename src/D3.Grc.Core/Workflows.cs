@@ -18,6 +18,7 @@ public sealed partial class Workspace
         ["Finding → Control"] = ("Finding", "Control"),
         ["Maßnahme → Finding"] = ("Measure", "Finding"),
         ["Maßnahme → Risiko"] = ("Measure", "Risk"),
+        ["Maßnahme → Control"] = ("Measure", "Control"),
         ["KI-System → Control"] = ("AiSystem", "Control"),
         ["OSS-Komponente → Control"] = ("OssComponent", "Control"),
         ["Dienstleister → Control"] = ("Supplier", "Control"),
@@ -53,12 +54,34 @@ public sealed partial class Workspace
         if(!DateTimeOffset.TryParse(p.ValidUntil,out var until)||!DateTimeOffset.TryParse(p.Collected,out var collected)||until<=at||collected>at)throw new ArgumentException("Nachweis war zum Prüfzeitpunkt nicht gültig.");
         using var cmd=Command(c,t,"SELECT Content FROM Evidence WHERE Id=$p0",id);var bytes=(byte[])cmd.ExecuteScalar()!;if(Convert.ToHexString(SHA256.HashData(bytes))!=p.Hash)throw new InvalidDataException("Evidence-Hash stimmt nicht.");
     }
-    public async Task ImportEvidenceAsync(string control,string source,string title,string origin,string fileName,byte[] content,DateTimeOffset until)=>await Change("EvidenceImported",control,title,(c,t)=>{
-        RequireKind(Get(c,t,control),"Control");Reason(title);Reason(origin);if(content.Length is <1 or >8388608||until<=DateTimeOffset.UtcNow)throw new ArgumentException("Maximal 8 MiB, Gültigkeit muss in der Zukunft liegen.");
-        if(Scalar(c,t,"SELECT SourceId FROM RecordSources WHERE RecordId=$p0 AND SourceId=$p1",control,source)=="")throw new ArgumentException("Quelle zuerst am Control zuordnen.");
-        if(long.Parse(Scalar(c,t,"SELECT COALESCE(SUM(length(Content)),0) FROM Evidence"))+content.Length>96*1024*1024)throw new IOException("Evidence-Gesamtlimit 96 MiB.");
-        Exec(c,t,"INSERT INTO Evidence VALUES($p0,$p1,$p2,$p3,NULL,$p4,$p5,$p6,$p7,$p8,$p9)",Guid.NewGuid().ToString("N"),title,control,source,origin,Path.GetFileName(fileName),Convert.ToHexString(SHA256.HashData(content)),content,DateTimeOffset.UtcNow.ToString("O"),until.ToString("O"));return true;
-    });
+    public Task ImportEvidenceAsync(string control, string source, string title, string origin, string fileName, byte[] content, DateTimeOffset until)
+    {
+        Reason(title);
+        Reason(origin);
+        if (content.Length is < 1 or > 8388608 || until <= DateTimeOffset.UtcNow)
+            throw new ArgumentException("Maximal 8 MiB, Gültigkeit muss in der Zukunft liegen.");
+        var id = Guid.NewGuid().ToString("N");
+        var bytes = content.ToArray();
+        var sha256 = Convert.ToHexString(SHA256.HashData(bytes));
+        var filename = Path.GetFileName(fileName);
+        var detail = JsonSerializer.Serialize(new { control, source, title, filename, sha256, until });
+        return Change("EvidenceImported", id, detail, (connection, transaction) =>
+        {
+            RequireKind(Get(connection, transaction, control), "Control");
+            var collected = DateTimeOffset.UtcNow;
+            if (until <= collected)
+                throw new ArgumentException("Die Gültigkeit muss in der Zukunft liegen.");
+            if (Scalar(connection, transaction, "SELECT SourceId FROM RecordSources WHERE RecordId=$p0 AND SourceId=$p1", control, source) == "")
+                throw new ArgumentException("Quelle zuerst am Control zuordnen.");
+            if (long.Parse(Scalar(connection, transaction, "SELECT COALESCE(SUM(length(Content)),0) FROM Evidence")) + bytes.Length > 96 * 1024 * 1024)
+                throw new IOException("Evidence-Gesamtlimit 96 MiB.");
+            Exec(connection, transaction, """
+                INSERT INTO Evidence (Id, Title, ControlId, SourceId, SourceDescription, FileName, Hash, Content, CollectedUtc, ValidUntil)
+                VALUES ($p0,$p1,$p2,$p3,$p4,$p5,$p6,$p7,$p8,$p9)
+                """, id, title, control, source, origin, filename, sha256, bytes, collected.ToString("O"), until.ToString("O"));
+            return true;
+        });
+    }
     public async Task ReuseEvidenceAsync(string evidence,string control)=>await Change("EvidenceReused",evidence,control,(c,t)=>{RequireKind(Get(c,t,control),"Control");var p=Proofs(c,t).Single(x=>x.Id==evidence);RequireProof(c,t,evidence,p.ControlId,DateTimeOffset.UtcNow);if(p.ControlId==control)throw new ArgumentException("Bereits zugeordnet.");Exec(c,t,"INSERT INTO EvidenceLinks VALUES($p0,$p1)",evidence,control);return true;});
     public Task<byte[]> EvidenceBytesAsync(string id)=>Read(c=>{var p=Proofs(c,null).Single(x=>x.Id==id);using var cmd=Command(c,null,"SELECT Content FROM Evidence WHERE Id=$p0",id);var bytes=(byte[])cmd.ExecuteScalar()!;if(Convert.ToHexString(SHA256.HashData(bytes))!=p.Hash)throw new InvalidDataException("Evidence beschädigt.");return bytes;});
     public Task<List<AuditTest>> TestsAsync(string audit)=>Read(c=>Query(c,null,"SELECT * FROM AuditTests WHERE AuditId=$p0",r=>new AuditTest(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7)),audit));

@@ -86,6 +86,14 @@ public sealed class TenantVaultTests : IDisposable
         Assert.NotEmpty(await project.EntriesAsync(kind: "Audit"));
         Assert.NotEmpty(await project.EntriesAsync(kind: "Finding"));
         Assert.NotEmpty(await project.EvidenceAsync("demo-control-01"));
+        var access = await project.Nis2PackageStateAsync("21i", "Kundenservice");
+        Assert.Equal("demo-control-01", Assert.Single(access.ControlIds).Value);
+        Assert.Equal("Bestätigt", Assert.Single(access.LinkedControls).Approval);
+        Assert.NotEmpty((await project.Nis2PackageStateAsync("23", "Kundenservice")).MeasureIds);
+        var review = Assert.Single(await project.ControlReviewItemsAsync("Kundenservice", DateTimeOffset.UtcNow),
+            item => item.Control.Id == "demo-control-01");
+        Assert.Equal(3, review.Schedule?.IntervalMonths);
+        Assert.Equal("demo-risk-01", Assert.Single(review.RiskIds));
         Assert.Equal(2, (await project.LatestRiskAssessmentsAsync(["demo-risk-01", "demo-risk-02", "demo-risk-03"])).Count);
         Assert.Contains(await project.DocumentsAsync(), value => value.Id == "demo-document-02");
         Assert.True(await project.VerifyAsync());

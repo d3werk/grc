@@ -14,6 +14,8 @@ public enum DocumentLinkTargetKind { Requirement = 0, Control = 1 }
 
 public sealed record DocumentDraft(string Title, string TopicId, string Scope, DocumentCategory Category, string Owner, string Content);
 
+public sealed record DocumentStarter(string Title, string Content);
+
 public sealed record DocumentRecord(string Id, DocumentDraft Draft, DocumentStatus Status, int Version, int Revision,
     int? PublishedVersion, string UpdatedUtc, string ReviewedBy, string ReviewedUtc);
 
@@ -52,6 +54,86 @@ public static class DocumentRegister
             [DocumentLinkTargetKind.Control] = "Control"
         });
 
+    public static DocumentStarter Starter(string topicId, DocumentCategory category)
+    {
+        var title = $"{CategoryLabels[category]} · {CompanyPlanning.TopicLabels.GetValueOrDefault(topicId, "Organisation und Prüfung")}";
+        var (objective, preparation, work, evidence) = topicId switch
+        {
+            "NIS2" => (
+                "Relevante Dienste und Abhängigkeiten erfassen, Risiken priorisieren und die Vorbereitung auf erhebliche Vorfälle organisieren.",
+                "Geltungsbereich, betroffene Organisationseinheiten und kritische Leistungen mit der Fachleitung abstimmen. Die Entscheidung zur Betroffenheit im Anforderungsregister belegen.",
+                "Die Fachverantwortung gleicht Risiken und Controls mit den freigegebenen Schutzmaßnahmen ab. Der Vorfallkoordinator prüft Meldewege, Kontaktdaten und Stellvertretung in einer Übung.",
+                "Betroffenheitsprüfung, Diensteliste, Bewertung offener Risiken und Ergebnis der Eskalationsübung ablegen."),
+            "ISMS" => (
+                "Schutzbedarf und Risiken für Informationswerte bewerten. Für wesentliche Risiken angemessene Controls auswählen und ihre Wirksamkeit regelmäßig prüfen.",
+                "Informationswerte, zugehörige Prozesse und verantwortliche Rollen aus dem Register übernehmen. Den relevanten Bewertungs- und Prüfzeitraum festlegen.",
+                "Risiken bewerten, die Behandlungsentscheidung begründen und jedem ausgewählten Control eine verantwortliche Rolle und einen Prüftermin zuweisen. Abweichungen mit Maßnahmen nachverfolgen.",
+                "Risikobewertung, geführte Kontrollprüfung und ausgewählte Nachweise mit Datum und verantwortlicher Rolle verknüpfen."),
+            "PRIVACY" => (
+                "Verarbeitungstätigkeiten transparent führen und vereinbarte Datenschutzmaßnahmen bei Änderungen frühzeitig überprüfen.",
+                "Verarbeitungszweck, betroffene Personengruppen, Datenkategorien, Empfänger und Löschregeln mit dem Fachbereich abstimmen.",
+                "Verarbeitungstätigkeit aktualisieren und die zugehörigen organisatorischen sowie technischen Maßnahmen zuordnen. Prüfen, ob eine Datenschutz-Folgenabschätzung angezeigt ist, und die Entscheidung dokumentieren.",
+                "Aktualisierten Registerstand, dokumentierte Prüfentscheidung und Freigabe der fachverantwortlichen Stelle hinterlegen."),
+            "AI" => (
+                "KI-Anwendungen mit dokumentiertem Zweck, geprüften Einsatzgrenzen und eindeutig zugewiesener Aufsicht betreiben.",
+                "KI-System, Anbieter, vorgesehenen Einsatz, Datenkategorien und menschliche Aufsicht im Inventar erfassen.",
+                "Risiken, Schutzmaßnahmen und Prüfkriterien vor Einführung bewerten. Fachliche Freigabe und Auflagen protokollieren. Änderungen an Modell, Zweck oder Eingabedaten erneut beurteilen.",
+                "Bewertung, Testergebnisse, Freigabeauflagen und Termin der nächsten Überprüfung mit dem KI-System verknüpfen."),
+            "BCM" => (
+                "Kritische Leistungen nach einer Störung innerhalb abgestimmter Ziele geordnet wiederherstellen.",
+                "Wesentliche Prozesse und ihre Abhängigkeiten erfassen. Ausfallszenarien, Auswirkungen und die benötigten Betriebsressourcen beurteilen.",
+                "Wiederanlaufziele und Reihenfolge festlegen. Alarmierung, Notbetrieb und Rückkehr zum Regelbetrieb im Wiederanlaufplan dokumentieren und in einer Übung erproben.",
+                "BIA, aktuelle Planfassung, Übungsprotokoll und Verbesserungsmaßnahmen im Projekt hinterlegen."),
+            "DORA" => (
+                "IKT-Abhängigkeiten kritischer Leistungen erkennen und Wiederanlauf, Vorfallbehandlung sowie Drittparteienrisiken nachvollziehbar steuern.",
+                "Betroffene Geschäftsfunktionen, IKT-Dienste und relevante Dienstleister mit ihren jeweils zuständigen Rollen erfassen.",
+                "Abhängigkeiten und Risiken bewerten, den vorgesehenen Wiederanlauf erproben und die vereinbarten Reaktionswege mit den beteiligten Teams abstimmen.",
+                "Bewertung, Bezüge zu Dienstleistern und Verträgen sowie Ergebnisse von Tests und Maßnahmen dokumentieren."),
+            "CLOUD" => (
+                "Cloud-Dienste mit klarer Aufgabenverteilung zwischen Anbieter und eigener Organisation sicher betreiben.",
+                "Dienste, verwaltete Daten, Betriebsregionen und die für den Dienst geltenden internen Anforderungen erfassen.",
+                "Verantwortlichkeit für Konfiguration, Identitäten, Protokollierung, Datensicherung und Wiederherstellung zuweisen. Abweichungen gegenüber den Vorgaben erfassen und nach Frist bearbeiten.",
+                "Aktuellen Konfigurationsstand, Prüfung privilegierter Rollen sowie Ergebnis der Wiederherstellungsprobe belegen."),
+            "OSS" => (
+                "Open-Source-Komponenten, ihre Herkunft und die für ihren Einsatz geltenden Verpflichtungen nachvollziehbar verwalten.",
+                "Direkte und transitive Komponenten mit Version, Bezugsquelle und Lizenz erfassen. Auslieferung und internen Einsatz unterscheiden.",
+                "Lizenzbedingungen für die konkrete Nutzung prüfen, Verpflichtungen der Auslieferung zuweisen und bekannte Sicherheitsbefunde priorisieren. Aktualisierung und Austausch verfolgen.",
+                "Komponentenliste oder SBOM, fachliche Lizenzprüfung und Maßnahmen für offene Befunde ablegen."),
+            "PROCESS" => (
+                "Abläufe mit einem eindeutigen Auslöser, Zuständigkeiten, Arbeitsschritten und einem prüfbaren Ergebnis beschreiben.",
+                "Zweck, Eingaben, Übergabestellen und Abhängigkeiten mit den beteiligten Rollen abstimmen.",
+                "Den Ablauf vom Eingang bis zum Abschluss dokumentieren. Rollen, Entscheidungspunkte und Abweichungen je Schritt festhalten. Änderungen mit einem typischen Praxisfall erproben.",
+                "Freigegebene Prozessfassung, vereinbarte Übergaben und Ergebnisse der nächsten Überprüfung dokumentieren."),
+            _ => (
+                "Aufgaben, Verantwortlichkeiten und Prüfkriterien für den betrachteten Geltungsbereich verbindlich beschreiben.",
+                "Betroffene Einheiten, beteiligte Rollen und vorhandene Anforderungen im Projekt ermitteln.",
+                "Arbeitsschritte mit Eingaben, erwarteten Ergebnissen und Entscheidungsstellen vereinbaren. Abweichungen dokumentieren und einer verantwortlichen Rolle zuweisen.",
+                "Relevante Nachweise, offene Maßnahmen und den nächsten Prüftermin mit dem Dokument verknüpfen.")
+        };
+        var content = $"""
+            # Zweck und Geltungsbereich
+
+            {objective} Der konkrete Bereich und die verantwortliche Stelle ergeben sich aus den Stammdaten dieses Dokuments.
+
+            ## Vorbereitung und Zuständigkeit
+
+            {preparation} Die Dokumentverantwortung koordiniert die Bearbeitung und vereinbart die fachliche Prüfung mit den beteiligten Rollen.
+
+            ## Durchführung
+
+            {work}
+
+            ## Nachweise und Pflege
+
+            {evidence}
+
+            - Ergebnisse und offene Punkte vor der Freigabe prüfen.
+            - Änderungen am Geltungsbereich oder Verfahren nachvollziehbar einarbeiten.
+            - Den nächsten Überprüfungstermin mit der zuständigen Stelle vereinbaren.
+            """;
+        return new DocumentStarter(title, content);
+    }
+
     internal static DocumentDraft ValidateDraft(DocumentDraft draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
@@ -84,6 +166,17 @@ public sealed partial class Workspace
         Read(connection => ReadDocuments(connection, topic, scope, search));
 
     public Task<DocumentRecord> DocumentAsync(string id) => Read(connection => GetDocument(connection, null, id));
+
+    public Task<List<Choice>> TemplateTopicChoicesAsync(string templateId) => Read(connection =>
+        Query(connection, null, """
+            SELECT topic.Id, topic.Title FROM Topics topic
+            WHERE EXISTS (SELECT 1 FROM DesktopTemplateTopics mapping WHERE mapping.TemplateId=$p0 AND mapping.TopicId=topic.Id)
+                OR (NOT EXISTS (SELECT 1 FROM DesktopTemplateTopics WHERE TemplateId=$p0) AND EXISTS (
+                    SELECT 1 FROM Templates template JOIN TopicSources source ON source.SourceId=template.SourceId
+                    WHERE template.Id=$p0 AND source.TopicId=topic.Id
+                ))
+            ORDER BY topic.Title, topic.Id
+            """, reader => new Choice(reader.GetString(0), reader.GetString(1)), templateId));
 
     public Task<List<DocumentVersion>> DocumentVersionsAsync(string id) => Read(connection =>
     {

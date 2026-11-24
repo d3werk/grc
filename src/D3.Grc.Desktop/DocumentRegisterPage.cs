@@ -59,7 +59,7 @@ public sealed partial class MainWindow
         topic.ItemsSource = availableTopics;
         var scope = Ui.Input("z. B. Produktentwicklung");
         var owner = Ui.Input("Name oder Rolle");
-        var sourceText = new RichTextEditor("Dokumenttext", "Dokumenttext eingeben", editorHeight: 310, maximumLength: 100000);
+        var sourceText = new RichTextEditor("Dokumenttext", "Dokumenttext eingeben", editorHeight: 350, maximumLength: 100000);
         title.MaxLength = 500;
         scope.MaxLength = 1000;
         owner.MaxLength = 240;
@@ -107,7 +107,10 @@ public sealed partial class MainWindow
         tabControl.SelectedItem = previewTab;
         var save = Button("Entwurf speichern", SaveEditorButtonAsync, true,
             "Speichert die bearbeitete Fassung. Die Veröffentlichung erfolgt nach der fachlichen Prüfung.", Glyph.Save);
-        var editorActions = Ui.Row(save);
+        var cancel = Ui.Help(new Button { Content = "Abbrechen", MinHeight = 37 },
+            "Verwirft nach Bestätigung ungespeicherte Änderungen und öffnet die gespeicherte Fassung.");
+        cancel.Classes.Add("grc-action");
+        var editorActions = Ui.Row(save, cancel);
         editorActions.Margin = new Thickness(0, 12, 0, 0);
         DockPanel.SetDock(editorActions, Dock.Bottom);
         var editorView = new DockPanel { Children = { editorActions, Ui.Scroll(editorFields) } };
@@ -123,6 +126,7 @@ public sealed partial class MainWindow
 
         DocumentRecord? selected = null;
         var editingNew = false;
+        DocumentStarter? generated = null;
         var addRequirement = Ui.Help(new Button { Content = "Anforderung zuordnen", MinHeight = 38 },
             "Verknüpft eine vorhandene Anforderung aus dem Projekt und protokolliert die Begründung.");
         var addControl = Ui.Help(new Button { Content = "Control zuordnen", MinHeight = 38 },
@@ -140,9 +144,17 @@ public sealed partial class MainWindow
         {
             if (!await CanLeaveFormAsync())
                 return;
-            BeginDraft();
+            await BeginDraftAsync();
             AcceptFormState();
-        }, true, "Öffnet einen leeren lokalen Entwurf. Gespeichert wird erst mit Entwurf speichern.", Glyph.Plus);
+        }, true, "Beginnt einen Entwurf mit einem ausformulierten Gerüst zum gewählten Fachthema.", Glyph.Plus);
+        var fromTemplate = Button("Aus Vorlage", async () =>
+        {
+            var template = await ChooseDocumentTemplateAsync();
+            if (template is null || !await CanLeaveFormAsync())
+                return;
+            await BeginDraftAsync(template);
+            AcceptFormState();
+        }, help: "Vorschau öffnen und eine bearbeitbare Kopie des ausgewählten Vorlagentexts anlegen.", glyph: Glyph.Templates);
 
         void PopulateList()
         {
@@ -160,9 +172,10 @@ public sealed partial class MainWindow
             PopulateList();
         }
 
-        void PresentDraft(DocumentRecord? document, TextTemplate? starter = null)
+        void PresentDraft(DocumentRecord? document, TextTemplate? starter = null, string? starterTopic = null)
         {
             selected = document;
+            generated = null;
             var draft = document?.Draft;
             var isEditable = editingNew || document?.Status == DocumentStatus.Draft;
             var visible = document is not null || editingNew;
@@ -177,34 +190,52 @@ public sealed partial class MainWindow
                 : "";
             tabsHost.Content = visible ? tabControl : emptySelection;
             editorArea.Content = editorView;
-            title.Text = draft?.Title ?? starter?.Title ?? "";
-            var initialCategory = starter?.Kind switch
-            {
-                "Control" or "Measure" => DocumentCategory.Procedure,
-                "Audit" or "AuditTest" => DocumentCategory.WorkInstruction,
-                "Risk" or "AiSystem" => DocumentCategory.Guidance,
-                _ => DocumentCategory.Policy
-            };
-            category.SelectedItem = DocumentRegister.CategoryLabels[draft?.Category ?? initialCategory];
-            topic.SelectedItem = availableTopics.FirstOrDefault(choice => choice.Id == (draft?.TopicId ?? _topicId));
+            var initialCategory = TemplateDocumentCategory(starter?.Kind);
+            var selectedCategory = draft?.Category ?? initialCategory;
+            var selectedTopic = draft?.TopicId ?? starterTopic ?? _topicId;
+            category.SelectedItem = DocumentRegister.CategoryLabels[selectedCategory];
+            topic.SelectedItem = availableTopics.FirstOrDefault(choice => choice.Id == selectedTopic);
             scope.Text = draft?.Scope ?? (editingNew ? EffectiveScope : "");
             owner.Text = draft?.Owner ?? "";
-            sourceText.Content = draft?.Content ?? starter?.Effective ?? "";
+            if (editingNew && string.IsNullOrWhiteSpace(RichTextContent.Plain(starter?.Effective ?? "")))
+                generated = DocumentRegister.Starter(selectedTopic, selectedCategory);
+            title.Text = draft?.Title ?? starter?.Title ?? generated?.Title ?? "";
+            sourceText.Content = draft?.Content ?? generated?.Content ?? starter?.Effective ?? "";
             title.IsReadOnly = scope.IsReadOnly = owner.IsReadOnly = sourceText.IsReadOnly = !isEditable;
             category.IsEnabled = topic.IsEnabled = isEditable;
-            save.IsVisible = isEditable;
+            save.IsVisible = cancel.IsVisible = isEditable;
             addRequirement.IsVisible = addControl.IsVisible = removeLink.IsVisible = document is { Status: not DocumentStatus.Retired };
             BuildActions(document?.Status);
         }
 
-        void BeginDraft(TextTemplate? template = null)
+        async Task BeginDraftAsync(TextTemplate? template = null)
         {
+            var templateTopics = template is null ? [] : await _workspace.TemplateTopicChoicesAsync(template.Id);
+            var current = availableTopics.FirstOrDefault(choice => choice.Id == _topicId);
+            var starterTopic = templateTopics.FirstOrDefault(choice => choice.Id == _topicId)
+                ?? templateTopics.FirstOrDefault()
+                ?? current
+                ?? availableTopics.FirstOrDefault(choice => choice.Id == "ISMS")
+                ?? availableTopics.FirstOrDefault();
             editingNew = true;
             documentList.SelectedItem = null;
-            PresentDraft(null, template);
+            PresentDraft(null, template, starterTopic?.Id);
             versionArea.Content = Ui.Notice("Veröffentlichte Fassungen erscheinen hier nach der ersten Veröffentlichung.");
             linkArea.Content = Ui.Notice("Bezüge können nach dem Speichern des Dokuments erfasst werden.");
             tabControl.SelectedItem = editorTab;
+        }
+
+        void UpdateGeneratedStarter()
+        {
+            if (generated is not { } previous || sourceText.Content != previous.Content ||
+                topic.SelectedItem is not Choice selectedTopic || category.SelectedItem is not string categoryLabel)
+                return;
+            var next = DocumentRegister.Starter(selectedTopic.Id,
+                DocumentRegister.CategoryLabels.Single(option => option.Value == categoryLabel).Key);
+            generated = next;
+            if (title.Text == previous.Title)
+                title.Text = next.Title;
+            sourceText.Content = next.Content;
         }
 
         void UpdatePreview()
@@ -283,6 +314,14 @@ public sealed partial class MainWindow
             AcceptFormState();
             tabControl.SelectedItem = previewTab;
             UpdatePreview();
+        }
+
+        async Task DiscardDocumentEditsAsync()
+        {
+            if (!await ConfirmDiscardFormAsync())
+                return;
+            await LoadDocumentAsync(selected);
+            AcceptFormState();
         }
 
         async Task ApplyDocumentChangeAsync(string id, Func<Task<DocumentRecord>> change, TabItem nextTab)
@@ -442,6 +481,8 @@ public sealed partial class MainWindow
         }
 
         SafeSelection(documentList, () => selected, LoadDocumentAsync);
+        category.SelectionChanged += (_, _) => UpdateGeneratedStarter();
+        topic.SelectionChanged += (_, _) => UpdateGeneratedStarter();
         TrackForm(() => (title.Text ?? "", category.SelectedItem, (topic.SelectedItem as Choice)?.Id,
                 scope.Text ?? "", owner.Text ?? "", sourceText.Content), SaveDraftAsync, null,
             title, category, topic, scope, owner, sourceText);
@@ -463,6 +504,7 @@ public sealed partial class MainWindow
                 AcceptFormState();
             });
         };
+        cancel.Click += async (_, _) => await Run(DiscardDocumentEditsAsync);
         addRequirement.Click += async (_, _) => await Run(() => AddLinkAsync(DocumentLinkTargetKind.Requirement));
         addControl.Click += async (_, _) => await Run(() => AddLinkAsync(DocumentLinkTargetKind.Control));
         removeLink.Click += async (_, _) => await Run(RemoveLinkAsync);
@@ -479,13 +521,86 @@ public sealed partial class MainWindow
         AcceptFormState();
         await RefreshListAsync();
         if (_documentStarter is { } starter)
-            BeginDraft(starter);
+        {
+            await BeginDraftAsync(starter);
+            AcceptFormState();
+        }
         UpdateFormStatus();
         return Ui.Split(
-            Ui.Card(Ui.Fill(Ui.Stack(Ui.Heading("Dokumentenregister"), count, Ui.Row(create),
+            Ui.Card(Ui.Fill(Ui.Stack(Ui.Heading("Dokumentenregister"), count, Ui.Row(create, fromTemplate),
                 Ui.Field("Status", stateFilter, "Beschränkt die Liste auf einen Status. Thema, Geltungsbereich und Suche gelten zusätzlich.")), listContent)),
             Ui.Card(Ui.Fill(Ui.Stack(heading, lifecycle, auditState, workflow), tabsHost)));
     }
+
+    private async Task<TextTemplate?> ChooseDocumentTemplateAsync()
+    {
+        var templates = await _workspace.TemplatesAsync(_topicId);
+        var window = new Window
+        {
+            Title = "Dokumentvorlage auswählen", Width = 940, Height = 650, MinWidth = 780, MinHeight = 520,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        var search = Ui.Input("Titel, Dokumentart oder Kennung");
+        search.MaxLength = 250;
+        var count = Ui.Secondary("");
+        var list = new ListBox
+        {
+            ItemTemplate = new FuncDataTemplate<TextTemplate>((item, _) => item is null ? null : Ui.Stack(
+                Ui.Text(item.Title, 14, true), Ui.Secondary(DocumentRegister.CategoryLabels[TemplateDocumentCategory(item.Kind)], 12)))
+        };
+        AutomationProperties.SetName(list, "Gefundene Dokumentvorlagen");
+        var preview = new ContentControl();
+        var use = new Button { Content = "Als Entwurf übernehmen", IsDefault = true, MinHeight = 38 };
+        var cancel = new Button { Content = "Abbrechen", IsCancel = true, MinHeight = 38 };
+        use.Click += (_, _) =>
+        {
+            if (list.SelectedItem is TextTemplate template)
+                window.Close(template);
+        };
+        cancel.Click += (_, _) => window.Close(null);
+
+        void ShowPreview()
+        {
+            var selectedTemplate = list.SelectedItem as TextTemplate;
+            use.IsEnabled = selectedTemplate is not null;
+            preview.Content = selectedTemplate is null
+                ? Ui.Notice("Wählen Sie eine Vorlage aus, um den Text zu lesen.")
+                : Ui.Stack(Ui.Heading(selectedTemplate.Title, 18), DocumentPreview.Create(selectedTemplate.Effective));
+        }
+
+        void Filter()
+        {
+            var term = search.Text?.Trim() ?? "";
+            var current = (list.SelectedItem as TextTemplate)?.Id;
+            var filtered = templates.Where(item => term.Length == 0 ||
+                new[] { item.Title, item.Id, DocumentRegister.CategoryLabels[TemplateDocumentCategory(item.Kind)] }
+                    .Any(value => value.Contains(term, StringComparison.CurrentCultureIgnoreCase))).ToList();
+            list.ItemsSource = filtered;
+            list.SelectedItem = filtered.FirstOrDefault(item => item.Id == current) ?? filtered.FirstOrDefault();
+            count.Text = filtered.Count == 1 ? "1 Vorlage" : $"{filtered.Count} Vorlagen";
+        }
+
+        search.TextChanged += (_, _) => Filter();
+        list.SelectionChanged += (_, _) => ShowPreview();
+        ShowPreview();
+        Filter();
+        var templateList = Ui.Card(Ui.Fill(Ui.Stack(Ui.Field("Vorlagen durchsuchen", search), count), list));
+        var body = Ui.Fill(Ui.Heading("Dokument aus Vorlage", 22, 1), Ui.Split(templateList, Ui.Scroll(preview)), Ui.Row(cancel, use));
+        body.Margin = new Thickness(18);
+        window.Content = body;
+        window.Opened += (_, _) => search.Focus();
+        return await window.ShowDialog<TextTemplate?>(this);
+    }
+
+    private static DocumentCategory TemplateDocumentCategory(string? kind) => kind switch
+    {
+        "Procedure" or "Control" or "Measure" => DocumentCategory.Procedure,
+        "WorkInstruction" or "Audit" or "AuditTest" => DocumentCategory.WorkInstruction,
+        "Guidance" or "Risk" or "AiSystem" => DocumentCategory.Guidance,
+        "Standard" => DocumentCategory.Standard,
+        "Other" => DocumentCategory.Other,
+        _ => DocumentCategory.Policy
+    };
 
     private static string DescribeDocument(DocumentRecord document)
     {

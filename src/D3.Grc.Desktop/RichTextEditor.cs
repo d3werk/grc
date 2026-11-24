@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Avalonia;
@@ -105,9 +106,11 @@ internal sealed partial class RichTextEditor : StackPanel
                 Command("F", "Fett (Strg+B)", () => ToggleInline(RichTextStyle.Bold), FontWeight.Bold),
                 Command("K", "Kursiv (Strg+I)", () => ToggleInline(RichTextStyle.Italic), fontStyle: FontStyle.Italic),
                 Command("U", "Unterstrichen (Strg+U)", () => ToggleInline(RichTextStyle.Underline), underline: true),
+                Command("¶ Absatz", "Überschrift in einen normalen Absatz umwandeln", SetParagraph),
                 Command("Ü1", "Überschrift", () => ToggleHeading(RichTextStyle.Heading)),
                 Command("Ü2", "Zwischenüberschrift", () => ToggleHeading(RichTextStyle.Subheading)),
-                Command("• Liste", "Aufzählung für diese Zeile oder Auswahl", ToggleBullets),
+                Command("• Liste", "Aufzählung für diese Zeile oder Auswahl", () => ToggleList(false)),
+                Command("1. Liste", "Nummerierte Liste für diese Zeile oder Auswahl", () => ToggleList(true)),
                 _undoButton, _redoButton)
         };
         Children.Add(_toolbar);
@@ -130,7 +133,14 @@ internal sealed partial class RichTextEditor : StackPanel
 
     private void HandleEditorKey(KeyEventArgs eventArgs)
     {
-        if (IsReadOnly || (eventArgs.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Meta)) == 0 ||
+        if (IsReadOnly)
+            return;
+        if (eventArgs.Key == Key.Enter && eventArgs.KeyModifiers == KeyModifiers.None && ContinueList())
+        {
+            eventArgs.Handled = true;
+            return;
+        }
+        if ((eventArgs.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Meta)) == 0 ||
             eventArgs.KeyModifiers.HasFlag(KeyModifiers.Alt))
             return;
         var action = eventArgs.Key switch
@@ -195,29 +205,53 @@ internal sealed partial class RichTextEditor : StackPanel
         ReplaceState(new EditorState(_state.Text, styles, _input.SelectionStart, _input.SelectionEnd));
     }
 
-    private void ToggleBullets()
+    private void SetParagraph()
+    {
+        var (start, end) = SelectedLines();
+        _typingStyle = (_typingStyle ?? StyleAtCaret(start)) & ~HeadingFlags;
+        if (!_state.Styles[start..end].Any(style => (style & HeadingFlags) != 0))
+            return;
+        var styles = (RichTextStyle[])_state.Styles.Clone();
+        for (var index = start; index < end; index++)
+            styles[index] &= ~HeadingFlags;
+        ReplaceState(new EditorState(_state.Text, styles, _input.SelectionStart, _input.SelectionEnd));
+    }
+
+    private void ToggleList(bool numbered)
     {
         var (start, end) = SelectedLines();
         var lines = _state.Text[start..end].Split('\n');
-        var remove = lines.All(line => line.StartsWith("• ", StringComparison.Ordinal));
+        var nonBlank = lines.Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
+        var remove = nonBlank.Length > 0 && nonBlank.All(line =>
+        {
+            var match = EditorListMarker().Match(line);
+            return match.Success && char.IsAsciiDigit(match.Groups["marker"].Value[0]) == numbered;
+        });
         var text = new StringBuilder(_state.Text[..start]);
         var styles = new List<RichTextStyle>(_state.Styles[..start]);
         var offset = start;
+        var number = 1;
         foreach (var line in lines)
         {
-            if (offset > start || text.Length > start)
+            if (offset > start)
             {
                 text.Append('\n');
                 styles.Add(_state.Styles[offset - 1]);
             }
-            var skip = remove ? 2 : 0;
-            if (!remove && !line.StartsWith("• ", StringComparison.Ordinal))
+            var match = EditorListMarker().Match(line);
+            var indent = match.Success ? match.Groups["indent"].Length : line.Length - line.TrimStart(' ', '\t').Length;
+            text.Append(line.AsSpan(0, indent));
+            styles.AddRange(_state.Styles[offset..(offset + indent)]);
+            if (!remove && (lines.Length == 1 || !string.IsNullOrWhiteSpace(line)))
             {
-                text.Append("• ");
-                styles.AddRange([RichTextStyle.None, RichTextStyle.None]);
+                var marker = numbered ? $"{(number++).ToString(CultureInfo.InvariantCulture)}. " : "• ";
+                text.Append(marker);
+                styles.AddRange(Enumerable.Repeat(RichTextStyle.None, marker.Length));
             }
-            text.Append(line.AsSpan(skip));
-            styles.AddRange(_state.Styles[(offset + skip)..(offset + line.Length)]);
+            var contentStart = match.Success ? match.Length : indent;
+            text.Append(line.AsSpan(contentStart));
+            var contentStyles = _state.Styles[(offset + contentStart)..(offset + line.Length)];
+            styles.AddRange(remove ? contentStyles : contentStyles.Select(style => style & ~HeadingFlags));
             offset += line.Length + 1;
         }
         var selectionEnd = text.Length;
@@ -225,6 +259,43 @@ internal sealed partial class RichTextEditor : StackPanel
         styles.AddRange(_state.Styles[end..]);
         if (text.Length <= _input.MaxLength)
             ReplaceState(new EditorState(text.ToString(), styles.ToArray(), start, selectionEnd));
+    }
+
+    private bool ContinueList()
+    {
+        var (start, end) = Selection();
+        if (start != end || (end < _state.Text.Length && _state.Text[end] != '\n'))
+            return false;
+        var (lineStart, _) = SelectedLines();
+        var line = _state.Text[lineStart..end];
+        var match = EditorListMarker().Match(line);
+        if (!match.Success)
+            return false;
+        var indent = match.Groups["indent"].Value;
+        if (string.IsNullOrWhiteSpace(line[match.Length..]))
+            start = lineStart + indent.Length;
+        var insert = "";
+        if (start == end)
+        {
+            var marker = match.Groups["marker"].Value;
+            if (char.IsAsciiDigit(marker[0]))
+            {
+                if (!int.TryParse(marker.AsSpan(0, marker.Length - 1), NumberStyles.None, CultureInfo.InvariantCulture,
+                        out var number) || number == int.MaxValue)
+                    return false;
+                marker = $"{(number + 1).ToString(CultureInfo.InvariantCulture)}{marker[^1]}";
+            }
+            insert = $"\n{indent}{marker} ";
+        }
+        var text = _state.Text[..start] + insert + _state.Text[end..];
+        if (text.Length > _input.MaxLength)
+            return false;
+        var styles = new RichTextStyle[text.Length];
+        Array.Copy(_state.Styles, styles, start);
+        var caret = start + insert.Length;
+        Array.Copy(_state.Styles, end, styles, caret, _state.Text.Length - end);
+        ReplaceState(new EditorState(text, styles, caret, caret));
+        return true;
     }
 
     private RichTextStyle StyleAtCaret(int start) => start > 0 && _state.Text[start - 1] != '\n'
@@ -381,6 +452,9 @@ internal sealed partial class RichTextEditor : StackPanel
 
     [GeneratedRegex(@"\*\*(?<bold>[^*]+)\*\*|(?<!\*)\*(?<italic>[^*]+)\*(?!\*)|`(?<code>[^`]+)`")]
     private static partial Regex LegacyInline();
+
+    [GeneratedRegex(@"^(?<indent>[ \t]*)(?<marker>[0-9]+[.)]|[-*•])[ \t]+")]
+    private static partial Regex EditorListMarker();
 
     private sealed class EditorTextBox : TextBox
     {

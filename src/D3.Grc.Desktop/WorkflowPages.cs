@@ -167,9 +167,15 @@ public sealed partial class MainWindow
             if (list.SelectedItem is Proof proof)
                 await PreviewEvidenceAsync(proof);
         },help:"Zeigt Text- und PNG-Nachweise in der App. Unterstützte Inhalte bleiben im Projekt.", glyph: Glyph.Documents);
+        var verify = Button("Integrität prüfen", async () =>
+        {
+            if (list.SelectedItem is Proof proof)
+                await ShowEvidenceIntegrityAsync(proof);
+        }, help: "Berechnet den SHA-256-Wert erneut und zeigt die Zuordnungen des gewählten Nachweises.", glyph: Glyph.Shield);
         preview.IsEnabled = list.SelectedItem is Proof;
-        list.SelectionChanged += (_, _) => preview.IsEnabled = list.SelectedItem is Proof;
-        return Ui.Split(Ui.Card(Ui.Fill(heading,list,Ui.Row(preview, export))),
+        verify.IsEnabled = preview.IsEnabled;
+        list.SelectionChanged += (_, _) => verify.IsEnabled = preview.IsEnabled = list.SelectedItem is Proof;
+        return Ui.Split(Ui.Card(Ui.Fill(heading,list,Ui.Row(preview, verify, export))),
             Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text("Evidence erfassen",20,true),
                 Ui.Notice("Quellen stammen vom ausgewählten Control. Nachweisherkunft ist ein separates Feld. Vorlagen erzeugen keine Evidence ohne tatsächlichen Dateiimport."),
                 Ui.Field("Control", control, "Ordnet die Nachweisdatei einem Control aus dem aktuellen Arbeitsbereich zu."),
@@ -213,6 +219,8 @@ public sealed partial class MainWindow
         var resultDetail = new ContentControl();
         var history = new Dictionary<string, AuditTest>(StringComparer.Ordinal);
         Button? complete = null;
+        var exportArchive = Button("Prüfdossier exportieren", () => ExportAuditEvidenceArchiveAsync(audit),
+            help: "Erstellt ein ZIP mit archivierten Prüfständen, Quellenbezügen und SHA-256-geprüften Originaldateien.", glyph: Glyph.Export);
 
         void UpdateResultDetail()
         {
@@ -231,6 +239,7 @@ public sealed partial class MainWindow
                     if (proof is not null)
                         await PreviewEvidenceAsync(proof);
                 }, glyph: Glyph.Evidence));
+            panel.Children.Add(Button("Prüfverlauf öffnen", () => ShowAuditSnapshotHistoryAsync(audit, item), glyph: Glyph.History));
             resultDetail.Content = Ui.Card(panel);
         }
 
@@ -240,6 +249,7 @@ public sealed partial class MainWindow
             history = (await _workspace.TestsAsync(audit.Id)).ToDictionary(test => test.ControlId, StringComparer.Ordinal);
             var coverage = await _workspace.AuditCoverageAsync([audit.Id]);
             var tested = coverage.Count(item => item.Outcome is not null);
+            exportArchive.IsEnabled = tested > 0;
             var gaps = coverage.Count(item => item.Outcome == "Abweichung" && !item.HasLinkedFinding);
             results.ItemsSource = coverage;
             results.SelectedItem = coverage.FirstOrDefault(item => item.ControlId == selectedId) ?? coverage.FirstOrDefault();
@@ -334,7 +344,7 @@ public sealed partial class MainWindow
             dossier.Children.Add(Ui.Secondary("Mit diesem Prüfauftrag sind noch keine Feststellungen verknüpft."));
         foreach (var finding in findings)
             dossier.Children.Add(Button($"{AuditIksTitle(finding)} · {finding.Status}", () => OpenModuleEntryAsync("Finding", finding.Id), glyph: Glyph.Finding));
-        dossier.Children.Add(Ui.Row(Button("Zuordnungen verwalten", () => OpenModuleEntryAsync("Mappings"), glyph: Glyph.Mapping),
+        dossier.Children.Add(Ui.Row(exportArchive, Button("Zuordnungen verwalten", () => OpenModuleEntryAsync("Mappings"), glyph: Glyph.Mapping),
             Button("Zurück zu Prüfaufträgen", async () => { if (await CanLeaveFormAsync()) await Render(); })));
         await RefreshResultsAsync();
         return Ui.Split(Ui.Card(Ui.Scroll(dossier)), Ui.Card(Ui.Scroll(editor)));

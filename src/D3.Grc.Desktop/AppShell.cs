@@ -29,6 +29,8 @@ public sealed partial class MainWindow
         ["BusinessProcess"] = ("Geschäftsprozesse", Glyph.Mapping),
         ["InternalAudit"] = ("Interne Audits", Glyph.Audit),
         ["InternalControl"] = ("Internes Kontrollsystem", Glyph.Shield),
+        ["ControlReviews"] = ("Kontrollprüfungen", Glyph.Tasks),
+        ["Nis2"] = ("NIS2-Maßnahmen", Glyph.Requirements),
         ["AiOverview"] = ("AI-GRC", Glyph.Ai),
         ["ResilienceOverview"] = ("Operationelle Resilienz", Glyph.Risk),
         ["ResilienceService"] = ("Kritische Geschäftsdienste", Glyph.Risk),
@@ -53,8 +55,8 @@ public sealed partial class MainWindow
     private static readonly (string Title, string[] Pages)[] NavigationGroups =
     [
         ("Arbeitsbereich", ["Dashboard", "Documents"]),
-        ("Governance und Risiken", ["Requirement", "Control", "Risk", "RiskMatrix", "Measure", "Mappings"]),
-        ("Prüfung und Nachweise", ["Evidence", "InternalAudit", "InternalControl"]),
+        ("Governance und Risiken", ["Nis2", "Requirement", "Control", "Risk", "RiskMatrix", "Measure", "Mappings"]),
+        ("Prüfung und Nachweise", ["Evidence", "InternalAudit", "InternalControl", "ControlReviews"]),
         ("Fachmodule", ["ProcessOverview", "ResilienceOverview", "ContinuityOverview", "AiOverview", "ContractsOverview"]),
         ("Register", ["Supplier", "OssComponent"]),
         ("Wissen und Verlauf", ["Sources", "Templates", "Glossary", "Journal"])
@@ -105,7 +107,8 @@ public sealed partial class MainWindow
             Button("Excel exportieren", () => Export(true),
                 help: "Exportiert Thema, Geltungsbereich und Suche als unverschlüsselte Excel-Datei.", glyph: Glyph.Export),
             Button("Drucken / PDF", () => Export(false),
-                help: "Erstellt eine unverschlüsselte HTML-Druckansicht zum Drucken oder Speichern als PDF im Browser.", glyph: Glyph.Print)
+                help: "Erstellt eine unverschlüsselte HTML-Druckansicht zum Drucken oder Speichern als PDF im Browser.", glyph: Glyph.Print),
+            ControlReminderButton()
         ];
         var commands = Ui.Card(Ui.Stack(Ui.Row([.. _projectOpeningActions, .. _projectActions]), filters));
         commands.Padding = new Thickness(14, 12);
