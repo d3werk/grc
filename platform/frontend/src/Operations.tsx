@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ClipboardCheck, Download, Eye, Grid2X2, Link2, Plus, UploadCloud } from 'lucide-react';
 import type { Assessment, AssessmentInput, CatalogRecord, Client, Evidence, MatrixData } from './api';
-import { download, errorMessage, query } from './api';
+import { download, errorMessage, evidenceTargetKinds, query } from './api';
+import { kindInfo } from './Catalog';
 import { RichTextEditor, RichTextPreview } from './RichText';
 import type { RichTextDocument } from './RichText';
+import { ScopeSelect } from './ScopeSelect';
 import { dateLabel, Empty, Field, Loading, Notice, todayIso, useData } from './ui';
 
 const responseLabels = {
   undecided: 'Noch offen', mitigate: 'Mindern', avoid: 'Vermeiden', transfer: 'Übertragen', accept: 'Akzeptieren'
 };
-const evidenceTargetLabel = (record: CatalogRecord) => `${record.kind === 'control' ? 'Control' : 'Maßnahme'} · ${record.title}`;
+const evidenceTargetLabel = (record: CatalogRecord) => `${kindInfo[record.kind].singular} · ${record.title}`;
 const likelihood = ['Sehr unwahrscheinlich', 'Unwahrscheinlich', 'Möglich', 'Wahrscheinlich', 'Sehr wahrscheinlich'];
 const impact = ['Sehr gering', 'Gering', 'Mittel', 'Hoch', 'Sehr hoch'];
 
@@ -138,19 +140,22 @@ export function RiskMatrix({ api, scope }: { api: Client; scope: string }) {
   </section>;
 }
 
-export function EvidenceView({ api, scope, records, write, controlId }: {
-  api: Client; scope: string; records: CatalogRecord[]; write: boolean; controlId?: string;
+export function EvidenceView({ api, scope, records, write, targetId, startUpload, onBack }: {
+  api: Client; scope: string; records: CatalogRecord[]; write: boolean;
+  targetId?: string; startUpload?: boolean; onBack?: () => void;
 }) {
-  const result = useData(signal => api.json<Evidence[]>(`/evidence${query({ scope })}`, { signal }), [api, scope]);
-  const [form, setForm] = useState(Boolean(controlId) && write);
+  const recordId = targetId;
+  const result = useData(signal => api.json<Evidence[]>(`/evidence${query({ scope, record_id: recordId })}`, { signal }), [api, scope, recordId]);
+  const [form, setForm] = useState(Boolean(startUpload) && write);
   const [kind, setKind] = useState<'file' | 'external'>('file');
   const [activeId, setActiveId] = useState<string>();
   const [linkId, setLinkId] = useState('');
-  const [uploadTarget, setUploadTarget] = useState(controlId ?? '');
+  const [uploadTarget, setUploadTarget] = useState(targetId ?? '');
   const [preview, setPreview] = useState<{ id: string; text: string } | { id: string; image: string }>();
   const [requestError, setRequestError] = useState('');
   const [pending, setPending] = useState(false);
-  const targets = records.filter(record => record.kind === 'control' || record.kind === 'measure');
+  const targets = records.filter(record => evidenceTargetKinds.has(record.kind));
+  const contextRecord = targets.find(record => record.id === targetId);
   const active = result.data?.find(item => item.id === activeId);
   const linked = targets.find(record => record.id === uploadTarget);
   const availableTargets = targets.filter(item => item.scope === active?.scope && !active?.linked_record_ids.includes(item.id));
@@ -162,8 +167,7 @@ export function EvidenceView({ api, scope, records, write, controlId }: {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
-    const targetId = String(fields.get('target_id') ?? '');
-    fields.delete('target_id');
+    if (!fields.get('record_id')) fields.delete('record_id');
     if (!fields.get('valid_until')) fields.delete('valid_until');
     setPending(true);
     setRequestError('');
@@ -178,13 +182,6 @@ export function EvidenceView({ api, scope, records, write, controlId }: {
       setUploadTarget('');
       setKind('file');
       setForm(false);
-      if (targetId) {
-        try {
-          await api.json(`/evidence/${evidence.id}/links`, { method: 'POST', body: JSON.stringify({ record_id: targetId }) });
-        } catch (reason) {
-          setRequestError(`Nachweis gespeichert. Bezug konnte nicht gespeichert werden. ${errorMessage(reason)}`);
-        }
-      }
       result.refresh();
     } catch (failure) {
       setRequestError(failure instanceof Error && failure.message === 'size' ? 'Die Datei darf höchstens 4 MiB groß sein.' : errorMessage(failure));
@@ -226,8 +223,14 @@ export function EvidenceView({ api, scope, records, write, controlId }: {
 
   return <section className="page">
     <header className="page-heading"><div className="heading-text"><span className="glyph"><ClipboardCheck aria-hidden="true" /></span>
-      <div><h1>Nachweise</h1><p>Prüfdateien und Referenzen für mehrere Controls und Maßnahmen verwenden.</p></div></div>
-      {write && <button className="primary" type="button" onClick={() => setForm(true)}><UploadCloud size={18} aria-hidden="true" /> Nachweis erfassen</button>}</header>
+      <div><h1>Nachweise</h1><p>{contextRecord ? evidenceTargetLabel(contextRecord) : 'Prüfdateien und Referenzen verwalten und mit Facheinträgen verknüpfen.'}</p></div></div>
+      <div className="actions">
+        {onBack && <button type="button" onClick={onBack}>Zurück zum Eintrag</button>}
+        {write && <button className="primary" type="button" onClick={() => {
+          setUploadTarget(targetId ?? '');
+          setForm(true);
+        }}><UploadCloud size={18} aria-hidden="true" /> Nachweis erfassen</button>}
+      </div></header>
     {requestError && <Notice message={requestError} />}
     {form && <form className="panel edit-panel" onSubmit={save}>
       <h2>Nachweis erfassen</h2>
@@ -236,11 +239,14 @@ export function EvidenceView({ api, scope, records, write, controlId }: {
           <option value="file">Datei</option><option value="external">Externe Referenz</option></select></Field>
         <Field label="Titel"><input name="title" required /></Field>
         <Field label="Herkunft"><input name="origin" required /></Field>
-        <Field label="Verknüpfter Eintrag"><select name="target_id" value={uploadTarget} onChange={event => setUploadTarget(event.target.value)}>
+        <Field label="Verknüpfter Eintrag"><select name="record_id" value={uploadTarget}
+          disabled={Boolean(contextRecord)} onChange={event => setUploadTarget(event.target.value)}>
           <option value="">Bezug später festlegen</option>{targets.map(target => <option value={target.id} key={target.id}>{evidenceTargetLabel(target)}</option>)}</select></Field>
+        {contextRecord && <input type="hidden" name="record_id" value={contextRecord.id} />}
         <Field label="Geltungsbereich" hint={linked ? 'Der Bereich wird aus dem verknüpften Eintrag übernommen.' : undefined}>
-          <input key={uploadTarget} name="scope" defaultValue={linked?.scope ?? scope} readOnly={Boolean(linked)} maxLength={240} />
+          <ScopeSelect key={uploadTarget} mode="evidence" name="scope" defaultValue={linked?.scope ?? scope} disabled={Boolean(linked)} />
         </Field>
+        {linked && <input type="hidden" name="scope" value={linked.scope} />}
         <Field label="Erfasst am"><input name="collected_on" type="date" required max={todayIso()} defaultValue={todayIso()} /></Field>
         <Field label="Gültig bis"><input name="valid_until" type="date" /></Field>
       </div>
@@ -260,7 +266,8 @@ export function EvidenceView({ api, scope, records, write, controlId }: {
                 setActiveId(item.id); setPreview(undefined); setLinkId(''); setRequestError('');
               }}><strong>{item.title}</strong><small>{item.filename ?? 'Externe Referenz'}</small></button></td>
               <td>{dateLabel(item.valid_until)}</td></tr>)}</tbody>
-          </table></div> : <Empty title="Noch keine Nachweise">Im aktuellen Geltungsbereich gibt es keine erfassten Nachweise.</Empty>}
+          </table></div> : <Empty title="Noch keine Nachweise">{recordId
+            ? 'Diesem Eintrag ist kein Nachweis zugeordnet.' : 'Im aktuellen Geltungsbereich gibt es keine erfassten Nachweise.'}</Empty>}
       </section>
       <section className="panel record-detail">
         {active ? <><h2>{active.title}</h2><dl className="record-meta">
@@ -281,7 +288,7 @@ export function EvidenceView({ api, scope, records, write, controlId }: {
               : <p className="muted">Noch keine Zuordnungen.</p>}
             {write && availableTargets.length > 0 && <form className="inline-form" onSubmit={link}>
               <Field label="Eintrag zuordnen"><select required value={linkId} onChange={event => setLinkId(event.target.value)}>
-                <option value="">Control oder Maßnahme auswählen</option>{availableTargets.map(item => <option key={item.id} value={item.id}>{evidenceTargetLabel(item)}</option>)}</select></Field>
+                <option value="">Eintrag auswählen</option>{availableTargets.map(item => <option key={item.id} value={item.id}>{evidenceTargetLabel(item)}</option>)}</select></Field>
               <button className="primary" type="submit" disabled={pending || !linkId}>Zuordnung speichern</button>
             </form>}
           </section></> : <Empty title="Nachweis auswählen">Datei, Herkunft, Gültigkeit und Bezüge ansehen.</Empty>}

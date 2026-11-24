@@ -1,3 +1,12 @@
+# In Entwicklung · Geltungsbereiche und Fachmodule im Web
+
+- Wiederverwendbare Geltungsbereiche für Filter, Formulare und Beratungsmandate. Vorhandene Bereichsnamen bleiben auswählbar.
+- Prozesslandkarte, Prozessarten, geordnete Prozessschritte und typisierte Abhängigkeiten.
+- Interne Audits mit Prüfungsuniversum, Jahresplan, Prüfschritten, Feststellungen und dokumentierter Nachverfolgung.
+- Operationelle Resilienz und Business Continuity mit kritischen Diensten, Toleranzen, Szenariotests, Auswirkungsanalysen, Wiederanlaufplänen und Übungen.
+- KI-Inventar mit begründeter Einstufung, menschlicher Aufsicht, Einsatzentscheidungen und Überprüfung. Vertragsregister mit Parteien, Pflichten, Entscheidungen und Fristenübersicht.
+- Controls mit Angaben zu Durchführung und Wirksamkeitsprüfung. Nachweise für zusätzliche Facheinträge mit direkter Zuordnung beim Speichern.
+
 # 0.12.0 · Textbearbeitung, Arbeitsbereich und D3-Werk-Design
 
 - Rich-Text-Bearbeitung für längere Fachtexte in Desktop und Web. Vorhandene Texte lassen sich weiterbearbeiten. Die Web-API stellt den Klartext weiterhin für Suche, Berichte und bestehende Integrationen bereit.

@@ -18,13 +18,22 @@ export interface LoginResponse {
 }
 
 export type Kind = 'org_unit' | 'asset' | 'it_service' | 'business_process' | 'risk' | 'control'
-  | 'measure' | 'framework_version' | 'requirement' | 'processing_activity' | 'supplier' | 'dpia';
+  | 'measure' | 'framework_version' | 'requirement' | 'processing_activity' | 'supplier' | 'dpia'
+  | 'audit_subject' | 'audit_engagement' | 'audit_test' | 'audit_finding'
+  | 'resilience_service' | 'resilience_scenario' | 'continuity_bia' | 'continuity_plan' | 'continuity_exercise'
+  | 'ai_system' | 'contract';
 export type Status = 'draft' | 'active' | 'in_review' | 'completed' | 'archived';
 export interface AttributeField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'date';
+  type: 'text' | 'textarea' | 'date' | 'number' | 'select';
+  options?: string[];
 }
+
+export const evidenceTargetKinds: ReadonlySet<Kind> = new Set([
+  'control', 'measure', 'audit_engagement', 'audit_test', 'audit_finding',
+  'resilience_scenario', 'continuity_plan', 'continuity_exercise', 'ai_system', 'contract'
+]);
 
 export interface KindMetadata {
   kind: Kind;
@@ -62,6 +71,7 @@ export interface RecordLink {
   from_id: string;
   to_id: string;
   rationale: string;
+  version: number;
   rationale_rich_text?: RichTextDocument | null;
 }
 

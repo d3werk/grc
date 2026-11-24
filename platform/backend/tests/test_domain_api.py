@@ -220,3 +220,43 @@ def test_tenant_and_scope_isolation_for_shared_links(client):
     assert forbidden.status_code == 403
     authorized = _record(http, scoped, "asset", "Geprüfte Anlage", scope="Nord")
     assert authorized["scope"] == "Nord"
+
+
+def test_contract_lifecycle_validates_dates_and_preserves_supplier_links(client):
+    http, bootstrap_token = client
+    _, admin = _tenant(http, bootstrap_token)
+    _, outsider = _tenant(http, bootstrap_token)
+    supplier = _record(http, admin, "supplier", "Synthetischer Vertragspartner", scope="Nord")
+    attributes = {
+        "contract_type": "Dienstleistung", "internal_party": "Einkauf",
+        "counterparty": "Synthetischer Vertragspartner", "starts_on": "2030-01-01",
+        "ends_on": "2030-12-31", "notice_due": "2030-09-30", "renewal_mode": "Durch Vereinbarung",
+    }
+    contract = _record(
+        http, admin, "contract", "Wartungsvertrag", scope="Nord", owner="Einkauf",
+        status="active", attributes=attributes,
+    )
+    link = _link(http, admin, "contract_supplier", contract, supplier)
+    assert link["to_id"] == supplier["id"]
+    address = f"/api/v1/catalog/{contract['id']}"
+    for invalid_attributes in ({"ends_on": "2029-12-31"}, {"renewal_mode": "Unbekannter Modus"}):
+        invalid = http.put(address, headers=admin, json={
+            "expected_version": contract["version"], "attributes": {**attributes, **invalid_attributes},
+        })
+        assert invalid.status_code == 422, invalid.text
+    missing_owner = http.put(address, headers=admin, json={"expected_version": contract["version"], "owner": ""})
+    assert missing_owner.status_code == 422
+    assert http.get(address, headers=admin).json() == contract
+    assert http.get(address, headers=outsider).status_code == 404
+
+    decision = {"decision": "Neu verhandeln", "decision_note": "Änderungsangebot einholen"}
+    updated = http.put(address, headers=admin, json={
+        "expected_version": contract["version"], "status": "in_review", "attributes": {**attributes, **decision},
+    })
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["status"] == "in_review"
+    assert updated.json()["version"] == contract["version"] + 1
+    assert updated.json()["attributes"] == {**attributes, **decision}
+    links = http.get("/api/v1/links", headers=admin, params={"record_id": contract["id"]})
+    assert links.status_code == 200, links.text
+    assert links.json() == [link]

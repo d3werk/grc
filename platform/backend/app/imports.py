@@ -11,7 +11,7 @@ from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field
 
 from .domain import create_record
-from .domain_models import CatalogCreate, validate_attributes
+from .domain_models import CatalogCreate, validate_attributes, validate_catalog_workflow
 from .tenancy import RequestContext, context
 
 router = APIRouter(prefix="/api/v1/imports", tags=["Importe"])
@@ -52,7 +52,9 @@ def csv_records(payload: CatalogCsvImport) -> list[CatalogCreate]:
                 if "attributes" in model:
                     model["attributes"] = json.loads(model["attributes"])
                 record = CatalogCreate.model_validate(model)
-                records.append(record.model_copy(update={"attributes": validate_attributes(record.kind, record.attributes)}))
+                attributes = validate_attributes(record.kind, record.attributes)
+                validate_catalog_workflow(record.kind, attributes, record.status, record.owner)
+                records.append(record.model_copy(update={"attributes": attributes}))
             except ValueError as exc:
                 raise HTTPException(422, f"Felder in CSV-Zeile {reader.line_num} prüfen.") from exc
     except csv.Error as exc:

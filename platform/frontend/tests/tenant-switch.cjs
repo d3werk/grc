@@ -100,7 +100,7 @@ async function run() {
     assert.equal(loginA.status(), 200);
     const tokenA = (await loginA.json()).access_token;
     await current(first);
-    await page.getByLabel('Geltungsbereich', { exact: true }).fill('Nord');
+    await page.getByLabel('Geltungsbereich', { exact: true }).selectOption('Nord');
     await button('Anwenden').click();
     await navigate('Assets');
     await button('Nord · geschütztes Asset').click();

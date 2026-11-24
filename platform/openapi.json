@@ -11,11 +11,20 @@
             "title": "Label",
             "type": "string"
           },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
           "type": {
             "enum": [
               "text",
               "textarea",
-              "date"
+              "date",
+              "number",
+              "select"
             ],
             "title": "Type",
             "type": "string"
@@ -179,7 +188,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "Kind",
             "type": "string"
@@ -334,7 +354,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "Kind",
             "type": "string"
@@ -377,7 +408,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "From Kind",
             "type": "string"
@@ -423,7 +465,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "To Kind",
             "type": "string"
@@ -539,7 +592,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "From Kind",
             "type": "string"
@@ -565,7 +629,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "To Kind",
             "type": "string"
@@ -655,7 +730,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "Kind",
             "type": "string"
@@ -934,7 +1020,18 @@
                 "requirement",
                 "processing_activity",
                 "supplier",
-                "dpia"
+                "dpia",
+                "audit_subject",
+                "audit_engagement",
+                "audit_test",
+                "audit_finding",
+                "resilience_service",
+                "resilience_scenario",
+                "continuity_bia",
+                "continuity_plan",
+                "continuity_exercise",
+                "ai_system",
+                "contract"
               ]
             },
             "title": "Record Counts",
@@ -990,7 +1087,18 @@
                 "requirement",
                 "processing_activity",
                 "supplier",
-                "dpia"
+                "dpia",
+                "audit_subject",
+                "audit_engagement",
+                "audit_test",
+                "audit_finding",
+                "resilience_service",
+                "resilience_scenario",
+                "continuity_bia",
+                "continuity_plan",
+                "continuity_exercise",
+                "ai_system",
+                "contract"
               ]
             },
             "title": "Status Counts",
@@ -1226,6 +1334,18 @@
             "pattern": "^[^\\x00]*$",
             "title": "Origin",
             "type": "string"
+          },
+          "record_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Id"
           },
           "scope": {
             "default": "",
@@ -1831,7 +1951,18 @@
               "requirement",
               "processing_activity",
               "supplier",
-              "dpia"
+              "dpia",
+              "audit_subject",
+              "audit_engagement",
+              "audit_test",
+              "audit_finding",
+              "resilience_service",
+              "resilience_scenario",
+              "continuity_bia",
+              "continuity_plan",
+              "continuity_exercise",
+              "ai_system",
+              "contract"
             ],
             "title": "Kind",
             "type": "string"
@@ -2487,6 +2618,93 @@
         "title": "RiskMatrixCell",
         "type": "object"
       },
+      "ScopeInput": {
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "maxLength": 240,
+            "minLength": 1,
+            "pattern": "^[^\\x00]*$",
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "ScopeInput",
+        "type": "object"
+      },
+      "ScopeOptions": {
+        "additionalProperties": false,
+        "properties": {
+          "can_create": {
+            "title": "Can Create",
+            "type": "boolean"
+          },
+          "catalog_write": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Write"
+          },
+          "evidence_write": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Write"
+          },
+          "read_scopes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Read Scopes",
+            "type": "object"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scopes",
+          "read_scopes",
+          "catalog_write",
+          "evidence_write",
+          "can_create"
+        ],
+        "title": "ScopeOptions",
+        "type": "object"
+      },
       "Text": {
         "additionalProperties": false,
         "properties": {
@@ -2562,7 +2780,7 @@
     }
   },
   "info": {
-    "description": "Mandantengebundene Arbeitsbereiche für Organisation, Assets, Risiken, Controls, Maßnahmen, Nachweise und Datenschutz.",
+    "description": "Mandantengebundene Arbeitsbereiche für Organisation, Assets, Risiken, Controls, Maßnahmen, Nachweise, Datenschutz, interne Audits, operationelle Resilienz, Business Continuity, KI-Governance und Verträge.",
     "title": "D3 GRC Platform",
     "version": "0.12.0"
   },
@@ -2883,7 +3101,18 @@
                     "requirement",
                     "processing_activity",
                     "supplier",
-                    "dpia"
+                    "dpia",
+                    "audit_subject",
+                    "audit_engagement",
+                    "audit_test",
+                    "audit_finding",
+                    "resilience_service",
+                    "resilience_scenario",
+                    "continuity_bia",
+                    "continuity_plan",
+                    "continuity_exercise",
+                    "ai_system",
+                    "contract"
                   ],
                   "type": "string"
                 },
@@ -3373,6 +3602,23 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "record_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Record Id"
+            }
           }
         ],
         "responses": {
@@ -3475,6 +3721,10 @@
                   },
                   "origin": {
                     "maxLength": 1000,
+                    "type": "string"
+                  },
+                  "record_id": {
+                    "format": "uuid",
                     "type": "string"
                   },
                   "scope": {
@@ -3590,7 +3840,7 @@
     },
     "/api/v1/evidence/{evidence_id}/links": {
       "post": {
-        "description": "Einen vorhandenen Nachweis einem Control oder einer Maßnahme im selben Geltungsbereich zuordnen.",
+        "description": "Einen vorhandenen Nachweis einem unterstützten Facheintrag im selben Geltungsbereich zuordnen.",
         "operationId": "link_evidence_api_v1_evidence__evidence_id__links_post",
         "parameters": [
           {
@@ -4828,6 +5078,86 @@
         "summary": "Record Risk Assessment",
         "tags": [
           "Risiken, Nachweise und Berichte"
+        ]
+      }
+    },
+    "/api/v1/scopes": {
+      "get": {
+        "operationId": "list_scopes_api_v1_scopes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScopeOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Scopes",
+        "tags": [
+          "Geltungsbereiche"
+        ]
+      },
+      "post": {
+        "operationId": "create_scope_api_v1_scopes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScopeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScopeInput"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequest"
+                }
+              }
+            },
+            "description": "Ungültige Eingabefelder"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Scope",
+        "tags": [
+          "Geltungsbereiche"
         ]
       }
     },

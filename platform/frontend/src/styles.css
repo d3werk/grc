@@ -254,7 +254,8 @@ button.link-button:hover:enabled { background: transparent; text-decoration: und
   font-size: .87rem;
   font-weight: 650;
 }
-.context-bar label input { width: clamp(9.5rem, 16vw, 15rem); font-weight: 400; }
+.context-bar label select { width: clamp(9.5rem, 16vw, 15rem); font-weight: 400; }
+.scope-creator { max-width: 32rem; display: grid; gap: .8rem; margin-bottom: 1.25rem; }
 .context-active {
   font-weight: 630;
   padding: .24rem .62rem;
@@ -374,6 +375,16 @@ dialog::backdrop { background: #252d2680; }
 .next-step { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
 
 .register-layout { display: grid; grid-template-columns: minmax(235px, 4fr) minmax(0, 6fr); gap: 1rem; align-items: start; }
+.module-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin: 0 0 1.1rem; }
+.module-navigation button { text-align: left; }
+.module-navigation button[aria-current="page"] { background: var(--accent-soft); color: var(--accent-dark); border-color: var(--accent); }
+.module-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); gap: 1rem; }
+.module-section { display: grid; align-content: start; gap: .65rem; }
+.module-section .panel-title { margin: 0; align-items: baseline; }
+.module-section .panel-title h2 { margin: 0; }
+.module-section p { margin: 0; color: var(--muted); }
+.module-section button { justify-self: start; }
+.catalog-columns td:not(:first-child), .catalog-columns th:not(:first-child) { white-space: nowrap; }
 .searchbox { display: flex; align-items: center; gap: .46rem; color: var(--muted); }
 .searchbox input { flex: 1 1 auto; }
 .table-scroll { max-width: 100%; overflow-x: auto; }
@@ -478,7 +489,7 @@ tr.selected { background: var(--accent-soft); }
   .breadcrumbs span, .breadcrumbs svg { display: none; }
   .user-actions button { padding: .5rem .58rem; }
   .context-bar label { display: grid; grid-template-columns: auto auto minmax(0, 1fr); }
-  .context-bar label input { width: min(30vw, 9rem); }
+  .context-bar label select { width: min(48vw, 13rem); }
   .context-active { flex: 0 1 auto; }
 }
 @media (max-width: 425px) {

@@ -18,6 +18,7 @@ from .domain import router as domain_router
 from .imports import router as imports_router
 from .operations import router as operations_router
 from .organization import router as organization_router
+from .scopes import router as scopes_router
 from .tenancy import RequestContext, context, router as tenancy_router
 
 class ValidationIssue(BaseModel):
@@ -46,7 +47,8 @@ app = FastAPI(
     version="0.12.0",
     description=(
         "Mandantengebundene Arbeitsbereiche für Organisation, Assets, Risiken, "
-        "Controls, Maßnahmen, Nachweise und Datenschutz."
+        "Controls, Maßnahmen, Nachweise, Datenschutz, interne Audits, operationelle Resilienz, "
+        "Business Continuity, KI-Governance und Verträge."
     ),
     responses={422: {"model": InvalidRequest, "description": "Ungültige Eingabefelder"}},
     swagger_ui_parameters={"persistAuthorization": False},
@@ -91,6 +93,10 @@ def readiness() -> JSONResponse:
                 schema = connection.execute(
                     "SELECT to_regclass('public.organization_responsibilities') IS NOT NULL "
                     "AND EXISTS (SELECT FROM catalog_link_types WHERE kind='processing_it_service') "
+                    "AND EXISTS (SELECT FROM catalog_link_types WHERE kind='contract_supplier') "
+                    "AND to_regclass('public.scope_options') IS NOT NULL "
+                    "AND EXISTS (SELECT FROM pg_constraint WHERE conrelid=to_regclass('public.evidence_links') "
+                    "AND conname='evidence_links_target_kind' AND pg_get_constraintdef(oid) LIKE '%contract%') "
                     "AND EXISTS (SELECT FROM pg_attribute WHERE attrelid=to_regclass('public.evidence_links') "
                     "AND attname='record_kind' AND attnotnull AND attgenerated='' AND NOT attisdropped) "
                     "AND EXISTS (SELECT FROM pg_attribute WHERE attrelid=to_regclass('public.catalog_records') "
@@ -120,6 +126,7 @@ app.include_router(domain_router)
 app.include_router(operations_router)
 app.include_router(imports_router)
 app.include_router(organization_router)
+app.include_router(scopes_router)
 
 frontend = os.environ.get("GRC_FRONTEND_DIR")
 if frontend:

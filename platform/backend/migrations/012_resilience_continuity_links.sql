@@ -1,0 +1,18 @@
+INSERT INTO catalog_link_types (kind, from_kind, to_kind, label) VALUES
+    ('resilience_service_process', 'resilience_service', 'business_process', 'Geschäftsdienst beruht auf Geschäftsprozess'),
+    ('resilience_service_it_service', 'resilience_service', 'it_service', 'Geschäftsdienst benötigt IT-Dienst'),
+    ('resilience_service_asset', 'resilience_service', 'asset', 'Geschäftsdienst benötigt Informationswert'),
+    ('resilience_service_supplier', 'resilience_service', 'supplier', 'Lieferant unterstützt Geschäftsdienst'),
+    ('resilience_service_risk', 'resilience_service', 'risk', 'Risiko betrifft Geschäftsdienst'),
+    ('resilience_scenario_service', 'resilience_scenario', 'resilience_service', 'Szenariotest untersucht Geschäftsdienst'),
+    ('resilience_scenario_measure', 'resilience_scenario', 'measure', 'Maßnahme behandelt Feststellung aus Szenariotest'),
+    ('continuity_bia_process', 'continuity_bia', 'business_process', 'BIA bewertet Geschäftsprozess'),
+    ('continuity_bia_service', 'continuity_bia', 'resilience_service', 'BIA bewertet Geschäftsdienst'),
+    ('continuity_bia_it_service', 'continuity_bia', 'it_service', 'IT-Dienst ist Abhängigkeit in der BIA'),
+    ('continuity_bia_asset', 'continuity_bia', 'asset', 'Informationswert ist Abhängigkeit in der BIA'),
+    ('continuity_bia_supplier', 'continuity_bia', 'supplier', 'Lieferant ist Abhängigkeit in der BIA'),
+    ('continuity_plan_bia', 'continuity_plan', 'continuity_bia', 'Wiederanlaufplan setzt Ziele der BIA um'),
+    ('continuity_plan_it_service', 'continuity_plan', 'it_service', 'Wiederanlaufplan berücksichtigt IT-Dienst'),
+    ('continuity_exercise_plan', 'continuity_exercise', 'continuity_plan', 'Übung erprobt Wiederanlaufplan'),
+    ('continuity_exercise_scenario', 'continuity_exercise', 'resilience_scenario', 'Übung ergänzt betrieblichen Szenariotest'),
+    ('continuity_exercise_measure', 'continuity_exercise', 'measure', 'Maßnahme folgt aus Übungsfeststellung');
