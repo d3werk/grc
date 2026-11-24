@@ -138,7 +138,8 @@ public static class CompanyPlanning
             ["CLOUD"] = "Cloud Security",
             ["BCM"] = "Business Continuity",
             ["OSS"] = "Open Source",
-            ["DORA"] = "DORA"
+            ["DORA"] = "DORA",
+            ["PROCESS"] = "Prozessmanagement"
         });
 
     public static CompanyProfile Validate(CompanyProfile profile)
@@ -161,6 +162,35 @@ public static class CompanyPlanning
         }
 
         return profile with { Topics = profile.Topics.Distinct(StringComparer.Ordinal).ToArray() };
+    }
+
+    public static (CompanyFactors Factors, string[] Topics) SuggestForIndustry(CompanyIndustry industry)
+    {
+        var factors = industry switch
+        {
+            CompanyIndustry.Finance => CompanyFactors.PersonalData | CompanyFactors.DoraReview |
+                CompanyFactors.CriticalProcesses | CompanyFactors.ExternalSuppliers,
+            CompanyIndustry.DigitalServices => CompanyFactors.PersonalData | CompanyFactors.CloudServices |
+                CompanyFactors.Nis2Review | CompanyFactors.OpenSourceSoftware | CompanyFactors.ExternalSuppliers,
+            CompanyIndustry.Health or CompanyIndustry.Energy or CompanyIndustry.Transport => CompanyFactors.PersonalData |
+                CompanyFactors.CriticalProcesses | CompanyFactors.Nis2Review,
+            CompanyIndustry.Manufacturing => CompanyFactors.CriticalProcesses | CompanyFactors.ExternalSuppliers,
+            CompanyIndustry.PublicSector or CompanyIndustry.EducationResearch => CompanyFactors.PersonalData | CompanyFactors.CloudServices,
+            CompanyIndustry.TradeAndServices => CompanyFactors.PersonalData | CompanyFactors.ExternalSuppliers,
+            _ => CompanyFactors.None
+        };
+        var topics = new List<string> { "ISMS" };
+        if (industry != CompanyIndustry.Other)
+            topics.Add("PROCESS");
+        foreach (var (factor, topic) in new[]
+        {
+            (CompanyFactors.PersonalData, "PRIVACY"), (CompanyFactors.Nis2Review, "NIS2"),
+            (CompanyFactors.DoraReview, "DORA"), (CompanyFactors.CriticalProcesses, "BCM"),
+            (CompanyFactors.CloudServices, "CLOUD"), (CompanyFactors.OpenSourceSoftware, "OSS")
+        })
+            if (factors.HasFlag(factor))
+                topics.Add(topic);
+        return (factors, topics.ToArray());
     }
 
     public static IReadOnlyList<CompanyModuleRecommendation> Build(CompanyProfile profile)

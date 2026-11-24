@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Automation;
+using Avalonia.Controls.Templates;
 using Avalonia.Platform.Storage;
 using D3.Grc.Core;
 namespace D3.Grc.Desktop;
@@ -69,7 +71,7 @@ public sealed partial class MainWindow
             if (from.SelectedItem is not Entry a || to.SelectedItem is not Entry b)
                 throw new ArgumentException("Ausgangsobjekt und Ziel auswählen.");
             return CommitFormChangeAsync(() => _workspace.LinkAsync(a.Id, b.Id, (string)type.SelectedItem!, Sid(source),
-                (string)coverage.SelectedItem!, _scopeValue, reason.Text ?? ""));
+                (string)coverage.SelectedItem!, EffectiveScope, reason.Text ?? ""));
         }
         async Task RefreshMappings()
         {
@@ -158,7 +160,7 @@ public sealed partial class MainWindow
             await RefreshEvidence();
             UpdateFormStatus();
         }, help: "Verknüpft den ausgewählten Nachweis mit einem weiteren Control aus dem aktuellen Arbeitsbereich.");
-        var export=Button("Datei exportieren",async()=>{if(list.SelectedItem is not Proof p)return;if(!await Ui.Confirm(this,"Evidence als unverschlüsselte Datei exportieren?","Exportieren"))return;var path=await SavePath(p.FileName,Path.GetExtension(p.FileName).TrimStart('.'));if(path is null)return;await Files.AtomicAsync(path,await _workspace.EvidenceBytesAsync(p.Id));await _workspace.RecordExportAsync(path,_topicId,_scopeValue,"Evidence");},
+        var export=Button("Datei exportieren",async()=>{if(list.SelectedItem is not Proof p)return;if(!await Ui.Confirm(this,"Evidence als unverschlüsselte Datei exportieren?","Exportieren"))return;var path=await SavePath(p.FileName,Path.GetExtension(p.FileName).TrimStart('.'));if(path is null)return;await Files.AtomicAsync(path,await _workspace.EvidenceBytesAsync(p.Id));await _workspace.RecordExportAsync(path,_topicId,EffectiveScope,"Evidence");},
             help: "Speichert den links ausgewählten Nachweis als unverschlüsselte Datei.");
         var preview=Button("Vorschau",async()=>
         {
@@ -182,15 +184,73 @@ public sealed partial class MainWindow
     private async Task<Control> AuditPage(Entry audit)
     {
         var ids = _mappings.Where(m => m.From == audit.Id && m.Type == "Audit → Control").Select(m => m.To).ToHashSet();
+        var scopedControls = _all.Where(entry => ids.Contains(entry.Id)).ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+        var findings = _mappings.Where(mapping => mapping.Type == "Finding → Audit" && mapping.To == audit.Id)
+            .Select(mapping => _all.FirstOrDefault(entry => entry.Id == mapping.From)).OfType<Entry>().ToArray();
         var control = Ui.Combo();
-        control.ItemsSource = _all.Where(e => ids.Contains(e.Id)).ToList();
+        control.ItemsSource = scopedControls.Values.ToArray();
         var source = SourceCombo(Array.Empty<Source>());
         var evidence = Ui.Combo();
         var outcome = Ui.Combo();
         outcome.ItemsSource = new[] { "Ergebnis auswählen", "Bestanden", "Abweichung", "Nicht anwendbar" };
         outcome.SelectedIndex = 0;
         var notes = Ui.Input("Prüfhandlung, Stichprobe, objektiver Sachverhalt und Ergebnis", true);
-        var results = new ListBox { MinHeight = 180, ItemsSource = await _workspace.TestsAsync(audit.Id) };
+        var summary = Ui.Secondary("");
+        AutomationProperties.SetLiveSetting(summary, AutomationLiveSetting.Polite);
+        var resultsHeading = Ui.Heading("Prüfumfang und Ergebnisse", 17, 2);
+        var results = new ListBox
+        {
+            MinHeight = 150, MaxHeight = 260,
+            ItemTemplate = new FuncDataTemplate<AuditCoverage>((item, _) => item is null ? null : Ui.Stack(
+                Ui.Text(AuditIksTitle(scopedControls[item.ControlId]), 14, true),
+                Ui.Secondary(item.Outcome ?? "Noch nicht geprüft"),
+                item.Outcome == "Abweichung" && !item.HasLinkedFinding
+                    ? Ui.Text("Feststellung fehlt", 12, true)
+                    : Ui.Secondary(item.TestedVersion is { } version && version != item.ControlVersion
+                        ? $"Prüfung bezog sich auf Control-Fassung {version}" : "")))
+        };
+        AutomationProperties.SetLabeledBy(results, resultsHeading);
+        var resultDetail = new ContentControl();
+        var history = new Dictionary<string, AuditTest>(StringComparer.Ordinal);
+        Button? complete = null;
+
+        void UpdateResultDetail()
+        {
+            if (results.SelectedItem is not AuditCoverage item || !history.TryGetValue(item.ControlId, out var test))
+            {
+                resultDetail.Content = null;
+                return;
+            }
+            var sourceName = _allSources.FirstOrDefault(candidate => candidate.Id == test.SourceId)?.Title ?? test.SourceId;
+            var tested = DateTimeOffset.TryParse(test.TestedUtc, out var when) ? when.ToLocalTime().ToString("g") : test.TestedUtc;
+            var panel = Ui.Stack(Ui.Heading("Aufzeichnung", 16, 3), Ui.Secondary($"{tested} · {sourceName}"), Ui.Text(test.Notes));
+            if (test.EvidenceId is { } evidenceId)
+                panel.Children.Add(Button("Zugeordneten Nachweis anzeigen", async () =>
+                {
+                    var proof = (await _workspace.EvidenceAsync(test.ControlId)).FirstOrDefault(candidate => candidate.Id == evidenceId);
+                    if (proof is not null)
+                        await PreviewEvidenceAsync(proof);
+                }, glyph: Glyph.Evidence));
+            resultDetail.Content = Ui.Card(panel);
+        }
+
+        async Task RefreshResultsAsync()
+        {
+            var selectedId = (results.SelectedItem as AuditCoverage)?.ControlId;
+            history = (await _workspace.TestsAsync(audit.Id)).ToDictionary(test => test.ControlId, StringComparer.Ordinal);
+            var coverage = await _workspace.AuditCoverageAsync([audit.Id]);
+            var tested = coverage.Count(item => item.Outcome is not null);
+            var gaps = coverage.Count(item => item.Outcome == "Abweichung" && !item.HasLinkedFinding);
+            results.ItemsSource = coverage;
+            results.SelectedItem = coverage.FirstOrDefault(item => item.ControlId == selectedId) ?? coverage.FirstOrDefault();
+            summary.Text = coverage.Count == 0 ? "Keine Controls zugeordnet. Ergänzen Sie den Prüfumfang unter Mappings." :
+                $"{tested} von {coverage.Count} Controls geprüft · {gaps} Abweichungen ohne verknüpfte Feststellung";
+            if (complete is not null)
+                complete.IsEnabled = coverage.Count > 0 && tested == coverage.Count && gaps == 0;
+            UpdateResultDetail();
+        }
+
+        results.SelectionChanged += (_, _) => UpdateResultDetail();
         var templates = await _workspace.TemplatesAsync(_topicId, "AuditTest");
         var template = Ui.Combo();
         source.SelectionChanged += (_, _) =>
@@ -230,21 +290,53 @@ public sealed partial class MainWindow
             return CommitFormChangeAsync(() => _workspace.TestAsync(audit.Id, activeControl.Id, Sid(source),
                 (evidence.SelectedItem as Proof)?.Id, (string)outcome.SelectedItem!, notes.Text ?? ""));
         }
-        TrackForm(() => ((source.SelectedItem as Source)?.Id, (evidence.SelectedItem as Proof)?.Id, outcome.SelectedItem,
-                notes.Text ?? ""), SaveTest, async () => results.ItemsSource = await _workspace.TestsAsync(audit.Id),
-            source, evidence, outcome, notes);
-        var complete=Button("Audit abschließen",async()=>{if(!await CanLeaveFormAsync())return;var why=await Ui.Prompt(this,"Abschlussbegründung");if(why is null)return;await _workspace.CompleteAuditAsync(audit.Id,why);await Render();},
-            help: "Für jedes Control wird ein Prüfergebnis benötigt. Abweichungen brauchen ein mit Audit und Control verknüpftes Finding.");
-        var editor = Ui.Stack(Ui.Text("Prüfung dokumentieren",20,true),
-            Ui.Field("Control im Audit-Scope", control, "Zeigt Controls, die unter Mappings mit diesem Audit verknüpft sind."),
-            Ui.Field("Prüfquelle", source, "Wählt den Quellenbezug des Controls aus, der für diese Prüfung maßgeblich ist."),
-            Ui.Field("Passende gültige Evidence", evidence, "Für das Ergebnis Bestanden ist ein am Prüfzeitpunkt gültiger Nachweis erforderlich."),
-            Ui.Field("Prüfvorlage", template, "Zeigt Prüftexte für die ausgewählte Quelle."),
-            Button("Prüftext übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)return;if(!string.IsNullOrWhiteSpace(notes.Text)&&!await Ui.Confirm(this,"Prüftext ersetzen?","Ersetzen"))return;notes.Text=RichTextContent.Plain(t.Effective);},
-                help: "Kopiert den Vorlagentext in die Prüfnotiz. Die tatsächliche Beobachtung anschließend ergänzen."),
-            Ui.Field("Ergebnis", outcome, "Tatsächliches Ergebnis auswählen. Bei Nicht anwendbar die Gründe in der Prüfnotiz festhalten."),
-            Ui.Field("Prüfnotiz *", notes, "Prüfhandlung, Stichprobe und beobachtetes Ergebnis so festhalten, dass andere die Entscheidung nachvollziehen können."),
-            Button("Prüfergebnis speichern", SaveEditorButtonAsync, true), complete);
-        return Ui.Split(Ui.Card(Ui.Scroll(Ui.Stack(Ui.Text(audit.Title,22,true),DocumentPreview.Create(audit.Body),Ui.Notice(ids.Count+" Controls im Scope. Scope unter Mappings pflegen. Bestanden benötigt gültige Evidence; Abweichung benötigt vor Abschluss ein verknüpftes Finding. Auditabschluss lässt offene Findings ausdrücklich bestehen."),results,Button("Zurück zu Audits",async()=>{if(!await CanLeaveFormAsync())return;await Render();})))),Ui.Card(Ui.Scroll(editor)));
+        _form = null;
+        var editor = Ui.Stack(Ui.Heading("Prüfung dokumentieren", 20, 2));
+        if (audit.Status == "In Prüfung")
+        {
+            TrackForm(() => ((source.SelectedItem as Source)?.Id, (evidence.SelectedItem as Proof)?.Id, outcome.SelectedItem,
+                    notes.Text ?? ""), SaveTest, RefreshResultsAsync, source, evidence, outcome, notes);
+            complete = Button("Audit abschließen", async () =>
+            {
+                if (!await CanLeaveFormAsync())
+                    return;
+                var reason = await Ui.Prompt(this, "Abschlussbegründung");
+                if (reason is null)
+                    return;
+                await _workspace.CompleteAuditAsync(audit.Id, reason);
+                await Render();
+            }, help: "Alle Controls brauchen ein Prüfergebnis. Eine Abweichung braucht eine Feststellung mit Audit- und Control-Bezug.");
+            editor.Children.AddRange([
+                Ui.Field("Control im Prüfumfang", control, "Zeigt Controls, die unter Mappings mit diesem Audit verknüpft sind."),
+                Ui.Field("Prüfquelle", source, "Wählt den Quellenbezug des Controls aus, der für diese Prüfung maßgeblich ist."),
+                Ui.Field("Passender gültiger Nachweis", evidence, "Für das Ergebnis Bestanden ist ein am Prüfzeitpunkt gültiger Nachweis erforderlich."),
+                Ui.Field("Prüfvorlage", template),
+                Button("Prüftext übernehmen", async () =>
+                {
+                    if (template.SelectedItem is not TextTemplate selected ||
+                        !string.IsNullOrWhiteSpace(notes.Text) && !await Ui.Confirm(this,"Prüftext ersetzen?","Ersetzen"))
+                        return;
+                    notes.Text = RichTextContent.Plain(selected.Effective);
+                }),
+                Ui.Field("Ergebnis", outcome, "Bei Nicht anwendbar den Grund in der Prüfnotiz festhalten."),
+                Ui.Field("Prüfnotiz *", notes),
+                Ui.Row(Button("Prüfergebnis speichern", SaveEditorButtonAsync, true), complete)]);
+        }
+        else
+        {
+            editor.Children.Add(Ui.Notice(audit.Status == "Abgeschlossen" ? "Das geschlossene Prüfdossier ist schreibgeschützt." :
+                "Setzen Sie den Prüfauftrag für die Erfassung auf „In Prüfung“."));
+            editor.Children.Add(Button("Prüfauftrag öffnen", () => OpenModuleEntryAsync("Audit", audit.Id), glyph: Glyph.Arrow));
+        }
+        var dossier = Ui.Stack(Ui.Heading(AuditIksTitle(audit), 22, 1), Ui.Secondary($"{audit.Status} · Termin {AuditDateLabel(audit)}"),
+            DocumentPreview.Create(audit.Body), resultsHeading, summary, results, resultDetail, Ui.Heading("Feststellungen", 17, 2));
+        if (findings.Length == 0)
+            dossier.Children.Add(Ui.Secondary("Mit diesem Prüfauftrag sind noch keine Feststellungen verknüpft."));
+        foreach (var finding in findings)
+            dossier.Children.Add(Button($"{AuditIksTitle(finding)} · {finding.Status}", () => OpenModuleEntryAsync("Finding", finding.Id), glyph: Glyph.Finding));
+        dossier.Children.Add(Ui.Row(Button("Zuordnungen verwalten", () => OpenModuleEntryAsync("Mappings"), glyph: Glyph.Mapping),
+            Button("Zurück zu Prüfaufträgen", async () => { if (await CanLeaveFormAsync()) await Render(); })));
+        await RefreshResultsAsync();
+        return Ui.Split(Ui.Card(Ui.Scroll(dossier)), Ui.Card(Ui.Scroll(editor)));
     }
 }

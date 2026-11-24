@@ -1,8 +1,8 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
-using Avalonia.Platform.Storage;
 using D3.Grc.Core;
 
 namespace D3.Grc.Desktop;
@@ -31,7 +31,7 @@ public sealed partial class MainWindow
 
     private async Task<(bool Completed, bool CleanupPending)> ShowCompanySetupAsync(bool createProject, CompanyProfile profile)
     {
-        var title = createProject ? "Unternehmen und Projekt einrichten" : "Unternehmensprofil konfigurieren";
+        var title = createProject ? "Unternehmen und Mandant einrichten" : "Unternehmensprofil konfigurieren";
         var window = new Window
         {
             Title = title,
@@ -63,7 +63,7 @@ public sealed partial class MainWindow
             createProject ? Ui.Field("Unternehmen oder Projekt *", name) : Ui.Text(_workspace.Name, 19, true),
             CompanyColumns(
                 Ui.Field("Unternehmensgröße", size, "Die Größe verändert den Umfang des empfohlenen Einstiegs."),
-                Ui.Field("Branche", industry, "Ergänzt die Vorschläge um branchentypische Schwerpunkte.")),
+                Ui.Field("Unternehmensart / Branche", industry, "Passt die Vorschläge für anklickbare Merkmale und Themen an.")),
             CompanyColumns(
                 Ui.Field("Standorte *", siteCount),
                 Ui.Field("Organisationseinheiten *", unitCount)),
@@ -74,23 +74,57 @@ public sealed partial class MainWindow
             .ToDictionary(pair => pair.Key, pair => CompanyCheckBox(pair.Value, profile.Factors.HasFlag(pair.Key)));
         var topicInputs = CompanyPlanning.TopicLabels.ToDictionary(pair => pair.Key,
             pair => CompanyCheckBox(pair.Value, profile.Topics.Contains(pair.Key, StringComparer.Ordinal)), StringComparer.Ordinal);
-        var scopeFields = CompanyColumns(
+        var manuallySetFactors = new HashSet<CompanyFactors>();
+        var manuallySetTopics = new HashSet<string>(StringComparer.Ordinal);
+        var applyingSuggestions = false;
+        var suggestionHint = Ui.Secondary("Vorgeschlagene Optionen können Sie anpassen.");
+        foreach (var (factor, input) in factors)
+            input.PropertyChanged += (_, args) =>
+            {
+                if (args.Property == ToggleButton.IsCheckedProperty && !applyingSuggestions)
+                    manuallySetFactors.Add(factor);
+            };
+        foreach (var (topicId, input) in topicInputs)
+            input.PropertyChanged += (_, args) =>
+            {
+                if (args.Property == ToggleButton.IsCheckedProperty && !applyingSuggestions)
+                    manuallySetTopics.Add(topicId);
+            };
+
+        void RefreshSuggestions()
+        {
+            if (industry.SelectedItem is not CompanyOption<CompanyIndustry> company)
+                return;
+            var suggestion = CompanyPlanning.SuggestForIndustry(company.Value);
+            applyingSuggestions = true;
+            try
+            {
+                foreach (var (factor, input) in factors)
+                {
+                    var recommended = suggestion.Factors.HasFlag(factor);
+                    input.Content = CompanyPlanning.FactorLabels[factor] + (recommended ? " · Vorschlag" : "");
+                    if (createProject && !manuallySetFactors.Contains(factor))
+                        input.IsChecked = recommended;
+                }
+                foreach (var (topicId, input) in topicInputs)
+                {
+                    var recommended = suggestion.Topics.Contains(topicId, StringComparer.Ordinal);
+                    input.Content = CompanyPlanning.TopicLabels[topicId] + (recommended ? " · Vorschlag" : "");
+                    if (createProject && !manuallySetTopics.Contains(topicId))
+                        input.IsChecked = recommended;
+                }
+            }
+            finally { applyingSuggestions = false; }
+        }
+        industry.SelectionChanged += (_, _) => RefreshSuggestions();
+        RefreshSuggestions();
+
+        var scopeFields = Ui.Stack(suggestionHint, CompanyColumns(
             Ui.Card(Ui.Stack([Ui.Text("Merkmale des Unternehmens", 17, true), .. factors.Values])),
-            Ui.Card(Ui.Stack([Ui.Text("Weitere Themen zur Prüfung", 17, true), .. topicInputs.Values])));
+            Ui.Card(Ui.Stack([Ui.Text("Fachthemen zur Prüfung", 17, true), .. topicInputs.Values]))));
 
         var plan = new ContentControl();
-        var password = Ui.Input("Mindestens 12 Zeichen");
-        password.PasswordChar = '●';
-        password.MaxLength = 1024;
-        var confirmation = Ui.Input("Projektpasswort wiederholen");
-        confirmation.PasswordChar = '●';
-        confirmation.MaxLength = 1024;
-        var planPage = createProject
-            ? Ui.Stack(Ui.Card(CompanyColumns(
-                Ui.Field("Projektpasswort *", password, "Schützt die verschlüsselte Projektdatei."),
-                Ui.Field("Projektpasswort bestätigen *", confirmation))), plan)
-            : Ui.Stack(plan);
-
+        var demo = new Button { Content = "Demo-Unternehmen öffnen", MinHeight = 40 };
         var back = new Button { Content = "Zurück", MinHeight = 40 };
         var cancel = new Button { Content = "Abbrechen", IsCancel = true, MinHeight = 40 };
         var next = new Button
@@ -102,7 +136,7 @@ public sealed partial class MainWindow
             Foreground = Avalonia.Media.Brushes.White
         };
         var footer = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 12, 0, 0) };
-        var actions = Ui.Row(cancel, back, next);
+        var actions = Ui.Row(demo, cancel, back, next);
         DockPanel.SetDock(actions, Dock.Right);
         footer.Children.Add(actions);
         footer.Children.Add(inlineError);
@@ -137,7 +171,8 @@ public sealed partial class MainWindow
             SetError("");
             progress.Text = $"Schritt {step + 1} von 3";
             back.IsEnabled = step > 0;
-            next.Content = step == 2 ? (createProject ? "Projektdatei anlegen" : "Profil speichern") : "Weiter";
+            next.Content = step == 2 ? (createProject ? "Mandant anlegen" : "Profil speichern") : "Weiter";
+            demo.IsVisible = createProject && step == 0;
             switch (step)
             {
                 case 0:
@@ -153,10 +188,10 @@ public sealed partial class MainWindow
                 default:
                     stepTitle.Text = "Ihr Umsetzungsplan";
                     explanation.Text = createProject
-                        ? "Prüfen Sie die vorgeschlagenen Aufgaben. Legen Sie anschließend die verschlüsselte Projektdatei an."
+                        ? "Prüfen Sie die vorgeschlagenen Aufgaben. Der Mandant wird verschlüsselt in Ihrem Profil gespeichert."
                         : "Prüfen und speichern Sie die Priorisierung. Bestehende Einträge und Themen bleiben verfügbar.";
                     plan.Content = CompanyPlanPreview(CompanyPlanning.Build(ReadProfile()));
-                    body.Content = planPage;
+                    body.Content = plan;
                     break;
             }
         }
@@ -170,6 +205,29 @@ public sealed partial class MainWindow
                 name.Focus();
             else
                 size.Focus();
+        };
+
+        demo.Click += async (_, _) =>
+        {
+            if (running)
+                return;
+            running = true;
+            dialog.IsEnabled = false;
+            try
+            {
+                cleanupPending = await CreateManagedTenantAsync(DemoTenant.Name, DemoTenant.Profile, demo: true);
+                running = false;
+                window.Close(true);
+            }
+            catch (Exception ex)
+            {
+                SetError(ex.Message);
+            }
+            finally
+            {
+                running = false;
+                dialog.IsEnabled = true;
+            }
         };
 
         next.Click += async (_, _) =>
@@ -204,23 +262,7 @@ public sealed partial class MainWindow
                     }
                     else if (createProject)
                     {
-                        if ((password.Text?.Length ?? 0) < 12)
-                            throw new ArgumentException("Das Projektpasswort muss mindestens 12 Zeichen haben.");
-                        if (password.Text != confirmation.Text)
-                            throw new ArgumentException("Die Projektpasswörter stimmen nicht überein.");
-
-                        var file = await window.StorageProvider.SaveFilePickerAsync(new Avalonia.Platform.Storage.FilePickerSaveOptions
-                        {
-                            Title = "Verschlüsselte Projektdatei anlegen",
-                            SuggestedFileName = "organisation.d3grc",
-                            DefaultExtension = "d3grc",
-                            FileTypeChoices = [new("D3 GRC-Projekt") { Patterns = ["*.d3grc"] }]
-                        });
-                        if (file is null)
-                            return;
-                        var path = file.TryGetLocalPath()
-                            ?? throw new IOException("Bitte einen lokalen Speicherort für das Projekt wählen.");
-                        cleanupPending = await _workspace.CreateAndSwitchAsync(path, name.Text!, password.Text!, ReadProfile());
+                        cleanupPending = await CreateManagedTenantAsync(name.Text!, ReadProfile());
                     }
                     else
                     {
@@ -250,12 +292,7 @@ public sealed partial class MainWindow
         };
 
         SetStep(0);
-        try { return (await window.ShowDialog<bool>(this) || pendingFileSave, cleanupPending); }
-        finally
-        {
-            password.Text = "";
-            confirmation.Text = "";
-        }
+        return (await window.ShowDialog<bool>(this) || pendingFileSave, cleanupPending);
     }
 
     private static Control CompanyPlanPreview(IReadOnlyList<CompanyModuleRecommendation> modules)

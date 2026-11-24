@@ -5,8 +5,12 @@ using static D3.Grc.Core.Database;
 namespace D3.Grc.Core;
 public sealed partial class Workspace
 {
-    public static readonly Dictionary<string, (string From, string To)> LinkTypes = new()
+    public static readonly Dictionary<string, (string From, string To)> LinkTypes = BuildLinkTypes();
+
+    private static Dictionary<string, (string From, string To)> BuildLinkTypes()
     {
+        var types = new Dictionary<string, (string From, string To)>
+        {
         ["Anforderung → Control"] = ("Requirement", "Control"),
         ["Risiko → Control"] = ("Risk", "Control"),
         ["Audit → Control"] = ("Audit", "Control"),
@@ -19,17 +23,26 @@ public sealed partial class Workspace
         ["Dienstleister → Control"] = ("Supplier", "Control"),
         ["Dienstleister → Risiko"] = ("Supplier", "Risk"),
         ["Maßnahme → Dienstleister"] = ("Measure", "Supplier")
-    };
+        };
+        foreach (var relation in DesktopModules.Relations)
+            types.Add(relation.Type, (relation.FromKind, relation.ToKind));
+        return types;
+    }
+
+    private static bool IsWorkflowLocked(Entry entry) =>
+        entry.Kind is "Audit" or "Finding" && entry.Status is "Abgeschlossen" or "Geschlossen";
     public Task<List<Mapping>> MappingsAsync()=>Read(c=>Query(c,null,"SELECT l.*,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,''),COALESCE(a.Approval,'Entwurf') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>new Mapping(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),r.GetString(8))));
     public async Task LinkAsync(string from,string to,string type,string source,string coverage,string scope,string reason)=>await Change("MappingCreated",from,JsonSerializer.Serialize(new{to,type,source,coverage,scope,reason}),(c,t)=>{
         Reason(reason);if(!LinkTypes.TryGetValue(type,out var pair)||!new[]{"Teilweise","Vollständig","Unterstützend"}.Contains(coverage))throw new ArgumentException("Beziehung/Abdeckung ungültig.");var a=Get(c,t,from);var b=Get(c,t,to);RequireKind(a,pair.From);RequireKind(b,pair.To);
-        if(a.Status is "Abgeschlossen" or "Geschlossen"||b.Status is "Abgeschlossen" or "Geschlossen")throw new ArgumentException("Abgeschlossene Datensätze sind gesperrt.");
+        if(IsWorkflowLocked(a)||IsWorkflowLocked(b))throw new ArgumentException("Abgeschlossene Datensätze sind gesperrt.");
+        if (type == ProcessModule.ParentType)
+            ValidateProcessLink(c, t, a, b);
         var sourceAllowed=Scalar(c,t,"SELECT SourceId FROM RecordSources WHERE RecordId=$p0 AND SourceId=$p1",from,source)!=""||source==a.SourceId;if(!sourceAllowed)throw new ArgumentException("Quellenbezug zuerst am Ausgangsobjekt begründet ergänzen.");
         var id=Guid.NewGuid().ToString("N");Exec(c,t,"INSERT INTO Links VALUES($p0,$p1,$p2,$p3,$p4,$p5)",id,from,to,type,reason,source);Exec(c,t,"INSERT INTO MappingAssessments VALUES($p0,$p1,$p2,'Bestätigt')",id,coverage,scope);return true;
     });
     public async Task UnlinkAsync(string id)=>await Change("MappingRemoved",id,"Benutzerbestätigung",(c,t)=>{
         var link=Query(c,t,"SELECT SourceRecordId,TargetRecordId,Type FROM Links WHERE Id=$p0",r=>(From:r.GetString(0),To:r.GetString(1),Type:r.GetString(2)),id).Single();
-        if(Get(c,t,link.From).Status is "Abgeschlossen" or "Geschlossen"||Get(c,t,link.To).Status is "Abgeschlossen" or "Geschlossen")throw new ArgumentException("Abgeschlossene Zuordnung gesperrt.");
+        if(IsWorkflowLocked(Get(c,t,link.From))||IsWorkflowLocked(Get(c,t,link.To)))throw new ArgumentException("Abgeschlossene Zuordnung gesperrt.");
         if(link.Type=="Audit → Control"&&Scalar(c,t,"SELECT Id FROM AuditTests WHERE AuditId=$p0 AND ControlId=$p1",link.From,link.To)!="")throw new ArgumentException("Bereits geprüften Scope nicht entfernen.");Exec(c,t,"DELETE FROM Links WHERE Id=$p0",id);return true;
     });
     private static List<Proof> Proofs(SqliteConnection c,SqliteTransaction? t,string control="")=>Query(c,t,"SELECT Id,Title,ControlId,SourceId,FileName,Hash,CollectedUtc,ValidUntil,SourceDescription FROM Evidence e WHERE $p0='' OR ControlId=$p0 OR EXISTS(SELECT 1 FROM EvidenceLinks l WHERE l.EvidenceId=e.Id AND l.ControlId=$p0)",r=>new Proof(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),r.GetString(8)),control);

@@ -87,7 +87,28 @@ public sealed partial class Workspace
             sheets.Add(new("Umsetzungsplan", ["Priorität", "Modul", "Fachthema", "Begründung", "Nächster Schritt"], planRows));
         }
         sheets.Add(new("Kennzahlen",["Kennzahl","Anzahl"],new(){new[]{"Anforderungen",entries.Count(e=>e.Kind=="Requirement").ToString()},new[]{"Controls",entries.Count(e=>e.Kind=="Control").ToString()},new[]{"Controls als Entwurf",entries.Count(e=>e.Kind=="Control"&&e.Status=="Entwurf").ToString()},new[]{"Offene Findings",entries.Count(e=>e.Kind=="Finding"&&e.Status!="Geschlossen").ToString()},new[]{"Ohne Verantwortung",entries.Count(e=>e.Owner=="").ToString()}}));
-        foreach(var kind in Entry.Kinds.Where(kind => kind != "Supplier"))sheets.Add(new(kind,["ID","Code","Titel","Quelle","Fundstelle","Status","Verantwortung","Termin","Scope","Version","Beschreibung"],entries.Where(e=>e.Kind==kind).Select(e=>new[]{e.Id,e.Code,e.Title,e.SourceId,e.Locator,e.Status,e.Owner,e.DueDate,e.Scope,e.Version.ToString(),RichTextContent.Plain(e.Body)}).ToList()));
+        foreach (var kind in Entry.Kinds.Where(kind => kind != "Supplier"))
+        {
+            var rows = entries.Where(entry => entry.Kind == kind).ToArray();
+            var spec = DesktopModules.Specs.GetValueOrDefault(kind);
+            if (spec is not null && kind != "AiSystem" && rows.Length == 0)
+                continue;
+            var fields = spec is null || rows.Length == 0 ? [] : spec.Fields;
+            var headers = new[] { "ID", "Code", "Titel", "Quelle", "Fundstelle", "Status", "Verantwortung", "Termin", "Scope", "Version", "Beschreibung" };
+            sheets.Add(new(kind, [..headers, ..fields.Select(field => field.Label)], rows.Select(entry =>
+            {
+                string[] baseFields = [entry.Id, entry.Code, entry.Title, entry.SourceId, entry.Locator, entry.Status,
+                    entry.Owner, entry.DueDate, entry.Scope, entry.Version.ToString(), RichTextContent.Plain(entry.Body)];
+                if (fields.Length == 0)
+                    return baseFields;
+                var values = ReadModuleFields(c, null, entry.Id);
+                return [..baseFields, ..fields.Select(field =>
+                {
+                    var value = values.GetValueOrDefault(field.Key, "");
+                    return field.Type == "steps" ? ProcessModule.FormatSteps(value) : value;
+                })];
+            }).ToList()));
+        }
         AddRiskAssessmentExport(c, sheets, meta, entries.Where(entry => entry.Kind == "Risk"));
         var links=Query(c,null,"SELECT l.Id,l.SourceRecordId,l.TargetRecordId,l.Type,l.Reason,l.SourceId,COALESCE(a.Coverage,'Teilweise'),COALESCE(a.Scope,'') FROM Links l LEFT JOIN MappingAssessments a ON a.LinkId=l.Id",r=>Enumerable.Range(0,8).Select(r.GetString).ToArray()).Where(x=>ids.Contains(x[1])||ids.Contains(x[2])).ToList();sheets.Add(new("Mappings",["ID","Ausgangs-ID","Ziel-ID","Typ","Begründung","Quelle","Abdeckung","Scope"],links));
         var proofIds=Query(c,null,"SELECT EvidenceId,ControlId FROM EvidenceLinks",r=>(Evidence:r.GetString(0),Control:r.GetString(1))).Where(x=>ids.Contains(x.Control)).Select(x=>x.Evidence).ToHashSet();

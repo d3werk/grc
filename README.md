@@ -6,11 +6,9 @@ Der neue Web-Arbeitsbereich führt Organisation, Assets und IT-Dienste, Risiken,
 
 Längere Fachtexte lassen sich mit dem Rich-Text-Editor bearbeiten. Über die Mandantenauswahl kann ein weiteres Konto verbunden und anschließend innerhalb der laufenden Browsersitzung gewechselt werden. Docker Compose startet Browserportal, FastAPI und PostgreSQL für die lokale Erprobung. [Start und erste Arbeitsstrecke](platform/README.md) · [Architektur und Berechtigungen](docs/PLATTFORM-ARCHITEKTUR.md) · [Prüfbericht 0.12.0](docs/PRUEFBERICHT-0.12.0.md)
 
-## Desktop 0.12.0
+## Desktop
 
-Der Desktop-Lieferumfang umfasst die .NET-Quellcode-Solution. **Mandant wechseln** öffnet die Auswahl verschlüsselter Projektdateien. Längere Texte wie **Beschreibung / Umsetzung** eines Controls lassen sich direkt formatieren. [Anwenderhandbuch](docs/ANWENDERHANDBUCH.md) · [Prüfbericht 0.12.0](docs/PRUEFBERICHT-0.12.0.md)
-
-Nach der lokalen Registrierung führt der Unternehmensassistent von der verschlüsselten Projektanlage zu einem begründeten Umsetzungsplan. Der Arbeitsbereich verbindet Anforderungen, Risiken, Controls, Lieferanten, Quellen, Nachweise und Audits mit einem Dokumentenregister. Textvorlagen lassen sich ansehen, bearbeiten und als Ausgangspunkt für Dokumententwürfe verwenden. Die Risikomatrix macht Behandlungsbedarf im gewählten Geltungsbereich sichtbar.
+Der Unternehmensassistent öffnet sich nach der ersten lokalen Anmeldung. Er schlägt je nach Unternehmensart passende Merkmale und Themen vor. Im Desktop-Menü stehen ein Mandanten-Dropdown, verschlüsselter Einzelexport, Gesamtsicherung und Wiederherstellung bereit. Die Demo **Nordlicht Service GmbH** enthält synthetische Prozesse, Risiken, Prüfungen, Controls, Resilienztests, BCM-Übungen, KI-Systeme und Verträge. [Anwenderhandbuch](docs/ANWENDERHANDBUCH.md)
 
 ### Ausgangsbasis der Desktop-Migration
 Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser Sitzung nicht als Dateien verfügbar. Deshalb ist dies eine konsolidierte neue Solution, kein gegen dein Repository getesteter In-place-Patch. Die bekannte 0.5-Datenbankstruktur und das D3GRC005-Containerformat werden weiter unterstützt; eine additive Migration ist enthalten. Die Migration wurde mit einer kompatiblen SQL-Testdatenbank geprüft, NICHT mit deiner persönlichen Projektdatei oder über die native C#-Laufzeit.
@@ -25,10 +23,10 @@ Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser
 5. Solution bauen und die Tests unter `tests/D3.Grc.Tests` ausführen.
 6. `D3.Grc.Desktop` als Startprojekt starten.
 7. Mit einem bestehenden lokalen Profil anmelden oder ein neues Profil registrieren. Nach der Registrierung startet direkt die Projekteinrichtung.
-8. Unternehmen konfigurieren, den Umsetzungsplan prüfen und die Projektdatei mit einem separaten Passwort anlegen. Die Datei wird sofort geöffnet. Bestehende Projekte lassen sich öffnen und anschließend konfigurieren.
+8. Unternehmen konfigurieren und den Umsetzungsplan prüfen. Den neuen Mandanten anlegen oder die Demo öffnen. Vorhandene verschlüsselte Projektdateien einmalig über die Mandantenverwaltung importieren.
 9. In der Übersicht eine Aufgabe öffnen, Anforderungen und Controls prüfen und Änderungen speichern.
 
-Keine Standard-Zugangsdaten. Profil- und Projektpasswort sind getrennt. Mindestens 12 Zeichen bei der Einrichtung. Kein Passwort-Reset.
+Die lokale Anmeldung benötigt ein eigenes Profilpasswort mit mindestens zwölf Zeichen. Intern verwaltete Mandanten werden in dieser Anmeldung entsperrt.
 
 ### Funktionsumfang im Desktop-Arbeitsbereich
 - Lokale Profilregistrierung, Argon2id-Passwortprüfung, temporäre Sperre nach Fehlversuchen.

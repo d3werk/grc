@@ -16,13 +16,13 @@ public sealed partial class MainWindow:Window
     private static readonly string AppVersion = typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "";
     private readonly LocalIdentity _identity;private readonly Workspace _workspace;
     private ContentControl _body=new();private TextBlock _status=Ui.Text("",12);
-    private ComboBox _topic=Ui.Combo();private TextBox _scope=Ui.Input("Scope exakt filtern (leer = alle)"),_search=Ui.Input("Suche: Titel, Code, Beschreibung, Owner");
+    private ComboBox _topic=Ui.Combo(),_scope=Ui.Combo();private TextBox _search=Ui.Input("Suche: Titel, Code, Beschreibung, Owner");
     private TextBlock _context=Ui.Text("",18,true);private readonly DispatcherTimer _timer=new(){Interval=TimeSpan.FromSeconds(30)};
     private Grid? _shell;private bool _busy,_loading,_allowClose;private string _page="Dashboard",_topicId="",_scopeValue="",_searchValue="",_statusFilter="";
     private List<Choice> _topics=[];private List<Entry> _entries=[];private List<Entry> _all=[];private List<Source> _sources=[];private List<Source> _allSources=[];private List<Mapping> _mappings=[];
     public MainWindow(LocalIdentity identity,Workspace workspace)
     {
-        _identity=identity;_workspace=workspace;Title=$"D3 GRC {AppVersion} · Datenschutz und Informationssicherheit";Width=1440;Height=950;MinWidth=1040;MinHeight=700;Background=Ui.Canvas;FontSize=14;
+        _identity=identity;_workspace=workspace;Title=$"D3 GRC {AppVersion} · Governance, Risiken und Compliance";Width=1440;Height=950;MinWidth=1040;MinHeight=700;Background=Ui.Canvas;FontSize=14;
         Opened+=(_,_)=>LoginScreen();
         Closing+=async(_,e)=>{if(_allowClose)return;e.Cancel=true;if(_busy)return;await Run(async()=>{if(!await CanLeaveFormAsync())return;await _workspace.LogoutAsync();_allowClose=true;_timer.Stop();Close();});};
         KeyDown+=async(_,e)=>{if(!_workspace.IsOpen)return;var command=e.KeyModifiers.HasFlag(KeyModifiers.Control)||e.KeyModifiers.HasFlag(KeyModifiers.Meta);if(command&&e.Key==Key.S){e.Handled=true;await Run(Save);}else if(command&&e.Key==Key.P){e.Handled=true;await Run(()=>Export(false));}};
@@ -75,26 +75,25 @@ public sealed partial class MainWindow:Window
     }
     private void LoginScreen()
     {
-        _recentProjects.Clear();
+        _activeTenantId = null;
+        _tenants = [];
         _shell=null;_body.Content=null;_form=null;_refreshAfterPersistence=false;_entries.Clear();_all.Clear();_sources.Clear();_allSources.Clear();_mappings.Clear();
         var name=Ui.Input("Lokaler Profilname");var password=Ui.Input("Profilpasswort");password.PasswordChar='*';
-        var login=Button("Anmelden",async()=>{if(!await _identity.LoginAsync(name.Text??"",password.Text??""))throw new UnauthorizedAccessException("Anmeldung fehlgeschlagen.");password.Text="";BuildShell();await Render();},true,glyph:Glyph.Arrow);
+        var login=Button("Anmelden",async()=>{if(!await _identity.LoginAsync(name.Text??"",password.Text??""))throw new UnauthorizedAccessException("Anmeldung fehlgeschlagen.");password.Text="";await StartProfileAsync();},true,glyph:Glyph.Arrow);
         login.IsDefault = true;
         var register=Button("Profil erstellen",async()=>{
             var confirm=await Ui.Prompt(this,"Profilpasswort bestätigen (mindestens 12 Zeichen)",true);if(confirm is null)return;if(confirm!=password.Text)throw new ArgumentException("Passwörter stimmen nicht überein.");await _identity.RegisterAsync(name.Text??"",password.Text??"");
             if (!await _identity.LoginAsync(name.Text ?? "", password.Text ?? ""))
                 throw new UnauthorizedAccessException("Das Profil wurde eingerichtet. Bitte melde dich damit an.");
             password.Text = "";
-            BuildShell();
-            await Render();
-            await CreateProjectFromSetupAsync();
-        }, help: "Legt ein lokales Profil an und startet den Assistenten für die verschlüsselte Projektdatei.", glyph: Glyph.Person);
+            await StartProfileAsync();
+        }, help: "Legt ein lokales Profil an und startet den Assistenten für den lokal gespeicherten Mandanten.", glyph: Glyph.Person);
         var logo = CreateLogo(43);
         logo.HorizontalAlignment = HorizontalAlignment.Left;
         var card=Ui.Card(Ui.Stack(logo,Ui.Heading("Bei D3 GRC anmelden",28,1),Ui.Secondary("Anmeldung mit einem lokalen Profil.",14),
             Ui.Field("Profilname", name, "Der Profilname wird im Änderungsjournal als lokale Identität angezeigt."),
-            Ui.Field("Profilpasswort", password, "Ein neues Profilpasswort muss mindestens 12 Zeichen haben. Projektdateien haben ein separates Passwort."),
-            Ui.Row(login,register),Ui.Secondary("Das Profilpasswort lässt sich nicht zurücksetzen. Ein neues Profil kann einen verlorenen lokalen Zugang ersetzen. Ihr Projektpasswort bleibt erforderlich."),Ui.Secondary(Ui.KeyboardHelp, 12)));
+            Ui.Field("Profilpasswort", password, "Ein neues Profilpasswort muss mindestens 12 Zeichen haben. Es öffnet auch Ihre intern verwalteten Mandanten."),
+            Ui.Row(login,register),Ui.Secondary("Das Profilpasswort schützt Ihren lokalen Mandantenspeicher. Für übertragbare Sicherungen erhalten Sie einen separaten Sicherungsschlüssel."),Ui.Secondary(Ui.KeyboardHelp, 12)));
         card.Width=500;card.Padding=new Thickness(30);card.HorizontalAlignment=HorizontalAlignment.Center;card.VerticalAlignment=VerticalAlignment.Center;card.Margin=new Thickness(24);
         Content = new Border
         {
@@ -104,13 +103,46 @@ public sealed partial class MainWindow:Window
     }
     private async Task ApplyFilters()
     {
-        var scope = _scope.Text?.Trim() ?? "";
+        var scope = IsProjectWidePrivacy ? _scopeValue : (_scope.SelectedItem as Choice)?.Id ?? "";
         var search = _search.Text?.Trim() ?? "";
-        if (scope == _scopeValue && search == _searchValue || !await CanLeaveFormAsync())
+        if (scope == _scopeValue && search == _searchValue)
             return;
+        if (!await CanLeaveFormAsync())
+        {
+            if (!IsProjectWidePrivacy && _scope.ItemsSource is IEnumerable<Choice> options)
+                _scope.SelectedItem = options.FirstOrDefault(option => option.Id == _scopeValue);
+            return;
+        }
         _scopeValue = scope;
         _searchValue = search;
         await Render();
+    }
+
+    private bool IsProjectWidePrivacy => _topicId == "PRIVACY";
+    private string EffectiveScope => IsProjectWidePrivacy ? "" : _scopeValue;
+
+    private async Task<bool> RefreshScopeOptionsAsync()
+    {
+        if (IsProjectWidePrivacy)
+        {
+            _scope.ItemsSource = new[] { new Choice("", "Projektweit") };
+            _scope.SelectedIndex = 0;
+            _scope.IsEnabled = false;
+            return false;
+        }
+
+        var scopes = await _workspace.ScopeOptionsAsync();
+        var scopeRemoved = _scopeValue != "" && !scopes.Contains(_scopeValue, StringComparer.Ordinal);
+        if (scopeRemoved)
+            _scopeValue = "";
+        var options = new[] { new Choice("", "Alle Geltungsbereiche") }.Concat(scopes
+            .OrderBy(scope => scope, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(scope => scope, StringComparer.Ordinal)
+            .Select(scope => new Choice(scope, scope))).ToList();
+        _scope.ItemsSource = options;
+        _scope.SelectedItem = options.First(option => option.Id == _scopeValue);
+        _scope.IsEnabled = true;
+        return scopeRemoved;
     }
     private async Task Render()
     {
@@ -121,10 +153,11 @@ public sealed partial class MainWindow:Window
         {
             if (!_workspace.IsOpen)
             {
+                _scope.ItemsSource = null;
                 _body.Content = Ui.Card(Ui.Stack(
-                    Ui.Heading("Projekt öffnen oder anlegen", 24, 1),
-                    Ui.Secondary("Ein neues Projekt beginnt mit dem Unternehmensassistenten. Zum Weiterarbeiten können Sie eine vorhandene Projektdatei öffnen.", 14),
-                    Ui.Notice("Die aktive SQLite-Arbeitskopie liegt im Klartext vor. Datenträgerverschlüsselung verwenden.")));
+                    Ui.Heading("Mandant auswählen oder anlegen", 24, 1),
+                    Ui.Secondary("Wählen Sie oben einen Mandanten oder legen Sie einen neuen im Unternehmensassistenten an.", 14),
+                    Button("Demo-Unternehmen öffnen", OpenDemoTenantAsync, true, glyph: Glyph.Open)));
                 _context.Text = "Kein Projekt geöffnet";
                 _status.Text = "Profil angemeldet";
                 UpdateShellNavigation();
@@ -134,10 +167,11 @@ public sealed partial class MainWindow:Window
             _topics = new[] { new Choice("", "Alle Themen") }.Concat(await _workspace.TopicsAsync()).ToList();
             _topic.ItemsSource = _topics;
             _topic.SelectedItem = _topics.FirstOrDefault(topic => topic.Id == _topicId) ?? _topics[0];
+            await RefreshScopeOptionsAsync();
             _all = await _workspace.EntriesAsync();
-            var contextEntries = _topicId == "" && _scopeValue == ""
+            var contextEntries = _topicId == "" && EffectiveScope == ""
                 ? _all
-                : await _workspace.EntriesAsync(_topicId, "", _scopeValue);
+                : await _workspace.EntriesAsync(_topicId, "", EffectiveScope);
             _entries = contextEntries.Where(Matches).ToList();
             _sources = await _workspace.SourcesAsync(_topicId);
             _allSources = _topicId == "" ? _sources : await _workspace.SourcesAsync();
@@ -145,6 +179,13 @@ public sealed partial class MainWindow:Window
             _body.Content = _page switch
             {
                 "Dashboard" => await Dashboard(),
+                "ProcessOverview" => await ProcessOverviewPage(),
+                "InternalAudit" => await InternalAuditOverviewPage(),
+                "InternalControl" => await InternalControlPage(),
+                "ResilienceOverview" => await ResilienceOverviewPage(),
+                "ContinuityOverview" => await ContinuityOverviewPage(),
+                "AiOverview" => await AiOverviewPage(),
+                "ContractsOverview" => await ContractsOverviewPage(),
                 "Documents" => await DocumentsPage(),
                 "RiskMatrix" => await RiskMatrixPage(),
                 "Mappings" => await MappingPage(),
@@ -155,7 +196,8 @@ public sealed partial class MainWindow:Window
                 "Journal" => await JournalPage(),
                 _ => await EntryPage(_page)
             };
-            _context.Text = $"{_workspace.Name} / {(_topic.SelectedItem as Choice)?.Title} / {Pages[_page]}";
+            var tenantName = _tenants.FirstOrDefault(tenant => tenant.Id == _activeTenantId)?.Name ?? _workspace.Name;
+            _context.Text = $"{tenantName} / {(_topic.SelectedItem as Choice)?.Title} / {Pages[_page]}";
             UpdateShellNavigation();
             UpdateFormStatus();
         }
@@ -183,7 +225,22 @@ public sealed partial class MainWindow:Window
         UpdateFormStatus();
     }
     private async Task Logout(){if(!await CanLeaveFormAsync())return;await _workspace.LogoutAsync();LoginScreen();}
-    private async Task CloseProject(){if(!await CanLeaveFormAsync())return;if(_workspace.IsOpen){if(_workspace.IsDirty)await _workspace.SaveAsync();await _workspace.CloseAsync();}_refreshAfterPersistence=false;await Render();}
+    private async Task CloseProject()
+    {
+        if (!await CanLeaveFormAsync())
+            return;
+        if (_workspace.IsOpen)
+        {
+            if (_workspace.IsDirty)
+                await _workspace.SaveAsync();
+            await _workspace.CloseAsync();
+        }
+        _activeTenantId = null;
+        SelectActiveTenant();
+        _refreshAfterPersistence = false;
+        ResetProjectContext();
+        await Render();
+    }
     private Task NewProject() => CreateProjectFromSetupAsync();
     private async Task<bool?> ChooseRecoveryAsync()
     {
@@ -218,31 +275,20 @@ public sealed partial class MainWindow:Window
         _searchValue = "";
         _statusFilter = "";
         _showResidualRiskMatrix = false;
-        _scope.Text = "";
+        _scope.ItemsSource = null;
         _search.Text = "";
     }
-    private async Task SaveAs()
-    {
-        if (!_workspace.IsOpen)
-            throw new InvalidOperationException("Projekt öffnen.");
-        var path = await SavePath("organisation-kopie.d3grc", "d3grc");
-        if (path is null || !await SaveFormAsync())
-            return;
-        await _workspace.SaveAsAsync(path);
-        RememberActiveProject();
-        _refreshAfterPersistence = false;
-        await Render();
-        _status.Text = "Neue Projektkopie mit gleichem Passwort gespeichert. Alte Datei bleibt erhalten.";
-    }
+    private Task SaveAs() => ExportTenantsAsync(all: false);
     private async Task<string?> SavePath(string name,string extension){var file=await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions{SuggestedFileName=name,DefaultExtension=extension});return file?.TryGetLocalPath();}
     private async Task Export(bool excel)
     {
         if (!_workspace.IsOpen)
             throw new InvalidOperationException("Projekt öffnen.");
         var draftNotice = HasFormChanges ? " Ungespeicherte Formularänderungen bleiben in der Bearbeitung." : "";
-        if(!await Ui.Confirm(this,$"Exportiert werden das Thema '{(_topic.SelectedItem as Choice)?.Title}', Scope '{_scopeValue}' und Suche '{_searchValue}'. Der Export enthält die übernommenen Objekte im Kontext als Klartext und verwendet keine lokalen Listenstatusfilter.{draftNotice}","Exportieren"))return;
-        var sheets=await _workspace.ExportSnapshotAsync(_topicId,_scopeValue,_searchValue);var path=await SavePath(excel?"D3-GRC-Bericht.xlsx":"D3-GRC-Druckansicht.html",excel?"xlsx":"html");if(path is null)return;
-        await Files.AtomicAsync(path,excel?ExcelExport.Build(sheets):Encoding.UTF8.GetBytes(ExcelExport.Html(_workspace.Name,sheets)));await _workspace.RecordExportAsync(path,_topicId,_scopeValue,excel?"xlsx":"html");
+        var scopeLabel = IsProjectWidePrivacy ? "Projektweit" : EffectiveScope == "" ? "Alle Geltungsbereiche" : EffectiveScope;
+        if(!await Ui.Confirm(this,$"Exportiert werden das Thema '{(_topic.SelectedItem as Choice)?.Title}', Geltungsbereich '{scopeLabel}' und Suche '{_searchValue}'. Der Export enthält die übernommenen Objekte im Kontext als Klartext und verwendet keine lokalen Listenstatusfilter.{draftNotice}","Exportieren"))return;
+        var sheets=await _workspace.ExportSnapshotAsync(_topicId,EffectiveScope,_searchValue);var path=await SavePath(excel?"D3-GRC-Bericht.xlsx":"D3-GRC-Druckansicht.html",excel?"xlsx":"html");if(path is null)return;
+        await Files.AtomicAsync(path,excel?ExcelExport.Build(sheets):Encoding.UTF8.GetBytes(ExcelExport.Html(_workspace.Name,sheets)));await _workspace.RecordExportAsync(path,_topicId,EffectiveScope,excel?"xlsx":"html");
         if(!excel)Process.Start(new ProcessStartInfo(new Uri(path).AbsoluteUri){UseShellExecute=true});_status.Text="Export erfolgreich geschrieben (Klartext).";
     }
     private ComboBox SourceCombo(IEnumerable<Source>? sources=null){var box=Ui.Combo();box.ItemsSource=(sources??_sources).ToList();box.SelectedIndex=0;return box;}

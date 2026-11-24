@@ -26,6 +26,7 @@ public sealed class Cipher:IDisposable
     }
     public async Task InitializeAsync(string password,byte[]? salt=null)
     {var s=salt??RandomNumberGenerator.GetBytes(16);var key=await DeriveAsync(password,s);Dispose();_key=key;_salt=s.ToArray();}
+    internal static Cipher FromKey(byte[] key, byte[] salt) => new() { _key = key.ToArray(), _salt = salt.ToArray() };
     public static byte[] Salt(byte[] file)
     {if(file.Length<52||file.Length>Limit+52||!file.AsSpan(0,8).SequenceEqual("D3GRC005"u8))throw new InvalidDataException("Unterstützt wird das D3GRC005-Format aus 0.5/0.6.");return file.AsSpan(8,16).ToArray();}
     public byte[] Encrypt(byte[] plain)
@@ -44,11 +45,15 @@ public sealed class Cipher:IDisposable
 public sealed class LocalIdentity
 {
     private readonly string _path;private readonly SemaphoreSlim _gate=new(1,1);
+    private byte[]? _vaultKey;
+    private byte[]? _vaultSalt;
+    internal string DataDirectory { get; }
     public string? User {get;private set;}
     public LocalIdentity(string? directory=null)
     {
-        var dir=directory??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"D3GRC","identity-v1");Files.PrivateDirectory(dir);_path=Path.Combine(dir,"profiles.db");
+        DataDirectory=Path.GetFullPath(directory??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"D3GRC","identity-v1"));Files.PrivateDirectory(DataDirectory);_path=Path.Combine(DataDirectory,"profiles.db");
         using var c=Database.Open(_path);Database.Exec(c,null,"CREATE TABLE IF NOT EXISTS Profiles(Name TEXT PRIMARY KEY,Salt BLOB NOT NULL,Verifier BLOB NOT NULL,Failures INTEGER NOT NULL DEFAULT 0,LockedUntil TEXT NOT NULL DEFAULT '')");
+        Database.Exec(c,null,"CREATE TABLE IF NOT EXISTS ProfileVaultSalts(Name TEXT PRIMARY KEY REFERENCES Profiles(Name), Salt BLOB NOT NULL CHECK(length(Salt)=16))");
         if(!OperatingSystem.IsWindows())File.SetUnixFileMode(_path,UnixFileMode.UserRead|UnixFileMode.UserWrite);
     }
     public async Task RegisterAsync(string name,string password)
@@ -63,10 +68,40 @@ public sealed class LocalIdentity
             if(row.Salt is null){var dummy=await Cipher.DeriveAsync(password,new byte[16]);CryptographicOperations.ZeroMemory(dummy);return false;}
             if(DateTimeOffset.TryParse(row.Until,out var until)&&until>DateTimeOffset.UtcNow)throw new InvalidOperationException("Profil vorübergehend gesperrt. Später erneut versuchen.");
             var actual=await Cipher.DeriveAsync(password,row.Salt);bool ok;try{ok=CryptographicOperations.FixedTimeEquals(actual,row.Hash);}finally{CryptographicOperations.ZeroMemory(actual);}
-            if(ok){Database.Exec(c,null,"UPDATE Profiles SET Failures=0,LockedUntil='' WHERE Name=$p0",name);User=name;return true;}
+            if (ok)
+            {
+                Database.Exec(c, null, "INSERT OR IGNORE INTO ProfileVaultSalts VALUES ($p0,$p1)", name, RandomNumberGenerator.GetBytes(16));
+                var salt = Database.Query(c, null, "SELECT Salt FROM ProfileVaultSalts WHERE Name=$p0", r => (byte[])r[0], name).Single();
+                var key = await Cipher.DeriveAsync(password, salt);
+                try
+                {
+                    Database.Exec(c, null, "UPDATE Profiles SET Failures=0,LockedUntil='' WHERE Name=$p0", name);
+                    Logout();
+                    _vaultKey = key;
+                    _vaultSalt = salt;
+                    User = name;
+                }
+                catch
+                {
+                    CryptographicOperations.ZeroMemory(key);
+                    throw;
+                }
+                return true;
+            }
             var failures=row.Failures+1;Database.Exec(c,null,"UPDATE Profiles SET Failures=$p0,LockedUntil=$p1 WHERE Name=$p2",failures,failures>=5?DateTimeOffset.UtcNow.AddMinutes(5).ToString("O"):"",name);return false;
         }finally{_gate.Release();}
     }
     public void Demand(){if(User is null)throw new UnauthorizedAccessException("Bitte zuerst anmelden.");}
-    public void Logout()=>User=null;
+    internal Cipher CreateVaultCipher()
+    {
+        Demand();
+        return Cipher.FromKey(_vaultKey ?? throw new InvalidOperationException("Mandantenspeicher gesperrt."), _vaultSalt!);
+    }
+    public void Logout()
+    {
+        if (_vaultKey is not null)
+            CryptographicOperations.ZeroMemory(_vaultKey);
+        _vaultKey = _vaultSalt = null;
+        User = null;
+    }
 }

@@ -1,3 +1,10 @@
+# In Entwicklung · Mandanten und Fachmodule im Desktop
+
+- Lokaler Unternehmensassistent mit branchenbezogenen Themenvorschlägen und intern gespeichertem Mandanten. Mandantenwahl über das Dropdown der laufenden Profilanmeldung.
+- Verschlüsselter Mandantenexport, Gesamtsicherung und Wiederherstellung als separate Kopien. Bestehende Projektdateien lassen sich einmalig übernehmen.
+- Geltungsbereiche aus dem Projektbestand, projektweiter Datenschutz und Erläuterungen zur 5×5-Risikomatrix.
+- Native Fachübersichten für Prozesse, interne Audits, IKS, operationelle Resilienz, BCM, KI-Governance und Verträge. Nordlicht Service GmbH als eigener Demo-Mandant mit synthetischen Daten.
+
 # In Entwicklung · Geltungsbereiche und Fachmodule im Web
 
 - Wiederverwendbare Geltungsbereiche für Filter, Formulare und Beratungsmandate. Vorhandene Bereichsnamen bleiben auswählbar.
