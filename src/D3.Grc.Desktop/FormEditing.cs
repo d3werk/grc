@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         else if (_workspace.IsOpen)
             _status.Text = _workspace.IsDirty
                 ? "Projektänderungen noch nicht in der Hauptdatei gespeichert."
-                : "Alle übernommenen Änderungen gespeichert · " + _workspace.ProjectPath;
+                : "Alle übernommenen Änderungen gespeichert · " + _workspace.Name;
     }
 
     private static async Task<bool> CommitFormChangeAsync(Func<Task> change, Action? accept = null)

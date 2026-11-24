@@ -28,7 +28,7 @@ public sealed class RegressionTests:IDisposable
         await Database.MigrateAsync(path);using var check=Database.Open(path);Assert.Equal("Custom legacy text",Database.Scalar(check,null,"SELECT CustomBody FROM Templates WHERE Id='REQ-001'"));Assert.Equal("Organization-specific content",Database.Scalar(check,null,"SELECT Body FROM Records WHERE Id='seed-REQ-001'"));Assert.Equal("PRIVACY",Database.Scalar(check,null,"SELECT TopicId FROM RecordTopics WHERE RecordId='seed-REQ-001'"));
     }
     [Fact]public async Task Migration_is_idempotent_via_history()
-    {var path=P("migration.db");File.Copy(Path.Combine(AppContext.BaseDirectory,"content","catalog-v05.db"),path);await Database.MigrateAsync(path);await Database.MigrateAsync(path);using var c=Database.Open(path);Assert.Equal("5",Database.Scalar(c,null,"SELECT COUNT(*) FROM __EFMigrationsHistory"));}
+    {var path=P("migration.db");File.Copy(Path.Combine(AppContext.BaseDirectory,"content","catalog-v05.db"),path);await Database.MigrateAsync(path);await Database.MigrateAsync(path);using var c=Database.Open(path);Assert.Equal("7",Database.Scalar(c,null,"SELECT COUNT(*) FROM __EFMigrationsHistory"));}
     [Fact]public async Task Source_filter_excludes_unrelated_topics()
     {var pair=await New("sources");using var w=pair.Workspace;var privacy=await w.SourcesAsync("PRIVACY");Assert.Contains(privacy,s=>s.Id=="GDPR");Assert.Contains(privacy,s=>s.Id=="BDSG");Assert.DoesNotContain(privacy,s=>s.Id is "AIACT" or "SPDX" or "BSI2004");}
     [Fact]public async Task Mismatched_primary_source_rejected()

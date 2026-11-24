@@ -25,6 +25,20 @@ public sealed partial class MainWindow
         ["Audit"] = ("Audits", Glyph.Audit),
         ["Finding"] = ("Findings", Glyph.Finding),
         ["AiSystem"] = ("KI-Systeme", Glyph.Ai),
+        ["ProcessOverview"] = ("Prozessmanagement", Glyph.Mapping),
+        ["BusinessProcess"] = ("Geschäftsprozesse", Glyph.Mapping),
+        ["InternalAudit"] = ("Interne Audits", Glyph.Audit),
+        ["InternalControl"] = ("Internes Kontrollsystem", Glyph.Shield),
+        ["AiOverview"] = ("AI-GRC", Glyph.Ai),
+        ["ResilienceOverview"] = ("Operationelle Resilienz", Glyph.Risk),
+        ["ResilienceService"] = ("Kritische Geschäftsdienste", Glyph.Risk),
+        ["ResilienceScenario"] = ("Szenariotests", Glyph.Audit),
+        ["ContinuityOverview"] = ("Business Continuity", Glyph.Tasks),
+        ["ContinuityBia"] = ("Business-Impact-Analysen", Glyph.RiskMatrix),
+        ["ContinuityPlan"] = ("Wiederanlaufpläne", Glyph.Documents),
+        ["ContinuityExercise"] = ("Notfallübungen", Glyph.Audit),
+        ["ContractsOverview"] = ("Vertragsmanagement", Glyph.Documents),
+        ["Contract"] = ("Vertragsregister", Glyph.Documents),
         ["OssComponent"] = ("Open Source", Glyph.Code),
         ["Documents"] = ("Dokumente", Glyph.Documents),
         ["Sources"] = ("Quellen", Glyph.Sources),
@@ -40,8 +54,9 @@ public sealed partial class MainWindow
     [
         ("Arbeitsbereich", ["Dashboard", "Documents"]),
         ("Governance und Risiken", ["Requirement", "Control", "Risk", "RiskMatrix", "Measure", "Mappings"]),
-        ("Prüfung und Nachweise", ["Evidence", "Audit", "Finding"]),
-        ("Register", ["Supplier", "AiSystem", "OssComponent"]),
+        ("Prüfung und Nachweise", ["Evidence", "InternalAudit", "InternalControl"]),
+        ("Fachmodule", ["ProcessOverview", "ResilienceOverview", "ContinuityOverview", "AiOverview", "ContractsOverview"]),
+        ("Register", ["Supplier", "OssComponent"]),
         ("Wissen und Verlauf", ["Sources", "Templates", "Glossary", "Journal"])
     ];
 
@@ -59,7 +74,7 @@ public sealed partial class MainWindow
         _context.MaxLines = 2;
         _context.TextTrimming = TextTrimming.CharacterEllipsis;
         _topic = Ui.Combo();
-        _scope = Ui.Input("Exakter Text");
+        _scope = Ui.Combo();
         _search = Ui.Input("Titel oder Code");
         ResetProjectContext();
 
@@ -73,9 +88,9 @@ public sealed partial class MainWindow
 
         _projectOpeningActions =
         [
-            Button("Neues Projekt", NewProject, true,
-                "Legt eine verschlüsselte Projektdatei mit einem eigenen Passwort an.", Glyph.Plus),
-            Button("Öffnen", OpenProject, help: "Öffnet eine verschlüsselte .d3grc-Datei. Bei vorhandenem Wiederherstellungsstand erscheint eine Auswahl.",
+            Button("Neuer Mandant", NewProject, true,
+                "Speichert das Unternehmen verschlüsselt im angemeldeten Profil.", Glyph.Plus),
+            Button("Projektdatei importieren", OpenProject, help: "Übernimmt eine vorhandene .d3grc-Datei in den lokalen Mandantenspeicher.",
                 glyph: Glyph.Open)
         ];
         var filters = BuildFilters();
@@ -83,7 +98,7 @@ public sealed partial class MainWindow
         [
             Button("Speichern", Save, true,
                 "Übernimmt das bearbeitete Formular oder speichert die Hauptdatei. Tastenkürzel Strg+S oder Cmd+S.", Glyph.Save),
-            Button("Kopie speichern", SaveAs, help: "Erstellt eine verschlüsselte Projektkopie mit demselben Passwort.", glyph: Glyph.Copy),
+            Button("Mandant exportieren", SaveAs, help: "Erstellt ein verschlüsseltes Archiv mit dem vollständigen Mandantenstand und einem Sicherungsschlüssel.", glyph: Glyph.Copy),
             Button("Schließen", CloseProject, help: "Speichert und schließt das Projekt. Das lokale Profil bleibt angemeldet.", glyph: Glyph.Close),
             Button("Unternehmen konfigurieren", OpenCompanyConfigurationAsync,
                 help: "Bearbeitet die Stammdaten und Themen des geöffneten Projekts.", glyph: Glyph.Settings),
@@ -108,12 +123,12 @@ public sealed partial class MainWindow
     {
         var filterActions = Ui.Row(
             Button("Filter anwenden", ApplyFilters,
-                help: "Aktualisiert die Ansicht mit dem eingegebenen Geltungsbereich und Suchtext.", glyph: Glyph.Filter),
+                help: "Aktualisiert die Ansicht mit dem gewählten Geltungsbereich und dem Suchtext.", glyph: Glyph.Filter),
             Button("Zurücksetzen", async () =>
             {
                 if (!await CanLeaveFormAsync())
                     return;
-                _scope.Text = _search.Text = _scopeValue = _searchValue = _statusFilter = "";
+                _search.Text = _scopeValue = _searchValue = _statusFilter = "";
                 await Render();
             }, help: "Leert Suche, Geltungsbereich und Listenstatus. Das gewählte Thema bleibt aktiv.", glyph: Glyph.Reset));
         filterActions.VerticalAlignment = VerticalAlignment.Bottom;
@@ -121,7 +136,7 @@ public sealed partial class MainWindow
         var fields = new Control[]
         {
             Ui.Field("Thema", _topic, "Die Auswahl wirkt sofort. Zum Speichern eines Eintrags ein konkretes Thema auswählen."),
-            Ui.Field("Geltungsbereich", _scope, "Filtert nach dem vollständigen Scope-Text. Ein leeres Feld zeigt alle Geltungsbereiche."),
+            Ui.Field("Geltungsbereich", _scope, "Wählen Sie einen gespeicherten Projektbereich und wenden Sie den Filter an. Datenschutz wird projektweit angezeigt."),
             Ui.Field("Suche", _search, "Findet Teiltexte in Titel, Code, Beschreibung oder Verantwortung der Einträge."),
             filterActions
         };
@@ -177,8 +192,9 @@ public sealed partial class MainWindow
             Child = profile
         };
         ToolTip.SetTip(profileBadge, _identity.User);
-        var user = Ui.Row(Button("Mandant wechseln", ChooseProjectAsync,
-                help: "Öffnet eine andere verschlüsselte Projektdatei oder legt einen weiteren Mandanten an.", glyph: Glyph.Open),
+        var user = Ui.Row(BuildTenantSelector(),
+            Button("Mandanten verwalten", SelectTenantActionsAsync,
+                help: "Einrichten, importieren, exportieren, alle lokalen Mandanten sichern oder wiederherstellen.", glyph: Glyph.Settings),
             profileBadge, Button("Abmelden", Logout,
             help: "Speichert das Projekt und kehrt zur Anmeldung zurück.", glyph: Glyph.Logout));
         user.VerticalAlignment = VerticalAlignment.Center;

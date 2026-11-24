@@ -260,8 +260,20 @@ check('Risk migration integrity', db.execute('PRAGMA integrity_check').fetchone(
 db.execute('ROLLBACK TO risk_fixture')
 db.execute('RELEASE risk_fixture')
 
+# Verify both additive Desktop migrations before compiling application statements.
+preserved_tables = ('Records', 'RecordTopics', 'Links', 'Documents', 'RiskAssessments')
+before_desktop = {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in preserved_tables}
+for version in ('010-desktop-modules', '011-iks'):
+    db.executescript((R/f'src/D3.Grc.Core/Migrations/{version}.sql').read_text())
+for table, rows in before_desktop.items():
+    check(f'Desktop migration preserves {table}', db.execute(f'SELECT * FROM {table}').fetchall() == rows)
+check('Desktop process topic has the internal source',
+      db.execute("SELECT SourceId FROM TopicSources WHERE TopicId='PROCESS'").fetchall() == [('INTERNAL',)])
+check('Desktop migration foreign keys', db.execute('PRAGMA foreign_key_check').fetchall() == [])
+
 # Compile static parameterized SQL against the migrated schema. No C# execution.
-db.execute("CREATE TABLE Profiles(Name TEXT PRIMARY KEY,Salt BLOB,Verifier BLOB,Failures INTEGER,LockedUntil TEXT)")
+db.executescript("""CREATE TABLE Profiles(Name TEXT PRIMARY KEY,Salt BLOB,Verifier BLOB,Failures INTEGER,LockedUntil TEXT);
+CREATE TABLE ProfileVaultSalts(Name TEXT PRIMARY KEY REFERENCES Profiles(Name),Salt BLOB NOT NULL);""")
 static_sql = re.compile(
     r'\b(?:Exec|Scalar|Query|Command)\(\s*\w+\s*,\s*\w+\s*,\s*'
     r'(?:"""(?P<raw>.*?)"""|"(?P<quoted>(?:[^"\\]|\\.)*)")(?=\s*[,\)])',

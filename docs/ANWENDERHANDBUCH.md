@@ -1,28 +1,30 @@
-# Anwenderhandbuch 0.12.0
+# Anwenderhandbuch D3 GRC Desktop
 
 In Version 0.6.1 bieten zentrale Felder und Aktionen kurze Bedienhinweise. Den Mauszeiger auf dem Element stehen lassen oder das Element mit der Tastatur fokussieren und F1 drücken. Escape schließt einen geöffneten Hinweis.
 
 ## 1. Registrierung und Anmeldung
-Profilname und Profilpasswort eingeben. „Profil erstellen“ legt ein Profil im Benutzerverzeichnis dieses Rechners an und startet nach der Anmeldung die Projekteinrichtung. Beim Abbrechen des Assistenten bleibt das Profil angemeldet. Für bestehende Profile steht die normale Anmeldung zur Verfügung. Nach fünf fehlgeschlagenen Versuchen wird das Profil vorübergehend gesperrt.
+Profilname und Profilpasswort eingeben. „Profil erstellen“ legt ein lokales Profil an. Nach der ersten Anmeldung öffnet sich der Unternehmensassistent als Fenster über dem Arbeitsbereich. Beim Abbrechen bleibt das Profil angemeldet. Nach fünf fehlgeschlagenen Anmeldeversuchen wird das Profil vorübergehend gesperrt.
 
-Das lokale Profil kennzeichnet Aktivitäten, ist aber keine verifizierte Organisationsidentität. Mehrere lokale Profile ersetzen keine Teamrechte. Bei Profilverlust kann ein neues Profil eingerichtet werden; der Zugriff auf Projekte erfordert weiterhin das Projektpasswort.
+Die Anmeldung entsperrt den verschlüsselten Mandantenspeicher dieses Profils. Die Anwendung verwendet für jeden Mandanten einen eigenen Schlüssel. Die Anmeldung und die lokale Arbeitskopie folgen dem Einzelplatzmodell.
 
-## 2. Projekt öffnen oder anlegen
-**Neues Projekt.** Im Assistenten Unternehmensgröße, Branche, Standorte und Organisationseinheiten angeben. Merkmale und Themen auswählen und den daraus abgeleiteten Plan prüfen. Ein separates Projektpasswort vergeben und einen neuen Speicherort wählen. Die Projektdatei öffnet sich direkt in der Übersicht.
+## 2. Mandanten einrichten, wechseln und sichern
 
-**Unternehmensprofil.** Größe, Branche, Merkmale und Risikoschwerpunkt bestimmen, welche Aufgaben als wesentlich empfohlen werden. Für optionale Aufgaben steht der vollständige Arbeitsbereich weiterhin zur Verfügung. Über „Unternehmen konfigurieren“ lässt sich das Profil für bestehende Projekte ergänzen oder ändern. Fachliche Anwendbarkeit wird je Anforderung bewertet.
-**Öffnen.** Verschlüsselte `.d3grc`-Datei auswählen und Projektpasswort eingeben. Ist ein Wiederherstellungsstand vorhanden, im Auswahlfenster den gewünschten Stand wählen oder den Vorgang abbrechen.
+- **Neuer Mandant.** Unternehmensart, Größe, Standorte, Organisationseinheiten und Risikofokus eingeben. Die Unternehmensart empfiehlt Merkmale und Fachthemen. Selbst gesetzte oder entfernte Häkchen bleiben beim Wechsel der Unternehmensart erhalten. Der Assistent zeigt daraus einen Umsetzungsplan und öffnet den intern gespeicherten Mandanten.
+- **Mandant wechseln.** Oben rechts im Dropdown einen gespeicherten Mandanten wählen. Die Anwendung nutzt die laufende Profilanmeldung. Bei ausstehenden Formularänderungen lässt sich speichern, verwerfen oder zum Formular zurückkehren.
+- **Bestehende Projektdatei übernehmen.** Unter **Mandanten verwalten → Bestehende Projektdatei importieren** die vorhandene verschlüsselte `.d3grc`-Datei auswählen und einmal ihr bisheriges Projektpasswort eingeben. Die Anwendung legt eine intern verwaltete Kopie an. Danach lässt sich der Mandant über das Dropdown öffnen.
+- **Mandant exportieren.** Den gewünschten Mandanten im Dropdown auswählen und **Mandant exportieren** wählen. Das verschlüsselte `.d3grcbackup`-Archiv enthält den vollständigen Projektstand, einschließlich Unternehmenseinstellungen, Dokumenten, Historie und Nachweisdateien.
+- **Alle Mandanten sichern.** Unter **Mandanten verwalten → Alle Mandanten sichern** ein Archiv für die Mandanten des angemeldeten Profils erstellen. Den angezeigten Sicherungsschlüssel getrennt ablegen. Zum Übertragen oder Wiederherstellen werden Archiv und Schlüssel benötigt.
+- **Mandantenarchiv wiederherstellen.** Das Archiv auswählen, den Sicherungsschlüssel eingeben und die wiederhergestellten Mandanten im Dropdown öffnen. Die Wiederherstellung fügt separate Kopien hinzu.
+- **Demo-Unternehmen öffnen.** Im Assistenten oder unter **Mandanten verwalten** auswählen. Nordlicht Service GmbH ist ein fiktiver, eigenständiger Mandant mit synthetischen Beispieldaten.
 
-**Mandant wechseln.** Oben im Arbeitsbereich die gewünschte Projektdatei auswählen und ihr eigenes Passwort eingeben. Die Anwendung hält das bisherige Projekt verfügbar, während die neue Datei geprüft wird. Eine abgebrochene Dateiauswahl führt zurück zur bisherigen Arbeit.
-
-Die mitgelieferten `.db`-Dateien sind öffentliche Starter-/Referenzdatenbanken ohne Kundendaten. Sie sind keine verschlüsselten Projektdateien und werden nicht direkt über Öffnen geladen.
-
-## 3. Thema, Scope und Suche
-Das Thema oben gilt für die aktuelle Ansicht. Alle Themen ist eine Gesamtansicht. Zum Anlegen/Speichern eines Datensatzes ein konkretes Thema auswählen. Die Fachgebiete sind Datenschutz, Informationssicherheit, NIS2, KI-Governance, Cloud Security, BCM, Open Source und DORA.
+## 3. Thema, Geltungsbereich und Suche
+Das Thema oben gilt für die aktuelle Ansicht. Alle Themen ist eine Gesamtansicht. In den Fachmodulen wird bei der Gesamtansicht deren vorgesehenes Thema für neue Einträge verwendet. Für die allgemeinen Register ein konkretes Thema auswählen. Die Fachgebiete sind Datenschutz, Informationssicherheit, NIS2, KI-Governance, Cloud Security, BCM, Open Source, DORA und Prozessmanagement.
 
 Zuordnung prüfen enthält migrierte Objekte ohne eindeutig ableitbaren Themenbezug. Nicht automatisch alle internen Controls allen Themen zuordnen. Einen passenden Fachkontext auswählen und das Objekt dort über einen begründeten Themenbezug ergänzen.
 
-Scope wird derzeit als exakter Textfilter behandelt, nicht als Organisationsbaum. Suche durchsucht Titel, Code, Beschreibung und Owner der Arbeitsobjekte. Filter anwenden aktualisiert den Kontext. Nicht jede Wissensansicht verwendet diese Objektsuche; das Glossar besitzt eine passende Begriffssuche. Quellen und Vorlagen werden primär nach Thema begrenzt.
+Das Dropdown **Geltungsbereich** zeigt die in der geöffneten Projektdatei gespeicherten Bereiche. Bereich wählen und **Filter anwenden** drücken. **Alle Geltungsbereiche** zeigt die Einträge aller Bereiche. Die Suche findet Titel, Kürzel, Beschreibung und Verantwortung. Das Glossar bietet eine eigene Begriffssuche. Quellen und Vorlagen folgen dem Thema.
+
+Beim Thema **Datenschutz** steht im Bereichsfeld **Projektweit**. Die Datenschutzansichten und -exporte berücksichtigen Einträge und Dokumente aus allen Bereichen des Projekts. Im Detail lässt sich die gespeicherte Zuordnung jedes Eintrags ablesen. Bei einem Wechsel in ein anderes Thema steht der zuvor gewählte Bereich wieder zur Verfügung.
 
 ## 4. Datensatz bearbeiten
 Eintrag links auswählen. Rechts stehen Tabs bereit:
@@ -39,7 +41,7 @@ In **Beschreibung / Umsetzung** lassen sich Textstellen markieren und über die 
 ## 5. Speichern
 Die globale Schaltfläche Speichern und Strg/Cmd+S speichern ein bearbeitetes Formular über dessen Speicherfunktion. Ohne Formularänderungen wird die Hauptdatei gespeichert.
 
-Speichern unter übernimmt ein offenes Formular zuerst und erzeugt anschließend eine neue verschlüsselte Projektkopie mit demselben Passwort. Die alte Datei bleibt erhalten. Vorhandene Zieldateien werden nicht überschrieben.
+Mandant exportieren übernimmt ein offenes Formular und erzeugt anschließend ein vollständiges verschlüsseltes Mandantenarchiv mit eigenem Sicherungsschlüssel.
 
 Bei einem Wechsel fragt die Anwendung nur nach tatsächlichen Formularänderungen. „Speichern“ übernimmt die Änderung und setzt den Wechsel fort. „Verwerfen“ setzt den Wechsel ohne Übernahme fort. „Abbrechen“ behält den vorherigen Eintrag und die Bearbeitung bei.
 
@@ -84,7 +86,7 @@ Umsetzung: Statusbalken der Controls.
 Nachweise & Audits: aktuelle Nachweisabdeckung und Findingstatus.
 Quellen & Qualität: themenbezogene Quellen und Prüfhinweise.
 
-Ansehen öffnet eine passende Detailansicht. Balken zeigen Anzahlen, keine Prozentwerte. Leere Daten werden nicht als positive Konformität dargestellt. Es gibt keine historische Zeitreihe und keine 5×5-Risikomatrix in dieser Lieferung.
+**Ansehen** öffnet die passende Detailansicht. Balken zeigen die Anzahlen im aktuellen Bestand. **Risikomatrix öffnen** führt zur 5×5-Ansicht mit demselben Thema, Geltungsbereich und Suchfilter.
 
 ## 12. Excel und Druck
 Excel exportieren erzeugt eine echte `.xlsx`-Datei ohne installierte Excel-Anwendung. Exportiert werden Thema, Scope und Objektsuche für alle Objekttypen im Kontext. Lokale Statusfilter einer einzelnen Liste werden nicht übernommen; der Exportdialog weist darauf hin.
@@ -96,7 +98,7 @@ Texte werden als Textzellen geschrieben, nicht als Formeln. Zahlen und geeignete
 Drucken / PDF erzeugt eine lokale HTML-Datei und öffnet den Standardbrowser. Dort Drucken oder als PDF speichern. Kein stiller Druck und kein eingebetteter nativer Druckdialog.
 
 ## 13. Logout und Sperren
-Beide Aktionen beenden in diesem Einzelplatzstand die Sitzung vollständig: Formularänderungen behandeln, Projektzustand sichern, Projekt schließen, Schlüsselkontext und lokale Dateisperre freigeben, zur Anmeldung zurückkehren. Zum Weiterarbeiten erneut anmelden und Projekt entsperren. Es gibt keinen versteckten entsperrten Hintergrund-Workspace.
+Beide Aktionen beenden in diesem Einzelplatzstand die Sitzung vollständig: Formularänderungen behandeln, Projektzustand sichern, Projekt schließen, Schlüsselkontext und lokale Dateisperre freigeben, zur Anmeldung zurückkehren. Zum Weiterarbeiten erneut im lokalen Profil anmelden.
 
 ## 14. Grenzen
 Aktive SQLite-Arbeitskopien sind Klartext im privaten Benutzerverzeichnis. Nach Absturz können Reste bestehen. Erst verschlüsselte Recovery prüfen, danach verwaiste Arbeitskopien bereinigen. Datenträgerverschlüsselung verwenden. Exporte und Backups nach dem eigenen Schutz-/Löschkonzept behandeln.
@@ -125,6 +127,22 @@ Die Nachweisvorschau zeigt UTF-8-Text und PNG direkt im Arbeitsbereich. Für and
 
 Ein gespeichertes Risiko im Register **Risiken** auswählen und im Reiter **Bewertungen** Eintrittswahrscheinlichkeit und Auswirkung jeweils auf einer Skala von 1 bis 5 festhalten. Die Bruttobewertung beschreibt das Risiko vor Berücksichtigung von Controls. Sobald ein begründeter Wert für das Risiko mit berücksichtigten Controls vorliegt, können beide Restrisikowerte ergänzt werden. Datum, Behandlung und Begründung werden der Bewertung zugeordnet.
 
-Die Risikomatrix trennt Brutto- und Restrisiken. Eine ausgewählte Zelle zeigt die zugehörigen Risiken im aktuellen Thema, Geltungsbereich und Suchkontext. Risiken ohne Bewertung und Risiken ohne Restrisikowerte werden sichtbar ausgewiesen. Für ein Risiko lassen sich Controls und Maßnahmen über typisierte Mappings dokumentieren.
+Das Produkt aus Eintrittswahrscheinlichkeit und Auswirkung ergibt den Punktwert der Zelle. Die Farbstufen lauten 1–4 niedrig, 5–9 mittel, 10–15 hoch und 16–25 kritisch. Die Zahl in der Zelle gibt an, wie viele Risiken im aktuellen Thema, Geltungsbereich und Suchkontext genau diese Kombination haben. Maßstäbe und Annahmen in der Bewertung festhalten, damit Werte im Projekt vergleichbar bleiben.
 
-Das Produkt aus Eintrittswahrscheinlichkeit und Auswirkung ergibt die Bewertungszahl. Die Einteilung lautet 1–4 niedrig, 5–9 mittel, 10–15 hoch und 16–25 kritisch. Maßstäbe und Annahmen bei der Bewertung so festhalten, dass die Werte im Projekt vergleichbar bleiben.
+Die Zellzahlen ändern sich, wenn ein Filter andere Risiken erfasst, die Bewertungssicht zwischen Ausgangs- und Restrisiko wechselt oder eine Bewertung die Zuordnung eines Risikos verändert. Je Risiko zählt der neueste Bewertungsstichtag. Bei gleichem Stichtag gilt der zuletzt gespeicherte Eintrag. Die Restrisikoansicht zeigt Risiken mit dokumentierten Restrisikowerten.
+
+Rechts zählt **Alle** den gefilterten Risikobestand. **Ohne Bewertung** zählt Risiken ohne gespeicherte Bewertung. **Ohne Restrisiko** zählt Risiken mit einer Ausgangsbewertung und fehlenden Restrisikowerten in der maßgeblichen Fassung. Nach Auswahl einer Zelle oder einer dieser Listen zeigt der Trefferzähler die Anzahl der angezeigten Risiken im Verhältnis zum gesamten Filterbestand. **Bewertung öffnen** führt beim ausgewählten Risiko zum Reiter **Bewertungen**. Die Verknüpfungen zu Controls und Maßnahmen stehen unter **Bezüge**.
+
+## Fachmodule und Demo-Arbeitsstrecken
+
+| Arbeitsbereich | Arbeitsablauf in der Demo |
+| --- | --- |
+| Prozessmanagement | In der interaktiven Prozesslandkarte **Kundenanliegen steuern** auswählen. Unter **Fachdetails** Prozessart, Eingaben, Ergebnisse und geordnete Schritte mit Rollen ansehen. Unter **Bezüge** ergänzen sich Unterprozesse, Risiken, Controls und Lieferanten. [BPM](https://swissgrc.com/bpm-software/) |
+| Interne Audits | Jahresplan, Fortschritt der Control-Prüfungen und überfällige Feststellungen öffnen. Im Prüfauftrag die Stichprobe mit einer Abweichung und der dazugehörigen Maßnahme ansehen. [Internal Audit](https://swissgrc.com/internal-audit-software/) |
+| Internes Kontrollsystem | Die Schlüsselkontrolle zur Rezertifizierung ansehen. Historie, Prüfart, Ergebnis, Nachweis und Maßnahme öffnen. [IKS](https://swissgrc.com/iks-software/) |
+| Operationelle Resilienz | Kritische Dienste, ihre Abhängigkeiten und Szenariotests ansehen. Beobachtete Ausfallzeit und dokumentierte Toleranz werden in den Testkarten gegenübergestellt. [Operational Resilience](https://swissgrc.com/operational-resilience-software/) |
+| Business Continuity | Business Impact Analyse, Wiederanlaufplan und Übung zur Bearbeitung von Kundenanfragen öffnen. Die Übersicht zeigt MTPD, RTO, RPO und die gemessenen Ergebnisse. [BCM](https://swissgrc.com/bcm-software/) |
+| AI-GRC | Den simulierten Einsatz zur Wissenssuche mit interner Risikoeinstufung, menschlicher Prüfung, Auflagen und Überprüfungsdatum öffnen. [AI GRC](https://swissgrc.com/ai-grc/) |
+| Vertragsmanagement | Anstehende und überfällige Vertragsfristen prüfen. Den verknüpften Hostingvertrag mit Laufzeit, Pflichten und zuständiger Stelle öffnen. [CLM](https://contraqto.com/) |
+
+Unter **Risikomatrix** enthält die Demo bewertete Beispiele mit und ohne Restrisiko sowie offene Bewertungen. Im Thema **Datenschutz** kannst du in die Dokumente wechseln und Einträge aus verschiedenen Projektbereichen sehen.

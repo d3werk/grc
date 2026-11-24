@@ -8,6 +8,9 @@ public sealed partial class MainWindow
     {
         var isSupplier = kind == "Supplier";
         var isRisk = kind == "Risk";
+        var module = DesktopModules.Specs.TryGetValue(kind, out var spec)
+            ? new NativeModuleForm(spec, () => { if (!_loading) UpdateFormStatus(); })
+            : null;
         var list=new ListBox();var statusFilter=Ui.Combo();statusFilter.ItemsSource=new[]{"Alle Status"}.Concat(Entry.Statuses(kind)).ToArray();statusFilter.SelectedItem=_statusFilter==""?"Alle Status":_statusFilter;
         if (isSupplier)
             list.ItemTemplate = new FuncDataTemplate<Entry>((entry, _) => entry is null ? null : Ui.Stack(
@@ -45,8 +48,13 @@ public sealed partial class MainWindow
                 "Erfasst Eintrittswahrscheinlichkeit, Auswirkung, Behandlung und die Gründe für diese Bewertung.", Glyph.Risk);
         void Clear()
         {
-            selected=null;templateId=null;source.ItemsSource=_sources;source.SelectedIndex=isSupplier ? -1 : 0;code.Text="";title.Text="";owner.Text="";due.Text="";scope.Text=_scopeValue;locator.Text="";body.Content="";reason.Text="";refs.ItemsSource=null;related.ItemsSource=null;proofs.ItemsSource=null;history.ItemsSource=null;topics.Text="";
+            selected=null;templateId=null;source.ItemsSource=_sources;source.SelectedIndex=isSupplier ? -1 : 0;code.Text="";title.Text="";owner.Text="";due.Text="";scope.Text=EffectiveScope;locator.Text="";body.Content="";reason.Text="";refs.ItemsSource=null;related.ItemsSource=null;proofs.ItemsSource=null;history.ItemsSource=null;topics.Text="";
             SetStatusChoices(Entry.Statuses(kind)[0]);
+            if (module is not null)
+            {
+                source.SelectedItem = _sources.FirstOrDefault(item => item.Id == "INTERNAL") ?? _sources.FirstOrDefault();
+                module.Load(null);
+            }
             supplier?.Load(null);
             if (reviews is not null && addReview is not null)
                 PresentSupplierReviews(reviews, addReview, null, []);
@@ -63,6 +71,8 @@ public sealed partial class MainWindow
             related.ItemsSource=_mappings.Where(m=>m.From==e.Id||m.To==e.Id).Select(m=>$"{_all.FirstOrDefault(x=>x.Id==m.From)?.Title} → {_all.FirstOrDefault(x=>x.Id==m.To)?.Title}\n{m.Type} · {m.Coverage} · {m.Reason}").ToList();
             proofs.ItemsSource=e.Kind=="Control"?(await _workspace.EvidenceAsync(e.Id)).Cast<object>().ToList():new List<object>{"Nachweise sind über zugeordnete Controls erreichbar."};history.ItemsSource=(await _workspace.JournalAsync()).Where(x=>x.Contains(e.Id,StringComparison.Ordinal)).ToList();
             templateId = e.TemplateId;
+            if (module is not null)
+                module.Load(await _workspace.ModuleFieldsAsync(e.Id));
             if (supplier is not null && reviews is not null && addReview is not null)
             {
                 supplier.Load(await _workspace.SupplierDetailsAsync(e.Id));
@@ -104,7 +114,7 @@ public sealed partial class MainWindow
             _all.RemoveAll(e => e.Id == entry.Id);
             _all.Add(entry);
             _entries.RemoveAll(e => e.Id == entry.Id);
-            if ((_scopeValue == "" || entry.Scope == _scopeValue) && Matches(entry))
+            if ((EffectiveScope == "" || entry.Scope == EffectiveScope) && Matches(entry))
                 _entries.Add(entry);
             Filter();
         }
@@ -188,9 +198,10 @@ public sealed partial class MainWindow
             }
             var details = supplier?.Read();
             return await CommitFormChangeAsync(
-                () => _workspace.SaveEntryAsync(entry, _topicId, reason.Text ?? "", supplierDetails: details), ApplySavedEntry);
+                () => _workspace.SaveEntryAsync(entry, _topicId == "" && module is not null ? module.Spec.Topic : _topicId,
+                    reason.Text ?? "", supplierDetails: details, moduleFields: module?.Read()), ApplySavedEntry);
         }
-        Control[] inputs = [code, title, owner, due, scope, locator, body, reason, source, status, .. (supplier?.Inputs ?? [])];
+        Control[] inputs = [code, title, owner, due, scope, locator, body, reason, source, status, .. (supplier?.Inputs ?? []), .. (module?.Inputs ?? [])];
         var supplierOverview = isSupplier && _topicId == "";
         if (supplierOverview)
             foreach (var input in inputs)
@@ -204,8 +215,14 @@ public sealed partial class MainWindow
             }
         TrackForm(() => (selected?.Id, code.Text ?? "", title.Text ?? "", owner.Text ?? "", due.Text ?? "", scope.Text ?? "",
                 locator.Text ?? "", body.Content, reason.Text ?? "", (source.SelectedItem as Source)?.Id, status.SelectedItem, templateId,
-                supplier?.State),
-            SaveRecord, async () => await LoadEntry(selected), inputs);
+                supplier?.State, module?.State),
+            SaveRecord, async () =>
+            {
+                if (await RefreshScopeOptionsAsync())
+                    await Render();
+                else
+                    await LoadEntry(selected);
+            }, inputs);
         var apply=Button("Vorlage übernehmen",async()=>{if(template.SelectedItem is not TextTemplate t)throw new ArgumentException("Vorlage auswählen.");if(!string.IsNullOrWhiteSpace(body.PlainText)&&!await Ui.Confirm(this,"Vorlage ersetzt den aktuellen Formulartext.","Übernehmen"))return;templateId=t.Id;code.Text=t.Id;title.Text=t.Title;locator.Text=t.Locator;body.Content=t.Effective;},
             help: "Ersetzt Code, Titel, Fundstelle und Beschreibung im Formular. Danach die Felder prüfen und speichern.");
         var addSource=Button("Weiteren Quellenbezug hinzufügen",async()=>{if(selected is null)throw new ArgumentException("Datensatz zuerst speichern.");if(!await CanLeaveFormAsync())return;var pick=await Ui.Pick(this,"Zusätzliche Quelle (bewusster Cross-Bezug)",_allSources.Cast<object>());if(pick is not Source s)return;var loc=await Ui.Prompt(this,"Konkrete Fundstelle");if(loc is null)return;var why=await Ui.Prompt(this,"Fachliche Begründung des zusätzlichen Quellenbezugs");if(why is null)return;await _workspace.AddSourceAsync(selected.Id,s.Id,loc,why);await Render();},
@@ -213,7 +230,9 @@ public sealed partial class MainWindow
         var addTopic=Button("Weiterem Thema zuordnen",async()=>{if(selected is null)throw new ArgumentException("Datensatz zuerst speichern.");if(!await CanLeaveFormAsync())return;var pick=await Ui.Pick(this,"Weiteres Thema",_topics.Where(t=>t.Id!=""&&t.Id!="REVIEW").Cast<object>());if(pick is not Choice t)return;var why=await Ui.Prompt(this,"Begründung");if(why is null)return;await _workspace.AddTopicAsync(selected.Id,t.Id,why);await Render();},
             help: "Macht denselben gespeicherten Eintrag in einem zusätzlichen Thema auffindbar. Die Zuordnung braucht eine Begründung.");
         var generalFields = Ui.Stack(
-            Ui.Notice(_topicId == ""
+            Ui.Notice(module is not null
+                ? "Fachdetails und fachliche Verknüpfungen in den zugehörigen Reitern pflegen."
+                : _topicId == ""
                 ? isSupplier ? "Gesamtansicht. Zum Anlegen oder Ändern oben ein Fachthema auswählen." : "Gesamtansicht. Zum Speichern ein konkretes Thema auswählen."
                 : isSupplier ? "Bewertungen und ihre Folgetermine werden im Reiter Bewertungen dokumentiert."
                 : isRisk ? "Eintrittswahrscheinlichkeit, Auswirkung und Behandlung werden unter Bewertungen erfasst."
@@ -229,10 +248,16 @@ public sealed partial class MainWindow
                 _ => "Hält den aktuellen Bearbeitungsstand fest."
             });
         var ownerField = Ui.Field(isSupplier ? "Verantwortung *" : "Verantwortung", owner, "Rolle oder Person angeben, die den Eintrag fachlich betreut.");
-        var dueField = Ui.Field(isSupplier ? "Nächste Prüfung" : "Termin", due, isSupplier
+        var dueField = Ui.Field(kind switch
+            {
+                "AiSystem" or "BusinessProcess" => "Nächste Überprüfung",
+                "Contract" => "Interner Wiedervorlagetermin",
+                "Supplier" => "Nächste Prüfung",
+                _ => "Termin"
+            }, due, isSupplier
                 ? "Prüftermin im Format JJJJ-MM-TT. Falls eine Bewertung vorliegt, muss der Termin danach liegen."
                 : "Datum im Format JJJJ-MM-TT eingeben, zum Beispiel 2026-11-30.");
-        var scopeField = Ui.Field("Scope", scope, "Geltungsbereich des Eintrags, etwa ein System, eine Einheit oder ein Prozess. Der globale Filter sucht den exakten Text.");
+        var scopeField = Ui.Field("Geltungsbereich", scope, "Bereich des Eintrags, etwa ein System, eine Einheit oder ein Prozess. Gespeicherte Bereiche erscheinen im Filter.");
         if (supplier is not null)
         {
             generalFields.Children.Add(titleField);
@@ -266,6 +291,8 @@ public sealed partial class MainWindow
         sourceFields.Children.Add(addTopic);
         var sources = Ui.Scroll(sourceFields);
         var workflow=Ui.Stack(Ui.Text("Verknüpfungen",18,true),related,Button("Mappings öffnen",async()=>{if(!await CanLeaveFormAsync())return;_page="Mappings";await Render();}));
+        if (module is not null)
+            workflow.Children.Insert(1, Button("Bezug anlegen", () => AddModuleRelationAsync(selected), glyph: Glyph.Mapping));
         if (isRisk)
             workflow.Children.Add(Ui.Notice("Nachweise sind über zugeordnete Controls erreichbar."));
         if (kind == "Requirement")
@@ -295,6 +322,12 @@ public sealed partial class MainWindow
             if(selected is null)throw new ArgumentException("Finding auswählen.");if(!await CanLeaveFormAsync())return;var ids=_mappings.Where(m=>m.From==selected.Id&&m.Type=="Finding → Control").Select(m=>m.To);var eligible=new List<Proof>();foreach(var id in ids)eligible.AddRange(await _workspace.EvidenceAsync(id));var pick=await Ui.Pick(this,"Wirksamkeitsnachweis",eligible.DistinctBy(p=>p.Id).Cast<object>());if(pick is not Proof p)return;var review=await Ui.Prompt(this,"Wirksamkeitsprüfung und Ergebnis dokumentieren");if(review is null)return;await _workspace.CloseFindingAsync(selected.Id,p.Id,review);await Render();},
             help: "Das Finding braucht den Status Wirksamkeitsprüfung und einen gültigen Nachweis für alle verknüpften Controls."));
         var tabItems = new List<TabItem> { Ui.Tab("Details", general) };
+        TabItem? moduleTab = null;
+        if (module is not null)
+        {
+            moduleTab = Ui.Tab("Fachdetails", module.Content);
+            tabItems.Add(moduleTab);
+        }
         if (reviews is not null && addReview is not null)
             tabItems.Add(Ui.Tab("Bewertungen", Ui.Fill(Ui.Row(addReview), Ui.Scroll(reviews)),
                 "Zeigt Ergebnisse, Begründungen und Folgetermine der Lieferantenprüfungen."));
@@ -329,7 +362,7 @@ public sealed partial class MainWindow
         duplicate.IsEnabled = !supplierOverview;
         var delete=Button("Löschen",async()=>{if(selected is null)return;if(!await CanLeaveFormAsync())return;var why=await Ui.Prompt(this,"Löschbegründung (verknüpfte Datensätze bleiben geschützt)");if(why is null)return;await _workspace.DeleteAsync(selected.Id,why);await Render();},
             help: "Löscht den ausgewählten Eintrag nach Eingabe einer Begründung. Verknüpfte Einträge sind vor dem Löschen geschützt.");
-        var create = Button(isSupplier ? "Lieferant anlegen" : "Neuer Eintrag", async () =>
+        var create = Button(isSupplier ? "Lieferant anlegen" : module is not null ? $"{module.Spec.Singular} anlegen" : "Neuer Eintrag", async () =>
         {
             if (!await CanLeaveFormAsync())
                 return;
@@ -351,6 +384,19 @@ public sealed partial class MainWindow
                 title.Focus();
             }
         });
+        if (_requestedModuleEntryId is { } requestedId)
+        {
+            _requestedModuleEntryId = null;
+            var requested = ((IEnumerable<Entry>)list.ItemsSource!).FirstOrDefault(entry => entry.Id == requestedId);
+            if (requested is not null)
+            {
+                await LoadEntry(requested);
+                list.SelectedItem = selected;
+                if (moduleTab is not null)
+                    tabs.SelectedItem = moduleTab;
+                AcceptFormState();
+            }
+        }
         if (riskTab is not null && _riskToFocus is { } requestedRiskId &&
             ((IEnumerable<Entry>)list.ItemsSource!).FirstOrDefault(e => e.Id == requestedRiskId) is { } requestedRisk)
         {

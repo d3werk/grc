@@ -122,11 +122,11 @@ public sealed partial class MainWindow
             }, help: help);
 
         var showAll = Select($"Alle · {portfolio.Length}", "Risiken im Filter", portfolio,
-            "Zeigt alle Risiken im aktuellen Thema, Geltungsbereich und Suchfilter.");
+            "Zählt alle Risiken im aktuellen Thema, Geltungsbereich und Suchfilter.");
         var showUnassessed = Select($"Ohne Bewertung · {withoutAssessment.Length}", "Risiken ohne Bewertung", withoutAssessment,
-            "Zeigt Risiken ohne erfasste Bewertung.");
+            "Zählt Risiken ohne gespeicherte Bewertung. Die erste Bewertung nimmt das Risiko in die Ausgangsmatrix auf.");
         var showMissingResidual = Select($"Ohne Restrisiko · {withoutResidual.Length}", "Bewertungen ohne Restrisiko", withoutResidual,
-            "Zeigt Risiken mit Ausgangsbewertung und fehlenden Angaben zum Restrisiko.");
+            "Zählt Risiken, deren neueste Bewertung nur ein Ausgangsrisiko enthält.");
 
         var matrix = new Grid
         {
@@ -193,7 +193,7 @@ public sealed partial class MainWindow
                 var description = $"Eintrittswahrscheinlichkeit {likelihood} ({RiskAssessmentMethod.LikelihoodLabels[likelihood]}), " +
                     $"Auswirkung {impact} ({RiskAssessmentMethod.ImpactLabels[impact]}), {score} Punkte, {levelLabel}";
                 Ui.Help(cell, $"{description}. Wählen Sie die Zelle, um die zugeordneten Risiken anzuzeigen.");
-                cell.Click += (_, _) => Show($"Wahrscheinlichkeit {likelihood} · Auswirkung {impact}", groups[(likelihood, impact)], cell);
+                cell.Click += (_, _) => Show($"{likelihood} × {impact} = {score} Punkte · {levelLabel}", groups[(likelihood, impact)], cell);
                 var (cellRow, cellColumn) = (row, column);
                 cell.KeyDown += (_, e) =>
                 {
@@ -231,7 +231,7 @@ public sealed partial class MainWindow
                 }
             }
             var countWithPosition = portfolio.Length - groups[null].Count();
-            summary.Text = $"{countWithPosition} von {portfolio.Length} Risiken in dieser Bewertungssicht";
+            summary.Text = $"{countWithPosition} von {portfolio.Length} Risiken in den Matrixzellen";
             Show("Risiken im Filter", portfolio);
         }
         mode.SelectionChanged += (_, _) =>
@@ -266,8 +266,10 @@ public sealed partial class MainWindow
             Ui.Secondary("Eintrittswahrscheinlichkeit (1 sehr unwahrscheinlich · 5 sehr wahrscheinlich)", 12),
             matrix,
             legend,
-            Ui.Secondary("Stufe aus Eintrittswahrscheinlichkeit × Auswirkung. Die Zahl in der Zelle gibt die Anzahl der Risiken an.", 12))));
-        var right = Ui.Card(Ui.Fill(Ui.Stack(resultLabel, resultCount, Ui.Row(showAll, showUnassessed, showMissingResidual)), results, open));
+            Ui.Secondary("Jede Zelle zählt Risiken mit genau dieser Kombination aus Wahrscheinlichkeit und Auswirkung. Die Risikostufe folgt dem Produkt der beiden Werte.", 12),
+            Ui.Secondary("Die Zellzahlen ändern sich mit dem Filter, der Bewertungssicht oder einer anderen maßgeblichen Bewertung. Es gilt der neueste Bewertungsstichtag, bei gleichem Datum die letzte Speicherung. Die Restrisikoansicht zählt vorhandene Restrisikowerte.", 12))));
+        var countHelp = Ui.Secondary("Eine Zell- oder Listenauswahl ändert die angezeigte Trefferzahl. Die drei Listenknöpfe zählen den gesamten Filterbestand und seine Bewertungslücken.", 12);
+        var right = Ui.Card(Ui.Fill(Ui.Stack(resultLabel, resultCount, Ui.Row(showAll, showUnassessed, showMissingResidual), countHelp), results, open));
         var layout = new Grid { ColumnDefinitions = new ColumnDefinitions("1.55*,*"), ColumnSpacing = 12 };
         layout.Children.Add(left);
         Grid.SetColumn(right, 1);

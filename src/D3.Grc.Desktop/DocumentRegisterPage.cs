@@ -68,7 +68,7 @@ public sealed partial class MainWindow
             CompanyColumns(Ui.Field("Dokumentart *", category, "Ordnet den Entwurf als Richtlinie, Verfahren oder anderen Dokumenttyp ein."),
                 Ui.Field("Thema *", topic, "Bestimmt, in welchem Fachthema dieses Dokument im Register erscheint.")),
             CompanyColumns(Ui.Field("Verantwortung *", owner, "Wählen Sie die fachlich verantwortliche Person oder Rolle."),
-                Ui.Field("Geltungsbereich", scope, "Für einen konkreten Bereich denselben Text wie im globalen Filter verwenden.")),
+                Ui.Field("Geltungsbereich", scope, "Gespeicherte Bereiche erscheinen im Projektfilter.")),
             Ui.Field("Dokumenttext", sourceText,
                 "Text direkt gestalten. Die Vorschau zeigt die aktuelle Fassung auch vor dem Speichern."));
 
@@ -156,7 +156,7 @@ public sealed partial class MainWindow
 
         async Task RefreshListAsync()
         {
-            records = await _workspace.DocumentsAsync(_topicId, _scopeValue, _searchValue);
+            records = await _workspace.DocumentsAsync(_topicId, EffectiveScope, _searchValue);
             PopulateList();
         }
 
@@ -187,7 +187,7 @@ public sealed partial class MainWindow
             };
             category.SelectedItem = DocumentRegister.CategoryLabels[draft?.Category ?? initialCategory];
             topic.SelectedItem = availableTopics.FirstOrDefault(choice => choice.Id == (draft?.TopicId ?? _topicId));
-            scope.Text = draft?.Scope ?? (editingNew ? _scopeValue : "");
+            scope.Text = draft?.Scope ?? (editingNew ? EffectiveScope : "");
             owner.Text = draft?.Owner ?? "";
             sourceText.Content = draft?.Content ?? starter?.Effective ?? "";
             title.IsReadOnly = scope.IsReadOnly = owner.IsReadOnly = sourceText.IsReadOnly = !isEditable;
@@ -305,6 +305,7 @@ public sealed partial class MainWindow
             AcceptFormState();
             tabControl.SelectedItem = nextTab;
             UpdatePreview();
+            await RefreshScopeOptionsAsync();
             await RefreshListAsync();
             await RefreshVersionsAsync(document);
             await RefreshLinksAsync(document);
