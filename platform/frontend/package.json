@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:e2e": "node tests/platform-flow.cjs && node tests/tenant-switch.cjs"
+    "test:e2e": "node tests/platform-flow.cjs && node tests/tenant-switch.cjs && node tests/modules.cjs"
   },
   "dependencies": {
     "@tiptap/core": "3.35.0",

@@ -152,6 +152,10 @@ def test_evidence_upload_download_reuse_and_safe_scope_move(operations_client):
     south = record(client, admin, "measure", "Anderer Bereich", "Süd")
     other_kind = record(client, admin, "risk", "Anderer Datensatztyp")
     meta = {"title": "Prüfauszug", "origin": "Systemtest", "scope": "Nord"}
+    send(client, "POST", "/evidence", 422, headers=admin, json={
+        **meta, "url": "https://docs.example.test/unzulässig", "record_id": south["id"],
+    })
+    assert send(client, "GET", "/evidence", 200, headers=admin).json() == []
     body = "Auszug mit Umlaut ä\n".encode()
     upload = send(
         client, "POST", "/evidence/upload", 201, headers=admin, data=meta,
@@ -186,6 +190,8 @@ def test_evidence_upload_download_reuse_and_safe_scope_move(operations_client):
     items = send(client, "GET", "/evidence", 200, headers=admin, params={"scope": "Nord"}).json()
     uploaded = next(item for item in items if item["id"] == upload["id"])
     assert set(uploaded["linked_record_ids"]) == {north["id"], north_two["id"], measure["id"]}
+    linked_to_measure = send(client, "GET", "/evidence", 200, headers=admin, params={"record_id": measure["id"]}).json()
+    assert [item["id"] for item in linked_to_measure] == [upload["id"]]
     report = send(client, "GET", "/reports/management", 200, headers=admin, params={"scope": "Nord"}).json()
     assert report["evidence"] == {"total": 2, "files": 1, "external": 1, "expired": 0, "controls_without_current": 0}
     move = {"scope": "Süd", "expected_version": north["version"]}

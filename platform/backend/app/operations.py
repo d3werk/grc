@@ -30,6 +30,10 @@ router = APIRouter(prefix="/api/v1", tags=["Risiken, Nachweise und Berichte"])
 
 MAX_FILE_BYTES = 4 * 1024 * 1024
 MAX_UPLOAD_BYTES = MAX_FILE_BYTES + 16 * 1024
+EVIDENCE_TARGET_KINDS = (
+    "control", "measure", "audit_engagement", "audit_test", "audit_finding",
+    "resilience_scenario", "continuity_plan", "continuity_exercise", "ai_system", "contract",
+)
 _DATABASE_TEXT = r"^[^\x00]*$"
 Scope = Annotated[str | None, Query(max_length=240, pattern=_DATABASE_TEXT)]
 Score = Annotated[int, Field(ge=1, le=5, strict=True)]
@@ -96,6 +100,7 @@ class EvidenceInput(BaseModel):
     scope: ScopeName = ""
     collected_on: IsoDate = Field(default_factory=_utc_today)
     valid_until: IsoDate | None = None
+    record_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> EvidenceInput:
@@ -366,6 +371,7 @@ def list_evidence(
     scope: Scope = None,
     limit: Annotated[int, Query(ge=1, le=250)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
+    record_id: UUID | None = None,
 ):
     if scope is not None:
         ctx.require_scope(scope)
@@ -375,8 +381,12 @@ def list_evidence(
             ORDER BY record_id
         ) AS linked_record_ids FROM evidence_items e
         WHERE e.tenant_id=%s AND (%s::text IS NULL OR e.scope=%s)
+        AND (%s::uuid IS NULL OR EXISTS (
+            SELECT FROM evidence_links l
+            WHERE l.tenant_id=e.tenant_id AND l.evidence_id=e.id AND l.record_id=%s
+        ))
         ORDER BY e.created_at DESC,e.id LIMIT %s OFFSET %s""",
-        (ctx.tenant_id, scope, scope, limit, offset),
+        (ctx.tenant_id, scope, scope, record_id, record_id, limit, offset),
     ).fetchall()
 
 
@@ -396,7 +406,9 @@ def _store_evidence(
         ),
     ).fetchone()
     audit_event(ctx, "evidence.created", "evidence", row["id"], {"kind": kind}, scope=data.scope)
-    return {**row, "linked_record_ids": []}
+    if data.record_id is not None:
+        _attach_evidence(ctx, row["id"], data.scope, data.record_id)
+    return {**row, "linked_record_ids": [data.record_id] if data.record_id else []}
 
 
 @router.post("/evidence", status_code=201, response_model=Evidence)
@@ -473,6 +485,7 @@ def _media_type(filename: str, content: bytes) -> str:
                             "scope": {"type": "string", "maxLength": 240},
                             "collected_on": {"type": "string", "format": "date"},
                             "valid_until": {"type": "string", "format": "date"},
+                            "record_id": {"type": "string", "format": "uuid"},
                         },
                     },
                 },
@@ -506,7 +519,7 @@ async def upload_evidence(request: Request, ctx: Annotated[RequestContext, Depen
         return message
 
     bounded_request = Request(request.scope, receive=bounded_receive)
-    async with bounded_request.form(max_files=1, max_fields=5, max_part_size=4096) as form:
+    async with bounded_request.form(max_files=1, max_fields=6, max_part_size=4096) as form:
         values = {}
         for key, value in form.multi_items():
             if key in values:
@@ -582,7 +595,7 @@ def download_evidence(evidence_id: UUID, ctx: Annotated[RequestContext, Depends(
 @router.post(
     "/evidence/{evidence_id}/links",
     response_model=EvidenceLink,
-    description="Einen vorhandenen Nachweis einem Control oder einer Maßnahme im selben Geltungsbereich zuordnen.",
+    description="Einen vorhandenen Nachweis einem unterstützten Facheintrag im selben Geltungsbereich zuordnen.",
 )
 def link_evidence(
     evidence_id: UUID, data: EvidenceLinkInput, ctx: Annotated[RequestContext, Depends(context("evidence.write"), scope="function")]
@@ -593,24 +606,28 @@ def link_evidence(
     if evidence is None:
         raise HTTPException(404, "Nachweis fehlt.")
     ctx.require_scope(evidence["scope"])
-    target = _catalog_item(ctx, data.record_id, "control", "measure")
-    if target["scope"] != evidence["scope"]:
+    _attach_evidence(ctx, evidence_id, evidence["scope"], data.record_id)
+    return {"evidence_id": evidence_id, "record_id": data.record_id}
+
+
+def _attach_evidence(ctx: RequestContext, evidence_id: UUID, scope: str, record_id: UUID) -> None:
+    target = _catalog_item(ctx, record_id, *EVIDENCE_TARGET_KINDS)
+    if target["scope"] != scope:
         raise HTTPException(422, "Nachweis und Ziel müssen denselben Geltungsbereich haben.")
     try:
         row = ctx.conn.execute(
             """INSERT INTO evidence_links(tenant_id,evidence_id,record_id,record_kind,scope,created_by)
             VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT (tenant_id,evidence_id,record_id) DO NOTHING
             RETURNING evidence_id,record_id""",
-            (ctx.tenant_id, evidence_id, data.record_id, target["kind"], evidence["scope"], ctx.user_id),
+            (ctx.tenant_id, evidence_id, record_id, target["kind"], scope, ctx.user_id),
         ).fetchone()
     except ForeignKeyViolation as exc:
         raise HTTPException(409, "Der verknüpfte Eintrag wurde geändert. Bitte die Auswahl erneut prüfen.") from exc
     if row is not None:
         audit_event(
-            ctx, "evidence.linked", "evidence", evidence_id, {"record_id": str(data.record_id)},
-            scope=evidence["scope"],
+            ctx, "evidence.linked", "evidence", evidence_id, {"record_id": str(record_id)},
+            scope=scope,
         )
-    return {"evidence_id": evidence_id, "record_id": data.record_id}
 
 
 @router.delete("/evidence/{evidence_id}/links/{record_id}", status_code=204)

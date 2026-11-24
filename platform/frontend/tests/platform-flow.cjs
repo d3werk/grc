@@ -59,7 +59,7 @@ async function run() {
     const form = page.getByRole("form", { name: "Neuer Eintrag" });
     await field("Titel", form).fill(title);
     await field("Kürzel", form).fill(code);
-    await field("Geltungsbereich", form).fill(scope);
+    await field("Geltungsbereich", form).selectOption(scope);
     await field("Verantwortung", form).fill("Testkoordination");
     await field("Status", form).selectOption("active");
     if (unit) await field("Organisation", form).selectOption(unit);
@@ -120,6 +120,13 @@ async function run() {
     await button("Mandant anlegen").click();
     await page.getByText(workspaceName, { exact: true }).first().waitFor();
     console.log("Tenant bootstrap and authentication passed.");
+    for (const name of [scope, "Leerer Testbereich"]) {
+      await button("Geltungsbereich anlegen").click();
+      const scopeForm = page.getByRole("form", { name: "Geltungsbereich anlegen" });
+      await field("Name des Geltungsbereichs", scopeForm).fill(name);
+      await button("Geltungsbereich speichern", scopeForm).click();
+      await scopeForm.waitFor({ state: "hidden" });
+    }
 
     const unit = await create("Organisation", "Organisationseinheit", "SMK-ORG", "SMK Standort Berlin",
       { "Art der Einheit": "Standort" });
@@ -264,11 +271,11 @@ async function run() {
 
     stage = "scope filtering";
     await page.setViewportSize({ width: 1440, height: 960 });
-    await field("Geltungsbereich", page.locator("form.context-bar")).fill("Leerer Testbereich");
+    await field("Geltungsbereich", page.locator("form.context-bar")).selectOption("Leerer Testbereich");
     await button("Anwenden").click();
     await heading("Noch keine Einträge").waitFor();
     assert.equal(await page.getByText("SMK Risiko Testdienstausfall", { exact: true }).count(), 0);
-    await field("Geltungsbereich", page.locator("form.context-bar")).fill(scope);
+    await field("Geltungsbereich", page.locator("form.context-bar")).selectOption(scope);
     await button("Anwenden").click();
     await page.getByRole("button", { name: /SMK Risiko Testdienstausfall/ }).waitFor();
 

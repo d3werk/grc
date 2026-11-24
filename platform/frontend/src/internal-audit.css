@@ -1,0 +1,21 @@
+.audit-overview {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.audit-planning-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .65rem;
+}
+
+.audit-planning-actions select {
+  min-width: 7rem;
+}
+
+.audit-overview .audit-overdue {
+  color: #821f2a;
+  font-weight: 650;
+}

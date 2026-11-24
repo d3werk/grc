@@ -51,6 +51,22 @@ Die Sitzung läuft standardmäßig acht Stunden. Beim vollständigen Neuladen de
 
 Unter **Basisregister → Verantwortlichkeiten** lässt sich dieselbe Person als IT-Leitung einer Einheit, als Asset Owner eines Dienstes und als Risk Owner eines Risikos zuordnen. Beendete Zuordnungen lassen sich in der Historie einblenden. Zugriffsrechte folgen aus den Mitgliedschaften und Mandaten. Unter **Administration → Audit-Protokoll** sehen berechtigte Nutzer die protokollierten Änderungen und Exporte mit handelndem Mitglied und Zeitpunkt in UTC. [API-Vertrag](openapi.json)
 
+## Geltungsbereiche und Fachmodule
+
+Wähle oben einen **Geltungsbereich** und übernimm ihn mit **Anwenden**. Der gewählte Bereich ist beim Anlegen eines Eintrags vorausgewählt. Mitglieder mit mandantenweiten Schreibrechten können einen neuen Bereich mit **Geltungsbereich anlegen** zur Auswahlliste hinzufügen. Vorhandene Bereichsnamen aus Registern, Nachweisen, Verantwortlichkeiten und Beratungsmandaten erscheinen passend zu den Zugriffsrechten. Organisationseinheit und Geltungsbereich lassen sich getrennt zuordnen.
+
+| Arbeitsbereich | Arbeitsablauf |
+| --- | --- |
+| Prozessmanagement | Prozessart, Zweck, Auslöser, Eingaben und Ergebnisse erfassen. Prozessschritte mit Rolle und Ausführung ordnen. Übergeordnete Prozesse in der Prozesslandkarte ansehen. IT-Dienste, Assets, Lieferanten und Controls verknüpfen. [BPM](https://swissgrc.com/bpm-software/) |
+| Interne Audits | Prüfeinheiten nach Risiko und Wesentlichkeit für den Jahresplan auswählen. Im Prüfauftrag Ziel, Umfang, Kriterien und Prüfprogramm dokumentieren. Prüfschritte, Arbeitspapiere, Feststellungen und Maßnahmen verknüpfen. Abschluss und Wirksamkeitsprüfung in den vorgesehenen Feldern festhalten. [Internal Audit](https://swissgrc.com/internal-audit-software/) |
+| Operationelle Resilienz | Kritischen Geschäftsdienst mit Auswirkungen, Toleranz und Abhängigkeiten erfassen. Einen Szenariotest mit der zum Testzeitpunkt geltenden Toleranz, gemessener Unterbrechung und Ergebnis dokumentieren. [Operational Resilience](https://swissgrc.com/operational-resilience-software/) |
+| Business Continuity | Auswirkungsanalyse und Wiederanlaufziele für einen Prozess dokumentieren. Plan mit Aktivierung, Eskalation, Rollen und Wiederanlauf erstellen. Beobachtete Wiederanlaufzeit und Verbesserungsbedarf aus einer Übung festhalten. [BCM](https://swissgrc.com/bcm-software/) |
+| KI-Governance | Verwendungszweck, Modell, Anbieter, Nutzergruppen und Daten erfassen. Risikoklasse fachlich begründen, Aufsicht und Betriebsüberwachung festlegen, Einsatzentscheidung und Wiederholungsprüfung dokumentieren. [AI GRC](https://swissgrc.com/ai-grc/) |
+| Vertragsmanagement | Parteien, Zuständigkeit, Laufzeit, Pflichten und Fortführungsentscheidung erfassen. Die Modulübersicht zeigt erfasste Kündigungs-, Prüf- und Laufzeittermine. [Contraqto](https://contraqto.com/) |
+| Governance und IKS → Controls | Kontrollart, Durchführung, Nachweis, Wirksamkeitskriterium und nächsten Prüftermin pflegen. Für dokumentierte Stichproben einen Prüfschritt im Modul **Interne Audits** mit dem Control verknüpfen. [IKS](https://swissgrc.com/iks-software/) |
+
+Externe Referenzen und unterstützte Nachweisdateien lassen sich aus dem jeweiligen Eintrag heraus erfassen. Die Anwendung speichert den Nachweis und seinen direkten Bezug gemeinsam. Beide benötigen denselben Geltungsbereich. Die Fachmodule verwenden die bestehenden Registerrechte. Die UI erfasst Prüf- und Freigabeentscheidungen. Eine unabhängige Prüfrolle, automatisierte Vertragsbenachrichtigungen und ein BPMN-Editor bleiben Teil des weiteren Ausbaus.
+
 ## CSV-Import und Schnittstellen
 
 Die Beschreibungs- und längeren Fachfelder im Register haben eine Formatierungsleiste. Die API speichert Absätze, Überschriften, Listen, Fett- und Kursivformatierung strukturiert. Suche, CSV und bestehende API-Clients verwenden weiterhin die Klartextfelder. `rich_text` ergänzt die Darstellung der Formatierungen. Wer über die API nur ein Klartextfeld ändert, erhält die Formatierung der übrigen unveränderten Felder. [OpenAPI](openapi.json)

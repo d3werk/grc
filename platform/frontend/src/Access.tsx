@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Plus, UsersRound } from 'lucide-react';
 import type { Client, Role } from './api';
 import { errorMessage } from './api';
+import { ScopeSelect } from './ScopeSelect';
 import { dateLabel, Empty, Field, Loading, Notice, useData } from './ui';
 
 interface Member { id: string; email: string; role: Role; active: boolean }
@@ -16,7 +17,7 @@ const grantLabel = {
   'exports.read': 'Berichte abrufen'
 };
 
-export function Access({ api, availableScopes }: { api: Client; availableScopes: string[] }) {
+export function Access({ api }: { api: Client }) {
   const members = useData(signal => api.json<Member[]>('/members', { signal }), [api]);
   const mandates = useData(signal => api.json<Mandate[]>('/advisor-mandates', { signal }), [api]);
   const [form, setForm] = useState<'member' | 'mandate' | null>(null);
@@ -37,7 +38,7 @@ export function Access({ api, availableScopes }: { api: Client; availableScopes:
         members.refresh();
       } else {
         await api.json('/advisor-mandates', { method: 'POST', body: JSON.stringify({
-          advisor_id: values.get('advisor_id'), scope: String(values.get('scope')).trim(),
+          advisor_id: values.get('advisor_id'), scope: values.get('scope'),
           permissions: values.getAll('permissions'), expires_at: new Date(String(values.get('expires_at'))).toISOString()
         }) });
         mandates.refresh();
@@ -79,8 +80,7 @@ export function Access({ api, availableScopes }: { api: Client; availableScopes:
         <div className="form-grid">
           <Field label="Beratungsmitglied"><select name="advisor_id" defaultValue="" required>
             <option value="">Mitglied auswählen</option>{advisors.map(item => <option key={item.id} value={item.id}>{item.email}</option>)}</select></Field>
-          <Field label="Geltungsbereich"><input name="scope" list="mandate-scopes" maxLength={240} required /></Field>
-          <datalist id="mandate-scopes">{availableScopes.map(scope => <option value={scope} key={scope} />)}</datalist>
+          <Field label="Geltungsbereich"><ScopeSelect mode="mandate" name="scope" defaultValue="" emptyLabel="Bereich auswählen" required /></Field>
           <Field label="Gültig bis"><input type="datetime-local" name="expires_at" required /></Field>
         </div>
         <fieldset className="permissions"><legend>Freigaben</legend>

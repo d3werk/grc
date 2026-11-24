@@ -4,6 +4,7 @@ import { History, Plus, RefreshCw, UsersRound } from 'lucide-react';
 import type { CatalogRecord, Client, Kind } from './api';
 import { errorMessage } from './api';
 import { kindInfo } from './Catalog';
+import { ScopeSelect } from './ScopeSelect';
 import { dateLabel, Empty, Field, Loading, Notice, useData } from './ui';
 
 interface Person {
@@ -84,7 +85,7 @@ export function Organization({ api, rows, scope, write, openRecord }: {
           display_name: String(values.get('display_name') ?? '').trim(),
           email: String(values.get('email') ?? '').trim(),
           ...(person ? { active: values.has('active'), expected_version: person.version }
-            : { scope: String(values.get('scope') ?? '').trim() })
+            : { scope: String(values.get('scope') ?? '') })
         };
         await api.json(person ? `/organization/people/${person.id}` : '/organization/people', {
           method: person ? 'PUT' : 'POST', body: JSON.stringify(body)
@@ -136,8 +137,8 @@ export function Organization({ api, rows, scope, write, openRecord }: {
         <Field label="Name"><input autoFocus name="display_name" defaultValue={edit.person?.display_name} maxLength={240} required /></Field>
         <Field label="E-Mail (optional)"><input type="email" name="email" defaultValue={edit.person?.email} maxLength={254} /></Field>
         {edit.person ? <label className="check"><input type="checkbox" name="active" defaultChecked={edit.person.active} /> Aktiv</label>
-          : <Field label="Geltungsbereich" hint="Ordnet die Person einem Arbeitsbereich zu. Leer für den zentralen Bereich.">
-            <input name="scope" defaultValue={scope} maxLength={240} /></Field>}
+          : <Field label="Geltungsbereich">
+            <ScopeSelect name="scope" defaultValue={scope} emptyLabel="Zentral" /></Field>}
       </div> : <div className="form-grid">
         <Field label="Person"><select autoFocus name="person_id" defaultValue="" required>
           <option value="">Person auswählen</option>{activePeople.map(person =>
@@ -223,12 +224,13 @@ const auditActions: Record<string, string> = {
   'risk.assessed': 'Risiko bewertet', 'evidence.created': 'Nachweis angelegt', 'evidence.downloaded': 'Nachweis heruntergeladen',
   'evidence.linked': 'Nachweis zugeordnet', 'evidence.unlinked': 'Nachweiszuordnung entfernt',
   'report.exported': 'Bericht abgerufen', 'person.created': 'Person angelegt', 'person.updated': 'Person geändert',
-  'responsibility.assigned': 'Verantwortlichkeit zugeordnet', 'responsibility.revoked': 'Verantwortlichkeit beendet'
+  'responsibility.assigned': 'Verantwortlichkeit zugeordnet', 'responsibility.revoked': 'Verantwortlichkeit beendet',
+  'scope.created': 'Geltungsbereich angelegt'
 };
 const entityLabels: Record<string, string> = {
   tenant: 'Mandant', member: 'Mitglied', advisor_mandate: 'Beratungsmandat', catalog_record: 'Registereintrag',
   catalog_link: 'Bezug', risk_assessment: 'Risikobewertung', evidence: 'Nachweis', management_report: 'Managementbericht',
-  privacy_report: 'Datenschutzbericht', person: 'Person', responsibility: 'Verantwortlichkeit'
+  privacy_report: 'Datenschutzbericht', person: 'Person', responsibility: 'Verantwortlichkeit', scope: 'Geltungsbereich'
 };
 const detailLabels: Record<string, string> = {
   kind: 'Typ', version: 'Version', fields: 'Geänderte Felder', reason: 'Begründung', record_id: 'Eintrags-ID',

@@ -4,12 +4,13 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
-from psycopg.errors import ForeignKeyViolation, UniqueViolation
+from psycopg.errors import CheckViolation, ForeignKeyViolation, UniqueViolation
 from psycopg.types.json import Jsonb
 
 from .db import audit_event
 from .domain_models import (
     ATTRIBUTE_FIELDS,
+    ATTRIBUTE_OPTIONS,
     DPIA_KEYS,
     KIND_LABELS,
     STATUS_LABELS,
@@ -26,6 +27,7 @@ from .domain_models import (
     CatalogStatusInfo,
     CatalogUpdate,
     validate_attributes,
+    validate_catalog_workflow,
 )
 from .rich_text import RichTextFields, plain_projection
 from .tenancy import RequestContext, context
@@ -76,7 +78,8 @@ def catalog_kinds(_ctx: ReadContext):
             "kind": kind,
             "label": label,
             "attribute_fields": [
-                {"key": key, "label": field_label, "type": field_type}
+                {"key": key, "label": field_label, "type": field_type,
+                 "options": ATTRIBUTE_OPTIONS.get(kind, {}).get(key, ())}
                 for key, field_label, field_type in ATTRIBUTE_FIELDS[kind]
             ],
         }
@@ -139,6 +142,7 @@ def create_record(
     description, attributes, rich_text = _project_catalog_text(
         payload.kind, payload.rich_text, payload.description, attributes
     )
+    validate_catalog_workflow(payload.kind, attributes, payload.status, payload.owner)
     if idempotency_key is not None and (
         not idempotency_key.strip() or idempotency_key != idempotency_key.strip()
         or len(idempotency_key) > 128 or "\x00" in idempotency_key
@@ -221,6 +225,7 @@ def update_record(record_id: UUID, payload: CatalogUpdate, ctx: WriteContext):
 
     updated = current | changes
     ctx.require_scope(updated["scope"])
+    validate_catalog_workflow(updated["kind"], updated["attributes"], updated["status"], updated["owner"])
     if "org_unit_id" in changes:
         _require_org_unit(ctx, updated["org_unit_id"])
         if updated["kind"] == "org_unit":
@@ -241,6 +246,10 @@ def update_record(record_id: UUID, payload: CatalogUpdate, ctx: WriteContext):
         raise HTTPException(409, "Dieses Kürzel wird für den Typ im gewählten Geltungsbereich bereits verwendet.") from error
     except ForeignKeyViolation as error:
         raise HTTPException(409, "Eine bestehende Zuordnung bindet den Datensatz an seinen bisherigen Geltungsbereich.") from error
+    except CheckViolation as error:
+        if error.diag.constraint_name == "process_parent_same_scope":
+            raise HTTPException(409, "Lösen Sie zuerst die vorhandene Prozesshierarchie, um den Geltungsbereich zu ändern.") from error
+        raise
     if updated["kind"] == "dpia" and "attributes" in changes:
         _save_dpia(ctx, record_id, updated["scope"], updated["attributes"])
     audit_event(
@@ -281,6 +290,8 @@ def list_links(
 def create_link(payload: CatalogLinkCreate, ctx: WriteContext):
     if payload.from_id == payload.to_id:
         raise HTTPException(422, "Eine Verknüpfung braucht zwei verschiedene Datensätze.")
+    if payload.kind == "process_parent":
+        ctx.conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"process-hierarchy:{ctx.tenant_id}",))
     endpoints = {
         row["id"]: row for row in ctx.conn.execute(
             """
@@ -301,6 +312,10 @@ def create_link(payload: CatalogLinkCreate, ctx: WriteContext):
     ).fetchone()
     if relation is None or (relation["from_kind"], relation["to_kind"]) != (source["kind"], target["kind"]):
         raise HTTPException(422, "Diese Verknüpfungsart passt nicht zu Ausgangs- und Zieldatensatz.")
+    if payload.kind == "process_parent":
+        if source["scope"] != target["scope"]:
+            raise HTTPException(422, "Über- und Unterprozess benötigen denselben Geltungsbereich.")
+        _validate_process_parent(ctx, payload.from_id, payload.to_id)
 
     document = payload.rationale_rich_text
     rationale = plain_projection(document, 5000, required=True) if document else payload.rationale
@@ -319,6 +334,29 @@ def create_link(payload: CatalogLinkCreate, ctx: WriteContext):
         raise HTTPException(409, "Diese Verknüpfung ist bereits vorhanden.")
     audit_event(ctx, "catalog.link_created", "catalog_link", created["id"], {"kind": payload.kind}, source["scope"])
     return created
+
+
+def _validate_process_parent(ctx: RequestContext, child_id: UUID, parent_id: UUID) -> None:
+    parent_exists = ctx.conn.execute(
+        "SELECT 1 FROM catalog_links WHERE tenant_id = %s AND kind = 'process_parent' AND from_id = %s",
+        (ctx.tenant_id, child_id),
+    ).fetchone()
+    if parent_exists is not None:
+        raise HTTPException(409, "Der Geschäftsprozess ist bereits einem übergeordneten Prozess zugeordnet.")
+    cycle = ctx.conn.execute(
+        """
+        WITH RECURSIVE ancestors(id) AS (
+            VALUES (%s::uuid)
+            UNION
+            SELECT l.to_id FROM ancestors a JOIN catalog_links l ON l.from_id = a.id
+            WHERE l.tenant_id = %s AND l.kind = 'process_parent'
+        )
+        SELECT 1 FROM ancestors WHERE id = %s
+        """,
+        (parent_id, ctx.tenant_id, child_id),
+    ).fetchone()
+    if cycle is not None:
+        raise HTTPException(422, "Ein untergeordneter Prozess kann nicht als übergeordneter Prozess ausgewählt werden.")
 
 
 @router.put("/links/{link_id}", response_model=CatalogLink)
