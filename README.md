@@ -19,16 +19,26 @@ Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser
 
 ### Schnellstart in JetBrains Rider
 1. ZIP in ein neues Verzeichnis entpacken.
-2. `D3.Grc.sln` öffnen.
+2. In Rider über **File → Open** die Datei `D3.Grc.sln` öffnen. Im linken Reiter **Solution** erscheint das Projekt `D3.Grc.Desktop`.
 3. Ein stabiles .NET-10-SDK installieren/erkennen lassen. `global.json` schließt Preview-SDKs aus.
 4. In Rider **Tools → NuGet → NuGet Restore** wählen.
 5. Solution bauen und die Tests unter `tests/D3.Grc.Tests` ausführen.
-6. `D3.Grc.Desktop` als Startprojekt starten.
+6. Oben das Startprofil **D3 GRC Desktop** auswählen und **Run** drücken.
 7. Mit einem bestehenden lokalen Profil anmelden oder ein neues Profil registrieren. Nach der Registrierung startet direkt die Projekteinrichtung.
 8. Unternehmen konfigurieren und den Umsetzungsplan prüfen. Den neuen Mandanten anlegen oder die Demo öffnen. Vorhandene verschlüsselte Projektdateien einmalig über die Mandantenverwaltung importieren.
 9. In der Übersicht eine Aufgabe öffnen, Anforderungen und Controls prüfen und Änderungen speichern.
 
 Die lokale Anmeldung benötigt ein eigenes Profilpasswort mit mindestens zwölf Zeichen. Intern verwaltete Mandanten werden in dieser Anmeldung entsperrt.
+
+#### Startprofil fehlt in Rider
+
+Im Reiter **Solution** unter `D3.Grc.Desktop → Properties` die Datei `launchSettings.json` mit der rechten Maustaste anklicken und **Generate Configurations** wählen. Danach **D3 GRC Desktop** starten. Alternativ unter **Run → Edit Configurations → + → .NET Project** das Projekt `D3.Grc.Desktop` als Startprojekt wählen. [Rider-Dokumentation](https://www.jetbrains.com/help/rider/Running_LaunchSettings.html)
+
+Der gleiche Start ist aus dem Verzeichnis mit `D3.Grc.sln` in PowerShell möglich.
+
+```powershell
+dotnet run --project .\src\D3.Grc.Desktop\D3.Grc.Desktop.csproj --launch-profile "D3 GRC Desktop"
+```
 
 #### NuGet-Update meldet eine inkompatible EF-Core-Version
 
