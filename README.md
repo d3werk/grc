@@ -21,7 +21,7 @@ Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser
 1. ZIP in ein neues Verzeichnis entpacken.
 2. `D3.Grc.sln` öffnen.
 3. Ein stabiles .NET-10-SDK installieren/erkennen lassen. `global.json` schließt Preview-SDKs aus.
-4. NuGet Restore ausführen, nicht alle Pakete auf neue Hauptversionen aktualisieren.
+4. In Rider **Tools → NuGet → NuGet Restore** wählen.
 5. Solution bauen und die Tests unter `tests/D3.Grc.Tests` ausführen.
 6. `D3.Grc.Desktop` als Startprojekt starten.
 7. Mit einem bestehenden lokalen Profil anmelden oder ein neues Profil registrieren. Nach der Registrierung startet direkt die Projekteinrichtung.
@@ -29,6 +29,20 @@ Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser
 9. In der Übersicht eine Aufgabe öffnen, Anforderungen und Controls prüfen und Änderungen speichern.
 
 Die lokale Anmeldung benötigt ein eigenes Profilpasswort mit mindestens zwölf Zeichen. Intern verwaltete Mandanten werden in dieser Anmeldung entsperrt.
+
+#### NuGet-Update meldet eine inkompatible EF-Core-Version
+
+D3 GRC verwendet `net10.0`. Das Projekt `D3.Grc.Core` legt den SQLite-Anbieter `Microsoft.EntityFrameworkCore.Sqlite.Core` auf **10.0.14** fest. Rider kann unter **Packages to Update** die Version **11.0.0** anzeigen. Diese Version benötigt `net11.0`.
+
+Wenn Rider **Rolling back package changes** meldet, sollte unter **Installed** wieder 10.0.14 stehen. Die Zeile für 11.0.0 unter **Packages to Update** abwählen und **Tools → NuGet → NuGet Restore** ausführen. Falls die lokale Projektdatei weiterhin 11.0.0 enthält, den Eintrag in `src/D3.Grc.Core/D3.Grc.Core.csproj` auf `Version="[10.0.14]"` zurücksetzen. [Rider-Dokumentation](https://www.jetbrains.com/help/rider/Using_NuGet.html#restore-packages)
+
+Zur Prüfung im Terminal neben `D3.Grc.sln` ausführen.
+
+```powershell
+dotnet --version
+dotnet restore D3.Grc.sln
+dotnet build D3.Grc.sln --no-restore
+```
 
 ### Funktionsumfang im Desktop-Arbeitsbereich
 - Lokale Profilregistrierung, Argon2id-Passwortprüfung, temporäre Sperre nach Fehlversuchen.
