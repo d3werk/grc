@@ -77,6 +77,14 @@ Ein Audit kann abgeschlossen sein, während Findings offen bleiben. Historische 
 
 Finding auf Wirksamkeitsprüfung setzen, passenden Nachweis und Prüfbegründung auswählen und schließen. Bei mehreren betroffenen Controls muss der gewählte Nachweis allen zugeordnet sein; gegebenenfalls Evidence zuvor wiederverwenden. Maßnahmen werden separat über Maßnahme → Finding verknüpft.
 
+### Auditpaket für ISO/IEC 27001
+
+Für interne ISMS-Audits im Auftrag eines Kunden stehen drei bearbeitbare Vorlagen zur Verfügung. Sie beziehen sich auf ISO/IEC 27001:2022 einschließlich Amd 1:2024. Ersetzen Sie Platzhalter durch bestätigte Angaben und wählen Sie Prüfschritte anhand von Auftrag, Risiken und der Erklärung zur Anwendbarkeit des Kunden aus. [ISO/IEC 27001:2022](https://www.iso.org/standard/82875.html) · [Amd 1:2024](https://www.iso.org/standard/88435.html)
+
+1. **Audit vorbereiten.** Der Leitfaden enthält einen Auftragstext, eine E-Mail zur Unterlagenanforderung, eine Beispielagenda und Anleitungen für Interviews, Stichproben und Abschlussgespräch. [Auditauftrag und Durchführung · Word](iso27001-audit/01_Auditauftrag_und_Durchfuehrung.docx)
+2. **Prüfungen und Nachweise erfassen.** Die Arbeitsmappe enthält 35 ISMS-Prüfideen und 36 Control-Prüfideen. Dokumentieren Sie darin Auswahl, Einzelfälle, Quellen, Feststellungen, Maßnahmen und Nachprüftermine. Erfassen Sie bestätigte Control-Prüfergebnisse in D3 GRC unter **Interne Audits → Bezüge → Prüfungen dokumentieren** mit der Referenz zum Arbeitspapier. [Prüfprogramm und Arbeitspapiere · Excel](iso27001-audit/02_Pruefprogramm_und_Arbeitspapiere.xlsx)
+3. **Berichten und nachprüfen.** Die Vorlage enthält die Zusammenfassung für die Leitung, ein Feststellungsblatt und ein fiktives Fallbeispiel zur Wirksamkeitsprüfung. Verknüpfen Sie die Feststellung und die Folgemaßnahme in D3 GRC. [Auditbericht und Nachprüfung · Word](iso27001-audit/03_Auditbericht_und_Nachpruefung.docx)
+
 ## 10. Quellen aktualisieren
 Quelle auswählen und Quelle aktualisieren / prüfen anklicken. Externen Abruf bestätigen. Die Anwendung verwendet eine feste HTTPS-Hostliste, Zeit-/Größenlimits und prüft Weiterleitungen. Projektinhalte werden nicht übertragen.
 
