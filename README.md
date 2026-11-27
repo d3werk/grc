@@ -12,6 +12,10 @@ Der Unternehmensassistent öffnet sich nach der ersten lokalen Anmeldung. Er sch
 
 Unter **NIS2-Maßnahmen** stehen Pakete für Artikel 21 Absatz 2 und Artikel 23 bereit. Vorhandene ISO- oder BSI-Controls lassen sich mit den Anforderungen verknüpfen und zusammen mit ihren Nachweisen weiterverwenden. **Kontrollprüfungen** zeigt Verantwortung, Prüfintervall, anstehende Termine und zugeordnete IT-Risiken. Audits können einen Prüfverlauf mit überprüften Originaldateien exportieren. In neu angelegten Demo-Mandanten sind ein NIS2-Mapping für die Zugriffssteuerung, ein verknüpftes IT-Risiko und ein separater Meldeprozess vorbereitet. [Anwenderhandbuch](docs/ANWENDERHANDBUCH.md)
 
+### Arbeitspaket für interne ISO-27001-Audits
+
+Die bearbeitbaren Word- und Excel-Vorlagen unterstützen externe Auditoren, die ein internes ISMS-Audit im Auftrag eines bereits zertifizierten Kunden durchführen. Prüfumfang und Stichproben werden anhand der Kundendaten, der Risiken und der Erklärung zur Anwendbarkeit festgelegt. [Auditunterlagen und Einsatz im Desktop](docs/ANWENDERHANDBUCH.md#auditpaket-für-isoiec-27001)
+
 ### Ausgangsbasis der Desktop-Migration
 Die ursprüngliche 0.5-ZIP und dein lokal korrigierter Quellcode waren in dieser Sitzung nicht als Dateien verfügbar. Deshalb ist dies eine konsolidierte neue Solution, kein gegen dein Repository getesteter In-place-Patch. Die bekannte 0.5-Datenbankstruktur und das D3GRC005-Containerformat werden weiter unterstützt; eine additive Migration ist enthalten. Die Migration wurde mit einer kompatiblen SQL-Testdatenbank geprüft, NICHT mit deiner persönlichen Projektdatei oder über die native C#-Laufzeit.
 
